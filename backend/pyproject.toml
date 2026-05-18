@@ -1,0 +1,86 @@
+[project]
+name = "gihagochi-backend"
+version = "0.1.0"
+description = "gihagochi 아이돌-팬 1:N 채팅 앱 백엔드 (FastAPI)"
+requires-python = ">=3.12"
+
+dependencies = [
+    # 웹 프레임워크
+    "fastapi[standard]>=0.115",
+    "uvicorn[standard]>=0.32",
+
+    # ORM / 마이그레이션 / DB 드라이버
+    "sqlalchemy[asyncio]>=2.0.36",
+    "alembic>=1.14",
+    "asyncpg>=0.30",            # 런타임용 async
+    "psycopg[binary]>=3.2",     # 마이그레이션용 sync (asyncpg는 multi-statement 비호환)
+    "python-dotenv>=1.0",       # migrations/env.py에서 .env 로드 (pydantic-settings는 앱 부트 후)
+
+    # Supabase 클라이언트 (Storage, Auth admin API 호출용)
+    # storage3가 2.20+에서 pyiceberg 의존성 추가 (analytics bucket용).
+    # pyiceberg는 C 확장(decoder_fast)이 있어 Python 3.14 빌드 실패 → 그 전으로 cap.
+    # 2.16부터 풀린 가능성도 있어 보수적으로 <2.16.
+    "supabase>=2.10,<2.16",
+
+    # FCM 푸시
+    "firebase-admin>=6.6",
+
+    # 모니터링
+    "sentry-sdk[fastapi]>=2.19",
+
+    # 설정 / 인증
+    "pydantic-settings>=2.7",
+    "pyjwt[crypto]>=2.10",  # Supabase JWT 검증 (python-jose는 미유지보수 + CVE)
+
+    # 미들웨어 / 로깅
+    "slowapi>=0.1.9",  # rate limiting
+    "structlog>=24.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.28",  # FastAPI 테스트 클라이언트
+    "ruff>=0.7.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# ============================================================
+# 도구 설정
+# ============================================================
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "ASYNC", # async best practices
+]
+ignore = [
+    "E501",  # line too long (formatter handles)
+    "B008",  # FastAPI Depends() in defaults는 정상 패턴
+]
+
+[tool.ruff.format]
+# black 호환 포맷. .editorconfig의 indent=4와 일치.
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests", "app/features"]
+python_files = ["test_*.py", "*_test.py"]

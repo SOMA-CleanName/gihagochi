@@ -1,0 +1,52 @@
+name: Migrations - 1 PR = 1 마이그레이션 룰 강제
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'backend/migrations/versions/**'
+
+# AGENTS.md 절대 룰 3번: PR당 마이그레이션 1개 이하.
+# 2개 이상 추가되면 CI fail.
+jobs:
+  migration-count:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Count added migration files
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          # Added (status A) 파일만 카운트 — 기존 마이그레이션 수정은 별개 룰로 다룸
+          ADDED=$(git diff --name-only --diff-filter=A "$BASE_SHA" "$HEAD_SHA" \
+            | grep -E '^backend/migrations/versions/.+\.py$' || true)
+
+          COUNT=$(echo -n "$ADDED" | grep -c . || true)
+
+          echo "추가된 마이그레이션 파일:"
+          echo "$ADDED"
+          echo ""
+          echo "개수: $COUNT"
+
+          if [ "$COUNT" -gt 1 ]; then
+            echo ""
+            echo "::error::PR에 마이그레이션이 $COUNT개 추가됨. AGENTS.md 절대 룰 3번: PR당 1개 이하."
+            echo "::error::여러 마이그레이션이 필요하면 PR을 나누거나, 메인 빌더에게 보고하세요."
+            exit 1
+          fi
+
+      - name: Check edited migrations (warning only)
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          EDITED=$(git diff --name-only --diff-filter=M "$BASE_SHA" "$HEAD_SHA" \
+            | grep -E '^backend/migrations/versions/.+\.py$' || true)
+
+          if [ -n "$EDITED" ]; then
+            echo "::warning::이미 머지된 마이그레이션이 수정됨 — 다른 환경에 적용된 후라면 위험합니다:"
+            echo "$EDITED"
+          fi

@@ -1,0 +1,24 @@
+# Railway 배포 설정.
+# https://docs.railway.app/reference/config-as-code
+#
+# 적용 전:
+# 1. Railway 대시보드에서 프로젝트 생성 + GitHub 연결
+# 2. 환경변수 등록 (Variables 탭):
+#    DATABASE_URL, SUPABASE_URL, SUPABASE_ANON_KEY,
+#    SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET,
+#    SENTRY_DSN, FCM_SERVICE_ACCOUNT_PATH, ENV=prod
+# 3. (선택) 도메인 연결
+#
+# 마이그레이션은 별도로 실행 (Dockerfile에 포함 X):
+#   - 로컬: cd backend && alembic upgrade head
+#   - 또는 Railway pre-deploy command 설정 (Settings → Deploy → Pre-deploy command)
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

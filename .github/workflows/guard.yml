@@ -1,0 +1,93 @@
+name: Guard - 메인 빌더 영역 변경 경고
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# core/, shared/, migrations/, docs/, .github/, pyproject.toml 등이
+# 피처 컨트리뷰터 PR에 포함되면 자동 코멘트 + label.
+#
+# CODEOWNERS가 review 강제는 이미 처리. 이건 컨트리뷰터에게 시각적 알림.
+jobs:
+  detect-protected-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect protected paths
+        id: detect
+        run: |
+          PROTECTED_PATTERN='^(backend/app/core/|backend/app/shared/|backend/migrations/|mobile/lib/core/|admin/lib/|admin/proxy\.ts$|admin/middleware\.ts$|docs/|\.github/|backend/pyproject\.toml$|mobile/pubspec\.yaml$|admin/package\.json$)'
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -E "$PROTECTED_PATTERN" || true)
+
+          if [ -n "$CHANGED" ]; then
+            echo "has_protected=true" >> "$GITHUB_OUTPUT"
+            {
+              echo 'files<<EOF'
+              echo "$CHANGED"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "has_protected=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on PR
+        if: steps.detect.outputs.has_protected == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const files = `${{ steps.detect.outputs.files }}`;
+            const body = [
+              '⚠ **메인 빌더 영역이 변경됨**',
+              '',
+              '이 PR은 다음 보호 경로를 수정합니다:',
+              '```',
+              files,
+              '```',
+              '',
+              '- [`AGENTS.md`](../AGENTS.md) 절대 룰 1번에 따라 메인 빌더 승인 필요.',
+              '- 피처 작업이라면 `features/<폴더>/` 외부 수정이 정말 필요한지 재검토.',
+              '- 필요하면 사유를 PR 본문에 추가해주세요.',
+            ].join('\n');
+
+            // 같은 봇 코멘트가 이미 있으면 업데이트 (중복 방지)
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.startsWith('⚠ **메인 빌더 영역이 변경됨**')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+            // 라벨 부착 (없으면 생성)
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['touches-core'],
+            });

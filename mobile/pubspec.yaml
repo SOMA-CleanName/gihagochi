@@ -1,0 +1,83 @@
+name: gihagochi
+description: gihagochi 아이돌-팬 1:N 채팅 앱 (모바일)
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # ── 상태 관리 ─────────────────────────────────
+  flutter_riverpod: ^3.1.0
+  riverpod_annotation: ^4.0.0
+
+  # ── 라우팅 ────────────────────────────────────
+  go_router: ^14.6.2
+
+  # ── 네트워킹 ──────────────────────────────────
+  dio: ^5.7.0
+
+  # ── 모델 직렬화 / 불변 객체 ──────────────────
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.9.0
+
+  # ── Supabase (DB / Auth / Realtime / Storage) ─
+  supabase_flutter: ^2.8.0
+
+  # ── 푸시 알림 (FCM) ───────────────────────────
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+  flutter_local_notifications: ^18.0.1
+
+  # ── 로컬 저장소 ───────────────────────────────
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.3
+
+  # ── 이미지 ────────────────────────────────────
+  cached_network_image: ^3.4.1
+  image_picker: ^1.1.2
+  image_cropper: ^8.0.2
+
+  # ── 음성 (녹음 + 재생) ────────────────────────
+  # 음성 메시지 재생용으로는 audioplayers 단독으로 충분.
+  # 스트리밍/큐 같은 고급 기능 필요해지면 just_audio 추가.
+  record: ^5.2.0
+  audioplayers: ^6.1.0
+
+  # ── 모니터링 ──────────────────────────────────
+  sentry_flutter: ^8.11.0
+
+  # ── 환경 변수 ─────────────────────────────────
+  # 주: 빌드타임 시크릿은 dart-define 권장. flutter_dotenv는 런타임 설정용.
+  flutter_dotenv: ^5.2.1
+
+  # ── 국제화 / 포매팅 ──────────────────────────
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+  # 코드 생성 (freezed, json_serializable, riverpod_generator)
+  build_runner: ^2.15.0
+  freezed: ^3.2.3
+  json_serializable: ^6.11.2
+  riverpod_generator: ^4.0.0
+
+  # 린트
+  custom_lint: ^0.8.1
+  riverpod_lint: ^3.1.0
+
+flutter:
+  uses-material-design: true
+
+  # assets / fonts는 화면 작업 시 추가
+  # assets:
+  #   - assets/images/
+  #   - .env

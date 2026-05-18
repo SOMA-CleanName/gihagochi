@@ -1,0 +1,43 @@
+# 빌드 컨텍스트에서 제외 — 이미지 크기 ↓, 빌드 속도 ↑, 시크릿 유출 방지
+
+# 가상환경 / 의존성
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 시크릿 (절대 포함 금지)
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+service-account*.json
+
+# 테스트 / 개발 도구
+tests/
+conftest.py
+**/tests/
+
+# 마이그레이션은 별도 step에서 실행 (이미지에 포함 X)
+migrations/
+alembic.ini
+
+# 빌드 산출물
+build/
+dist/
+
+# 문서 / 메타
+README.md
+*.md
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

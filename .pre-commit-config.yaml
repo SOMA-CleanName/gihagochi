@@ -1,0 +1,64 @@
+# pre-commit 설정
+# 설치: pip install pre-commit && pre-commit install
+# 전체 수동 실행: pre-commit run --all-files
+
+repos:
+  # ============================================================
+  # 공용 위생
+  # ============================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  # ============================================================
+  # Python (backend/) — ruff가 lint + format 둘 다 처리
+  # 주: black은 ruff-format으로 대체 (black 호환 출력, 훨씬 빠름)
+  # ============================================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        files: ^backend/
+        args: [--fix]
+      - id: ruff-format
+        files: ^backend/
+
+  # ============================================================
+  # Flutter (mobile/) — dart SDK가 PATH에 있어야 함
+  # ============================================================
+  - repo: local
+    hooks:
+      - id: dart-format
+        name: dart format (mobile)
+        entry: dart format
+        language: system
+        files: ^mobile/.*\.dart$
+        # 코드 생성 결과물 제외
+        exclude: \.(g|freezed|gr|config)\.dart$
+
+  # ============================================================
+  # Frontend (admin/) — Phase 4에서 활성화
+  # eslint/prettier는 admin/node_modules 의존성 필요
+  # ============================================================
+  # - repo: local
+  #   hooks:
+  #     - id: prettier
+  #       name: prettier (admin)
+  #       entry: bash -c 'cd admin && npx prettier --write'
+  #       language: system
+  #       files: ^admin/.*\.(ts|tsx|js|jsx|json|css|scss|md)$
+  #     - id: eslint
+  #       name: eslint (admin)
+  #       entry: bash -c 'cd admin && npx eslint --fix'
+  #       language: system
+  #       files: ^admin/.*\.(ts|tsx|js|jsx)$
