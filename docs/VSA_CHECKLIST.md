@@ -12,53 +12,53 @@
 ### 1.1 디렉토리 골격
 
 **백엔드**
-- [ ] `backend/app/__init__.py`
-- [ ] `backend/app/core/` 폴더 생성
-- [ ] `backend/app/shared/__init__.py` + `shared/models/`
-- [ ] `backend/app/features/__init__.py`
-- [ ] `backend/app/features/_template/` (복사 시작점)
-- [ ] `backend/app/main.py` (자동 라우터 등록 포함)
+- [x] `backend/app/__init__.py`
+- [x] `backend/app/core/` 폴더 생성
+- [x] `backend/app/shared/__init__.py` + `shared/models/`
+- [x] `backend/app/features/__init__.py`
+- [x] `backend/app/features/_template/` (복사 시작점)
+- [x] `backend/app/main.py` (자동 라우터 등록 포함)
 
 **모바일**
-- [ ] `mobile/lib/core/` 폴더 생성
-- [ ] `mobile/lib/features/_template/`
-- [ ] `mobile/lib/main.dart` (Sentry/Supabase/Firebase init + ProviderScope + go_router)
+- [x] `mobile/lib/core/` 폴더 생성
+- [x] `mobile/lib/features/_template/`
+- [x] `mobile/lib/main.dart` (Sentry/Supabase/Firebase init + ProviderScope + go_router)
 
 **관리자 웹**
-- [ ] `admin/app/(admin)/layout.tsx`
-- [ ] `admin/app/(admin)/_template/page.tsx`
-- [ ] `admin/lib/supabase/{server,client,middleware}.ts`
-- [ ] `admin/middleware.ts` (관리자 role 체크)
+- [x] `admin/app/(admin)/layout.tsx`
+- [x] `admin/app/(admin)/_template/page.tsx`
+- [x] `admin/lib/supabase/{server,client,middleware}.ts`
+- [x] `admin/middleware.ts` (관리자 role 체크) — Next.js 16 룰에 따라 `admin/proxy.ts`로 존재 (role 체크는 `lib/supabase/middleware.ts`)
 
 ### 1.2 자동 등록 메커니즘
 
-- [ ] **백엔드**: `main.py`가 `pkgutil.iter_modules(features.__path__)` 로 `router.py` 자동 import
-- [ ] **백엔드**: `_` prefix 폴더(`_template/`)는 자동 등록에서 제외되는지 확인
-- [ ] **모바일**: `core/router/app_router.dart`가 각 슬라이스 `routes.dart`의 `List<RouteBase>` 를 spread로 합치는 패턴 확립
-- [ ] **모바일**: `_template/routes.dart`에 예시 라우트 1개 포함
-- [ ] **관리자 웹**: App Router 파일 기반 라우팅으로 자동 (별도 설정 없음, 확인만)
+- [x] **백엔드**: `main.py`가 `pkgutil.iter_modules(features.__path__)` 로 `router.py` 자동 import
+- [x] **백엔드**: `_` prefix 폴더(`_template/`)는 자동 등록에서 제외되는지 확인
+- [x] **모바일**: `core/router/app_router.dart`가 각 슬라이스 `routes.dart`의 `List<RouteBase>` 를 spread로 합치는 패턴 확립
+- [x] **모바일**: `_template/routes.dart`에 예시 라우트 1개 포함
+- [x] **관리자 웹**: App Router 파일 기반 라우팅으로 자동 (별도 설정 없음, 확인만)
 
 ### 1.3 `_template/` 가 작동하는가
 
 새 슬라이스를 만들려면 `_template/`을 복사해서 시작해야 함. 템플릿이 살아있어야 함.
 
 **백엔드 `_template/`**
-- [ ] `SPEC.md` (양식 + 빈 섹션)
-- [ ] `router.py` — 빈 `router = APIRouter(prefix="/_template")` + 예시 엔드포인트 1개
-- [ ] `schemas.py` — Pydantic 예시 1개
-- [ ] `service.py` — DB 세션 의존성 받는 예시 함수 1개
-- [ ] `tests/test_router.py` — 스모크 테스트 1개
+- [x] `SPEC.md` (양식 + 빈 섹션)
+- [x] `router.py` — 빈 `router = APIRouter(prefix="/_template")` + 예시 엔드포인트 1개
+- [x] `schemas.py` — Pydantic 예시 1개
+- [x] `service.py` — DB 세션 의존성 받는 예시 함수 1개
+- [x] `tests/test_router.py` — 스모크 테스트 1개
 
 **모바일 `_template/`**
-- [ ] `SPEC.md`
-- [ ] `routes.dart` — `List<RouteBase> templateRoutes = [...]` export
-- [ ] `presentation/template_screen.dart`
-- [ ] `application/template_controller.dart` — `@riverpod` 예시
-- [ ] `domain/template_model.dart` — freezed 예시
-- [ ] `data/template_repository.dart`
+- [x] `SPEC.md`
+- [x] `routes.dart` — `List<RouteBase> templateRoutes = [...]` export
+- [x] `presentation/template_screen.dart`
+- [x] `application/template_controller.dart` — `@riverpod` 예시
+- [x] `domain/template_model.dart` — freezed 예시
+- [x] `data/template_repository.dart`
 
 **관리자 웹 `_template/`**
-- [ ] `page.tsx` (Server Component)
+- [x] `page.tsx` (Server Component)
 - [ ] `_components/` 빈 폴더
 
 ### 1.4 슬라이스 외부 의존이 `core/`로 완비됐는가
@@ -66,32 +66,32 @@
 새 슬라이스가 `core/`만 의존해서 시작 가능해야 함.
 
 **백엔드 `core/`**
-- [ ] `config.py` (Supabase URL/keys, FCM, Sentry, JWT)
-- [ ] `db.py` (`get_session()` 의존성)
-- [ ] `auth.py` (`get_current_user()`, `require_role()`)
-- [ ] `supabase.py` (Storage / Auth admin)
-- [ ] `fcm.py` (`send_push()`)
-- [ ] `realtime.py` (`broadcast_to_idol_topic()`)
-- [ ] `errors.py` (표준 에러 + Sentry 캡처)
-- [ ] `logging.py`
+- [x] `config.py` (Supabase URL/keys, FCM, Sentry, JWT)
+- [x] `db.py` (`get_session()` 의존성)
+- [x] `auth.py` (`get_current_user()`, `require_role()`)
+- [x] `supabase.py` (Storage / Auth admin)
+- [x] `fcm.py` (`send_push()`) — 실제 시그니처는 `send_push_to_tokens()`
+- [x] `realtime.py` (`broadcast_to_idol_topic()`)
+- [x] `errors.py` (표준 에러 + Sentry 캡처)
+- [x] `logging.py`
 
 **모바일 `core/`**
-- [ ] `api/dio_client.dart` (JWT 첨부 + 401 refresh)
-- [ ] `auth/auth_service.dart` + `auth_guard.dart`
-- [ ] `realtime/realtime_service.dart`
-- [ ] `push/push_service.dart`
-- [ ] `storage/secure_storage.dart`
-- [ ] `theme/` (ThemeData)
-- [ ] `widgets/` (`AppButton`, `MessageBubble`, `LoadingView`, ...)
-- [ ] `error/error_handler.dart`
-- [ ] `router/app_router.dart`
+- [x] `api/dio_client.dart` (JWT 첨부 + 401 refresh)
+- [x] `auth/auth_service.dart` + `auth_guard.dart`
+- [x] `realtime/realtime_service.dart`
+- [x] `push/push_service.dart`
+- [x] `storage/secure_storage.dart`
+- [x] `theme/` (ThemeData)
+- [x] `widgets/` (`AppButton`, `MessageBubble`, `LoadingView`, ...)
+- [x] `error/error_handler.dart`
+- [x] `router/app_router.dart`
 
 ### 1.5 격리 보장 장치
 
-- [ ] `.github/CODEOWNERS`에 `core/`, `shared/`, `migrations/`, `docs/` 메인 빌더 지정 (✅ 완료)
-- [ ] `.github/workflows/guard.yml` — 컨트리뷰터가 `core/` 만지면 자동 코멘트
-- [ ] `.github/workflows/migrations.yml` — 마이그레이션 2개 이상이면 fail
-- [ ] PR 템플릿에 "core/, shared/, 다른 features/ 수정 없음" 체크 (✅ 완료)
+- [x] `.github/CODEOWNERS`에 `core/`, `shared/`, `migrations/`, `docs/` 메인 빌더 지정 (✅ 완료)
+- [x] `.github/workflows/guard.yml` — 컨트리뷰터가 `core/` 만지면 자동 코멘트
+- [x] `.github/workflows/migrations.yml` — 마이그레이션 2개 이상이면 fail
+- [x] PR 템플릿에 "core/, shared/, 다른 features/ 수정 없음" 체크 (✅ 완료)
 
 ### 1.6 DB 기반
 
