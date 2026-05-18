@@ -6,7 +6,8 @@
 # 2. 환경변수 등록 (Variables 탭):
 #    DATABASE_URL, SUPABASE_URL, SUPABASE_ANON_KEY,
 #    SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET,
-#    SENTRY_DSN, FCM_SERVICE_ACCOUNT_PATH, ENV=prod
+#    SENTRY_DSN, ENV=prod
+#    FCM_SERVICE_ACCOUNT_JSON — 다운받은 JSON 통째 (minified). 자세히는 backend/.env.example
 # 3. (선택) 도메인 연결
 #
 # 마이그레이션은 별도로 실행 (Dockerfile에 포함 X):
