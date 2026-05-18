@@ -73,7 +73,11 @@ notepad .env
 - `SUPABASE_JWT_SECRET` — Studio → Settings → API → JWT Secret
 
 선택:
-- `SENTRY_DSN`, `FCM_SERVICE_ACCOUNT_PATH`
+- `SENTRY_DSN`
+- FCM (둘 중 하나):
+  - `FCM_SERVICE_ACCOUNT_JSON` — JSON 통째 (Railway/Vercel 등 cloud 권장)
+  - `FCM_SERVICE_ACCOUNT_PATH` — 파일 경로 (로컬 개발용)
+  - 자세히는 `.env.example` 의 FCM 섹션
 
 ### 3. 마이그레이션 적용
 

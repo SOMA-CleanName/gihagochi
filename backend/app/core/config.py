@@ -36,9 +36,15 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str = Field(..., description="JWT 서명 검증용")
 
     # ── FCM ──
+    # 두 가지 주입 방식 — Cloud 배포는 JSON, 로컬은 PATH 권장.
+    # 둘 다 설정되면 JSON이 우선.
+    fcm_service_account_json: str | None = Field(
+        default=None,
+        description="서비스 어카운트 JSON 내용 (cloud 배포용). 줄바꿈 보존 위해 minified 권장.",
+    )
     fcm_service_account_path: Path | None = Field(
         default=None,
-        description="firebase-admin 서비스 어카운트 JSON 경로. None이면 푸시 발송 비활성.",
+        description="서비스 어카운트 JSON 파일 경로 (로컬 개발용). JSON 미설정 시 폴백.",
     )
 
     # ── Sentry ──
