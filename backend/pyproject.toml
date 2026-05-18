@@ -84,3 +84,8 @@ indent-style = "space"
 asyncio_mode = "auto"
 testpaths = ["tests", "app/features"]
 python_files = ["test_*.py", "*_test.py"]
+markers = [
+    # 실제 dev DB 연결 필요 (conftest.py의 `session` 픽스처).
+    # CI에선 `-m "not integration"`으로 스킵.
+    "integration: requires real DB / external services",
+]
