@@ -26,7 +26,7 @@ _settings = get_settings()
 engine = create_async_engine(
     _settings.database_url_async,
     echo=_settings.is_dev,
-    pool_pre_ping=True,    # stale connection 자동 감지
+    pool_pre_ping=True,  # stale connection 자동 감지
     pool_size=10,
     max_overflow=20,
 )
@@ -34,7 +34,7 @@ engine = create_async_engine(
 SessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False,   # commit 후에도 ORM 객체 접근 가능
+    expire_on_commit=False,  # commit 후에도 ORM 객체 접근 가능
     autoflush=False,
 )
 
