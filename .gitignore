@@ -105,6 +105,9 @@ android/gradlew
 android/gradlew.bat
 android/local.properties
 android/**/GeneratedPluginRegistrant.java
+# JVM 크래시 덤프 (Gradle OOM 시 생성)
+android/**/hs_err_pid*.log
+android/**/replay_pid*.log
 
 # 생성 파일 (build_runner)
 *.g.dart
