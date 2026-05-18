@@ -123,9 +123,7 @@ def require_role(
         user: Annotated[CurrentUser, Depends(get_current_user)],
     ) -> CurrentUser:
         if user.role not in allowed:
-            raise ForbiddenError(
-                f"필요한 권한: {', '.join(r.value for r in allowed)}"
-            )
+            raise ForbiddenError(f"필요한 권한: {', '.join(r.value for r in allowed)}")
         return user
 
     return _check

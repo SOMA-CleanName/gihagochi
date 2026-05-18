@@ -38,9 +38,7 @@ if config.config_file_name is not None:
 # 형식: postgresql://USER:PASSWORD@HOST:PORT/DB  (Supabase Session Pooler 권장)
 db_url = os.environ.get("DATABASE_URL")
 if not db_url:
-    raise RuntimeError(
-        "DATABASE_URL 환경변수가 필요합니다. backend/.env 또는 shell에 세팅."
-    )
+    raise RuntimeError("DATABASE_URL 환경변수가 필요합니다. backend/.env 또는 shell에 세팅.")
 
 # psycopg v3 드라이버로 강제 (sync). asyncpg URL 이면 변환.
 if db_url.startswith("postgresql+asyncpg://"):

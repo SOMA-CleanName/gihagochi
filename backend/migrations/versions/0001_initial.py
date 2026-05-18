@@ -10,23 +10,24 @@ Phase 1.3 — _workspace/schema/{tables.sql, rls-policies.sql} 를 한 마이그
 - Supabase Postgres 환경. `auth.users` 와 `realtime.broadcast_changes` 가 이미 존재.
 - 로컬 plain Postgres 에서는 broadcast trigger 부분에서 실패할 수 있음 (Realtime 미설치).
 """
+
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers
 revision: str = "0001_initial"
-down_revision: Union[str, Sequence[str], None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # =============================================================================
 # upgrade
 # =============================================================================
+
 
 def upgrade() -> None:
     # -------------------------------------------------------------------------
@@ -723,6 +724,7 @@ def upgrade() -> None:
 # =============================================================================
 # downgrade — 역순으로 정리
 # =============================================================================
+
 
 def downgrade() -> None:
     # 1) broadcast trigger / function

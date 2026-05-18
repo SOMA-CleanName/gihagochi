@@ -60,14 +60,16 @@ jobs:
           if command -v mypy >/dev/null 2>&1; then
             mypy app || echo "::warning::mypy 실패 - blocking 아님"
           fi
-      - name: Test (pytest)
+      - name: Test (pytest, integration 마커 제외)
         env:
           SUPABASE_URL: https://test.supabase.co
           SUPABASE_ANON_KEY: test-anon-key
           SUPABASE_SERVICE_ROLE_KEY: test-service-key
           SUPABASE_JWT_SECRET: test-jwt-secret
           DATABASE_URL: postgresql://test:test@localhost:5432/test
-        run: pytest -x --tb=short
+        # integration 마커는 실제 dev DB 필요 → CI에선 스킵.
+        # 로컬: `pytest -m integration` 또는 마커 옵션 없이 전체 실행.
+        run: pytest -x --tb=short -m "not integration"
 
   mobile:
     needs: detect-changes

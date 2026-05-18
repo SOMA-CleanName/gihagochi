@@ -17,15 +17,9 @@ class NotificationPref(Base):
     user_id: Mapped[UUID] = mapped_column(
         Uuid, ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True
     )
-    new_message_enabled: Mapped[bool] = mapped_column(
-        nullable=False, server_default=text("TRUE")
-    )
-    idol_reply_enabled: Mapped[bool] = mapped_column(
-        nullable=False, server_default=text("TRUE")
-    )
-    marketing_enabled: Mapped[bool] = mapped_column(
-        nullable=False, server_default=text("FALSE")
-    )
+    new_message_enabled: Mapped[bool] = mapped_column(nullable=False, server_default=text("TRUE"))
+    idol_reply_enabled: Mapped[bool] = mapped_column(nullable=False, server_default=text("TRUE"))
+    marketing_enabled: Mapped[bool] = mapped_column(nullable=False, server_default=text("FALSE"))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("NOW()")
     )

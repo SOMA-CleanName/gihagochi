@@ -43,8 +43,13 @@ async def test_example_returns_profile(
     assert body["user_id"] == str(user_id)
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_service_raises_when_profile_missing(session: AsyncSession) -> None:
-    """서비스 레이어 단위 테스트 — 프로필 없으면 NotFoundError."""
+    """서비스 레이어 단위 테스트 — 프로필 없으면 NotFoundError.
+
+    `session` 픽스처가 실제 dev DB 연결 필요 → integration 마커.
+    CI에선 스킵, 로컬에선 `pytest -m integration`으로 실행.
+    """
     with pytest.raises(NotFoundError):
         await get_example(session, uuid4())
