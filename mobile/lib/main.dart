@@ -42,7 +42,12 @@ Future<void> main() async {
   );
 
   // 푸시 — features/notification에서 TokenRegistrar 주입 가능.
-  await PushService.init();
+  // 시뮬레이터/Push entitlement 미설정 환경에선 APNS 토큰 부재로 throw — graceful degrade.
+  try {
+    await PushService.init();
+  } catch (e) {
+    debugPrint('[main] PushService init 실패 (FCM 토큰 비활성): $e');
+  }
 
   // Sentry로 감싼 runApp. DSN 없으면 init 자체가 no-op.
   await SentryFlutter.init(
