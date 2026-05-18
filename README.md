@@ -37,30 +37,24 @@ gihagochi/
 
 ---
 
-## 셋업
+## 시작
 
-각 폴더는 자체 셋업 가이드를 둠.
+**처음 클론한 사람**: [`docs/ONBOARDING.md`](./docs/ONBOARDING.md) — 사전 설치 / 시크릿 받기 / 셋업 / 첫 실행 검증을 한 문서로.
 
-- 백엔드: [`backend/README.md`](./backend/README.md) *(예정)*
-- 모바일: [`mobile/README.md`](./mobile/README.md) *(예정)*
-- 관리자 웹: [`admin/README.md`](./admin/README.md) *(예정)*
-
-루트 공통 도구:
-
-```bash
-# pre-commit 훅 활성화 (커밋 전 자동 포맷/린트)
-pip install pre-commit
-pre-commit install
-```
+폴더별 세부 가이드:
+- 백엔드: [`backend/README.md`](./backend/README.md)
+- 모바일: [`mobile/README.md`](./mobile/README.md)
+- 관리자 웹: [`admin/README.md`](./admin/README.md)
 
 ---
 
 ## 문서
 
+- [`docs/ONBOARDING.md`](./docs/ONBOARDING.md) — 새 팀원 첫 셋업
+- [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md) — 피처 작업 라이프사이클 / PR 흐름
 - [`docs/SCHEMA.md`](./docs/SCHEMA.md) — DB 스키마 + RLS 정책 + 테이블 owner
-- [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md) — 피처 작업 라이프사이클
 - [`docs/FEATURES.md`](./docs/FEATURES.md) — 38개 피처 → 작업 단위 매핑
-- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — 시스템 구조, 핵심 결정 *(Phase 5 예정)*
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — 시스템 구조, 핵심 결정
 
 ---
 
