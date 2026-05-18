@@ -44,10 +44,12 @@ dependencies:
   image_cropper: ^8.0.2
 
   # ── 음성 (녹음 + 재생) ────────────────────────
-  # 음성 메시지 재생용으로는 audioplayers 단독으로 충분.
-  # 스트리밍/큐 같은 고급 기능 필요해지면 just_audio 추가.
-  record: ^5.2.0
-  audioplayers: ^6.1.0
+  # F-019/F-020 음성 메시지(P1)는 추후. 1차 출시 필수 아님.
+  # record 5.2.1이 record_linux: ^0.7.x를 허용해서 0.7.2(startStream 미구현)가
+  # 선택되는 transitive dep 충돌로 Android 빌드 자체가 깨졌음.
+  # 작업 재개 시 record 최신 버전 + record_linux 호환성 확인 후 다시 추가.
+  # record: ^5.2.0
+  # audioplayers: ^6.1.0
 
   # ── 모니터링 ──────────────────────────────────
   sentry_flutter: ^8.11.0
