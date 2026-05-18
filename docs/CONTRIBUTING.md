@@ -157,11 +157,13 @@ PR 템플릿 체크리스트:
 
 | 도구 | 자동 로드 여부 | 본인이 할 일 |
 |---|---|---|
-| Claude Code | ✓ (`CLAUDE.md` → `@AGENTS.md`) | 없음 |
-| Codex (CLI / Cloud) | ✓ (`AGENTS.md` 직접) | 없음 |
+| Claude Code | ✓ 루트에서 띄우면 (`CLAUDE.md` → `@AGENTS.md`) | 서브폴더(`backend/`, `mobile/`, `admin/`)에서 직접 띄우면 해당 폴더 `AGENTS.md` 수동 첨부 |
+| Codex (CLI / Cloud) | ✓ (`AGENTS.md` 직접 — 루트 + 서브폴더 모두) | 없음 |
 | Cursor | 부분 (`.cursor/rules/` 설정 시) | 미설정 시 `AGENTS.md` 수동 첨부 |
 | Copilot | 부분 (`.github/copilot-instructions.md` 설정 시) | 미설정 시 수동 첨부 |
 | 기타 (Aider, Windsurf, Cline 등) | 도구마다 다름 | 세션 시작 시 `AGENTS.md` 시스템 프롬프트로 첨부 |
+
+> stack-specific 룰은 **`AGENTS.md` 표준 하나로 통일**. `CLAUDE.md`는 루트에만 두고(Claude Code 자동 로드 진입점), 그 안에서 `@AGENTS.md`로 도구 중립 룰로 위임.
 
 **룰 위반 PR은 리뷰에서 reject** — CODEOWNERS와 CI 가드가 일부 잡지만, 룰을 알면 PR 만들기 전에 막힘.
 
