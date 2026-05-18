@@ -95,7 +95,7 @@
 
 ### 1.6 DB 기반
 
-- [ ] `docs/SCHEMA.md` 테이블별 owner 명시 (✅ 완료, 검증 대기)
+- [x] `docs/SCHEMA.md` 테이블별 owner 명시 (✅ 완료, 검증 대기)
 - [ ] `backend/migrations/versions/0001_initial.py` Supabase dev에 적용 + RLS 검증
 - [ ] `0001_initial.py`이 만든 ENUM/테이블/RLS가 `SCHEMA.md`와 일치하는지 대조
 
