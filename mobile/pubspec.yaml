@@ -46,7 +46,7 @@ dependencies:
   # ── 음성 (녹음 + 재생) ────────────────────────
   # 음성 메시지 재생용으로는 audioplayers 단독으로 충분.
   # 스트리밍/큐 같은 고급 기능 필요해지면 just_audio 추가.
-  record: ^5.2.0
+  record: ^6.2.0
   audioplayers: ^6.1.0
 
   # ── 모니터링 ──────────────────────────────────
@@ -78,6 +78,7 @@ flutter:
   uses-material-design: true
 
   # assets / fonts는 화면 작업 시 추가
+  assets:
+    - .env
   # assets:
   #   - assets/images/
-  #   - .env
