@@ -157,11 +157,13 @@ PR 템플릿 체크리스트:
 
 | 도구 | 자동 로드 여부 | 본인이 할 일 |
 |---|---|---|
-| Claude Code | ✓ (`CLAUDE.md` → `@AGENTS.md`) | 없음 |
-| Codex (CLI / Cloud) | ✓ (`AGENTS.md` 직접) | 없음 |
+| Claude Code | ✓ 루트에서 띄우면 (`CLAUDE.md` → `@AGENTS.md`) | 서브폴더(`backend/`, `mobile/`, `admin/`)에서 직접 띄우면 해당 폴더 `AGENTS.md` 수동 첨부 |
+| Codex (CLI / Cloud) | ✓ (`AGENTS.md` 직접 — 루트 + 서브폴더 모두) | 없음 |
 | Cursor | 부분 (`.cursor/rules/` 설정 시) | 미설정 시 `AGENTS.md` 수동 첨부 |
 | Copilot | 부분 (`.github/copilot-instructions.md` 설정 시) | 미설정 시 수동 첨부 |
 | 기타 (Aider, Windsurf, Cline 등) | 도구마다 다름 | 세션 시작 시 `AGENTS.md` 시스템 프롬프트로 첨부 |
+
+> stack-specific 룰은 **`AGENTS.md` 표준 하나로 통일**. `CLAUDE.md`는 루트에만 두고(Claude Code 자동 로드 진입점), 그 안에서 `@AGENTS.md`로 도구 중립 룰로 위임.
 
 **룰 위반 PR은 리뷰에서 reject** — CODEOWNERS와 CI 가드가 일부 잡지만, 룰을 알면 PR 만들기 전에 막힘.
 
@@ -203,14 +205,57 @@ admin/package.json
 
 ---
 
-## 5. 충돌 처리
+## 5. 브랜치 전략 + 충돌 처리
+
+### 5.1 브랜치 prefix 컨벤션
+
+PR 영향 범위는 **브랜치 이름만 보고도 알 수 있어야** 함.
+
+| prefix | 영역 | 누가 만드나 |
+|---|---|---|
+| `feature/<폴더>` | `features/<폴더>/` + `feature-specs/<폴더>.md` | 컨트리뷰터 (피처 작업 단위) |
+| `core/<설명>` | `backend/app/core/`, `mobile/lib/core/` | 메인 빌더 |
+| `shared/<설명>` | `backend/app/shared/` + 동반 migration 1개 | 메인 빌더 |
+| `admin-core/<설명>` | `admin/lib/`, `admin/middleware.ts`, `admin/proxy.ts` | 메인 빌더 |
+| `infra/<설명>` | `.github/`, `pyproject.toml`, `pubspec.yaml`, `package.json` | 메인 빌더 |
+| `docs/<설명>` | `docs/` | 메인 빌더 (단, 작은 정정은 컨트리뷰터 PR도 OK) |
+| `fix/<설명>` | 영역 무관, 긴급 버그 픽스 | 누구든 (CODEOWNERS가 리뷰 라우팅) |
+
+### 5.2 핵심 원칙 — **분리 PR + 선 머지 + rebase**
+
+피처 작업 중 메인 빌더 영역 변경이 필요해지면 한 PR에 묶지 말 것. 항상:
+
+```
+1. 컨트리뷰터: feature 브랜치 작업 중 인지 → feature-specs/<폴더>.md에 기록 + 메인 빌더에게 핑
+2. 메인 빌더: <prefix>/<설명> 별도 브랜치에서 변경 → PR → main 머지
+3. 컨트리뷰터: git fetch && git rebase origin/main → 본 작업 재개
+```
+
+가장 흔한 케이스: **migration 동반 피처**
+
+```
+PR #N   shared/add-message-read-count   (메인 빌더)
+        ├─ migrations/0005_...
+        └─ shared/models/message.py
+        → main 머지
+
+PR #N+1 feature/chat-message            (컨트리뷰터, rebase 후)
+        └─ features/chat_message/...
+        (migration 없음 — 이미 main에 있음)
+```
+
+이 흐름은 **1 PR = 1 migration** 룰 + **메인 빌더 영역 격리** 둘 다 동시에 만족.
+
+### 5.3 충돌 / 막힘 시 처리
 
 | 상황 | 처리 |
 |---|---|
+| 피처 작업 중 `core/` 새 함수 필요 | `feature-specs/<폴더>.md` Open Questions에 적음 → 메인 빌더 핑 → `core/<설명>` 별도 PR → 머지 → rebase |
+| 피처가 DB 컬럼 추가 필요 | 동일 흐름, `shared/<설명>` 브랜치로 migration + 모델 선 머지 → rebase 후 피처 PR엔 migration 없음 |
 | 다른 PR과 같은 마이그레이션 번호 충돌 | 늦은 PR이 `alembic merge`로 병합 |
-| 다른 PR과 같은 테이블에 컬럼 추가 | 마이그레이션 분리하면 OK |
-| `core/`에 새 함수 필요 | 메인 빌더에게 핑 → 메인 빌더가 추가 → rebase |
+| `core/<설명>` 머지 후 rebase 시 충돌 | 자체 판단 금지 — 메인 빌더에게 충돌 파일 보내고 도움 요청 |
 | 같은 `features/` 폴더 두 사람 작업 | 작업 단위 묶기 실패 — 한 사람에게 몰기 (메인 빌더와 협의) |
+| 긴급 버그 (운영 영향) | `fix/<설명>` 브랜치, 영역 무관. PR 리뷰는 빠르게 |
 
 ---
 
