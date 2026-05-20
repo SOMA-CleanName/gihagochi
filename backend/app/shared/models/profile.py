@@ -21,12 +21,22 @@ class Profile(Base):
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     role: Mapped[UserRole] = mapped_column(
-        SAEnum(UserRole, name="user_role", create_type=False),
+        SAEnum(
+            UserRole,
+            name="user_role",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         server_default=text("'fan'::user_role"),
     )
     status: Mapped[UserStatus] = mapped_column(
-        SAEnum(UserStatus, name="user_status", create_type=False),
+        SAEnum(
+            UserStatus,
+            name="user_status",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         server_default=text("'pending'::user_status"),
     )

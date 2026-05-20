@@ -29,7 +29,13 @@ class Message(Base):
     # 멱등성용 클라 생성 ID. (sender_id, client_message_id) unique partial index.
     client_message_id: Mapped[UUID | None] = mapped_column(Uuid)
     type: Mapped[MessageType] = mapped_column(
-        SAEnum(MessageType, name="message_type", create_type=False), nullable=False
+        SAEnum(
+            MessageType,
+            name="message_type",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
     )
     sender_id: Mapped[UUID] = mapped_column(
         Uuid, ForeignKey("profiles.id", ondelete="RESTRICT"), nullable=False
@@ -46,7 +52,12 @@ class Message(Base):
     )
     content: Mapped[str | None] = mapped_column()
     media_type: Mapped[MediaType] = mapped_column(
-        SAEnum(MediaType, name="media_type", create_type=False),
+        SAEnum(
+            MediaType,
+            name="media_type",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         server_default=text("'text'::media_type"),
     )
