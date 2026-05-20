@@ -7,7 +7,7 @@
 
 ## 개요
 
-팬/아이돌이 소셜 로그인(Google/Apple/Kakao/Naver)으로 가입·로그인하고, 옵션 C(가입 화면에서 팬/아이돌 선택) 흐름으로 사용자 타입을 분기한다. 아이돌은 가입 시 `idol_signup_applications`에 신청 row가 함께 생성되고, 관리자 승인 후 활성화된다. Supabase Auth + RLS를 기반으로 한다.
+팬/아이돌이 Google 소셜 로그인으로 가입·로그인하고, 옵션 C(가입 화면에서 팬/아이돌 선택) 흐름으로 사용자 타입을 분기한다. 아이돌은 가입 시 `idol_signup_applications`에 신청 row가 함께 생성되고, 관리자 승인 후 활성화된다. Supabase Auth + RLS를 기반으로 한다. (Apple/Kakao/Naver는 1차 출시 제외, feature-specs/auth.md 참조)
 
 관련 화면 / 사용자: `docs/FEATURES.md` §3.1 (F-001~F-006).
 
@@ -142,8 +142,8 @@ async def has_pending_idol_application(
 - 401/500 없이 200 응답
 
 ### 시나리오 2: 아이돌 가입 + 승인 대기
-1. "아이돌로 가입" 선택 → tos + privacy 체크 → Apple 버튼 탭
-2. Apple OAuth 완료 후 display_name, stage_name, bio 입력
+1. "아이돌로 가입" 선택 → tos + privacy 체크 → Google 버튼 탭
+2. Google OAuth 완료 후 display_name, stage_name, bio 입력
 3. `POST /auth/signup` 호출 (as=idol)
 4. "승인 대기 중" 화면 진입 (신청일 표시)
 

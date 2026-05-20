@@ -9,9 +9,9 @@
 
 ## 개요
 
-옵션 C: 가입 화면에서 "팬으로 가입" vs "아이돌로 가입" 선택. 약관 체크박스 통과 후 3개 소셜 제공자(Google/Apple/Kakao) 중 선택. **3개 모두 Supabase native OAuth** → `supabase.auth.signInWithOAuth({ provider })` 단일 호출로 처리 (mobile native SDK 추가 X). OAuth 콜백 후 backend `POST /auth/signup` 호출로 프로필 + (선택)아이돌 신청 + 약관 동의를 트랜잭션 생성. 로그인은 동일 소셜 계정 재선택 → `GET /auth/me`로 프로필 조회 후 사용자 타입에 따라 진입 화면 분기.
+옵션 C: 가입 화면에서 "팬으로 가입" vs "아이돌로 가입" 선택. 약관 체크박스 통과 후 **Google로 시작** 버튼 1개. Supabase native OAuth → `supabase.auth.signInWithOAuth({ provider: 'google' })` 호출로 처리 (mobile native SDK 추가 X). OAuth 콜백 후 backend `POST /auth/signup` 호출로 프로필 + (선택)아이돌 신청 + 약관 동의를 트랜잭션 생성. 로그인은 Google 계정 재선택 → `GET /auth/me`로 프로필 조회 후 사용자 타입에 따라 진입 화면 분기.
 
-> Naver는 1차 출시 제외 (P2 재검토). 추가 시점에 별도 PR.
+> Apple/Kakao/Naver는 1차 출시 제외. 차후 Kakao 등 추가 시 Apple Sign in with Apple 동시 추가 필요 (App Store 가이드라인 4.8).
 
 관련 화면 / 사용자 / 우선순위: `docs/FEATURES.md` §3.1 (F-001~F-006).
 
@@ -21,7 +21,7 @@
 
 | Route | 화면 | 진입 조건 |
 |---|---|---|
-| `/auth/landing` | 가입/로그인 진입 (소셜 3개 + 가입/로그인 토글) | 비로그인 상태 |
+| `/auth/landing` | 가입/로그인 진입 ("Google로 시작" 버튼 + 가입/로그인 토글) | 비로그인 상태 |
 | `/auth/signup/role` | 가입 타입 선택 ("팬으로 가입" / "아이돌로 가입") | landing에서 "가입" 선택 후 |
 | `/auth/signup/terms` | 약관 동의 체크박스 (tos/privacy 필수, marketing 선택) | 가입 타입 선택 후 |
 | `/auth/signup/profile` | display_name 입력 (+ 아이돌이면 stage_name, bio) | 약관 동의 + OAuth 콜백 후 |
@@ -42,7 +42,7 @@
 - **쓰기**: 백엔드 API — `POST /auth/signup`, `POST /auth/logout`
 - **Realtime 구독**: 없음
 - **Supabase 직결**:
-  - `supabase.auth.signInWithOAuth({ provider: 'google' | 'apple' | 'kakao' })` — 3개 모두 동일 API
+  - `supabase.auth.signInWithOAuth({ provider: 'google' })`
   - `supabase.auth.signOut()` — 로그아웃 시 함께 호출
 
 ---
@@ -54,11 +54,12 @@
 - `core.router.app_router` — route 등록 (1줄 import 추가만, 본체 수정 X)
 - `core.widgets.*` — 공용 위젯 (버튼/체크박스/입력 폼)
 
-> Google/Apple/Kakao 모두 Supabase native OAuth라 `pubspec.yaml` 변경 불필요 (인지 트리거 #2 해소).
+> Google은 Supabase native OAuth라 `pubspec.yaml` 변경 불필요 (인지 트리거 #2 해소).
 >
 > 메인 빌더 추가 작업 (Supabase Studio 측):
-> - Authentication → Providers에서 Google/Apple/Kakao 활성 + 각 client_id/secret 입력
-> - 각 OAuth 앱 (Google Cloud Console / Apple Developer / Kakao Developers)에 콜백 URL `https://<project-ref>.supabase.co/auth/v1/callback` 등록
+> - Authentication → Providers에서 Google 활성 + client_id/secret 입력
+> - Google Cloud Console → APIs & Services → Credentials에서 OAuth 2.0 Client ID 발급
+> - 콜백 URL `https://<project-ref>.supabase.co/auth/v1/callback`을 OAuth 앱 설정에 등록
 
 ---
 
@@ -118,20 +119,13 @@ Future<void> forceSignOut();
 3. Google OAuth 완료 → display_name 입력 → "완료"
 4. `/discover` 진입 확인
 
-### 시나리오 2: 아이돌 가입 (Apple) + 승인 대기
+### 시나리오 2: 아이돌 가입 (Google) + 승인 대기
 1. `/auth/landing` → "가입" → "아이돌로 가입"
-2. tos/privacy 체크 → "Apple로 시작"
-3. Apple OAuth 완료 → display_name + stage_name + bio 입력 → "완료"
+2. tos/privacy 체크 → "Google로 시작"
+3. Google OAuth 완료 → display_name + stage_name + bio 입력 → "완료"
 4. `/auth/idol-pending` 진입 → 신청일 표시 확인
 5. 백엔드에서 강제로 `idol_signup_applications.status='rejected', rejection_reason='샘플 사유'` UPDATE
 6. 앱 재시작 → `/auth/idol-pending` 거절 사유 표시 + "재신청" 버튼 확인
-
-### 시나리오 3: Kakao 가입
-1. `/auth/landing` → "가입" → "팬으로 가입" → 약관 체크
-2. "Kakao로 시작" 탭 → `signInWithOAuth({provider: 'kakao'})` → Kakao 인증 페이지 (in-app browser 또는 redirect)
-3. 인증 완료 → 앱 복귀 → display_name 입력 → `/discover` 진입
-
-> Google/Apple/Kakao 모두 동일한 `signInWithOAuth` 경로. 시나리오 1(Google)/2(Apple) 흐름과 본 시나리오는 provider 인자만 다름.
 
 ### 시나리오 4: 로그아웃 + 자동 로그인 차단
 1. 로그인 상태 → 마이페이지 → 로그아웃 탭
