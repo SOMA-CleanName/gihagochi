@@ -73,6 +73,26 @@ def _decode_jwt(token: str) -> dict:
 # ============================================================
 
 
+async def get_supabase_user_id(
+    authorization: Annotated[str | None, Header()] = None,
+) -> UUID:
+    """Supabase JWT만 검증하고 sub claim의 UUID 반환. profiles 조회 X.
+
+    `get_current_user`와 달리 profiles 미존재여도 401 안 던짐.
+    가입 직후 profile 생성 전 시점(`/auth/signup` 등)에서만 사용.
+    profile이 이미 있는 일반 호출은 `get_current_user` / `AuthedUser` 사용.
+
+    실패:
+    - 401 UnauthorizedError: 토큰 누락/만료/무효, sub claim 부재
+    """
+    token = _extract_bearer(authorization)
+    payload = _decode_jwt(token)
+    try:
+        return UUID(payload["sub"])
+    except (KeyError, ValueError) as e:
+        raise UnauthorizedError("토큰에 유효한 sub claim이 없습니다.") from e
+
+
 async def get_current_user(
     session: Annotated[AsyncSession, Depends(get_session)],
     authorization: Annotated[str | None, Header()] = None,
@@ -144,3 +164,6 @@ FanUser = Annotated[CurrentUser, Depends(require_role(UserRole.FAN))]
 
 AuthedUser = Annotated[CurrentUser, Depends(get_current_user)]
 """인증만 필요한 경우. 권한 분기 없음."""
+
+PendingAuthUser = Annotated[UUID, Depends(get_supabase_user_id)]
+"""profile 생성 전 신규 가입자. JWT만 검증, profiles 조회 X. F-001 가입 전용."""
