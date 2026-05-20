@@ -9,7 +9,9 @@
 
 ## 개요
 
-옵션 C: 가입 화면에서 "팬으로 가입" vs "아이돌로 가입" 선택. 약관 체크박스 통과 후 4개 소셜 제공자(Google/Apple/Kakao/Naver) 중 선택. OAuth 콜백 후 backend `POST /auth/signup` 호출로 프로필 + (선택)아이돌 신청 + 약관 동의를 트랜잭션 생성. 로그인은 동일 소셜 계정 재선택 → `GET /auth/me`로 프로필 조회 후 사용자 타입에 따라 진입 화면 분기.
+옵션 C: 가입 화면에서 "팬으로 가입" vs "아이돌로 가입" 선택. 약관 체크박스 통과 후 3개 소셜 제공자(Google/Apple/Kakao) 중 선택. **3개 모두 Supabase native OAuth** → `supabase.auth.signInWithOAuth({ provider })` 단일 호출로 처리 (mobile native SDK 추가 X). OAuth 콜백 후 backend `POST /auth/signup` 호출로 프로필 + (선택)아이돌 신청 + 약관 동의를 트랜잭션 생성. 로그인은 동일 소셜 계정 재선택 → `GET /auth/me`로 프로필 조회 후 사용자 타입에 따라 진입 화면 분기.
+
+> Naver는 1차 출시 제외 (P2 재검토). 추가 시점에 별도 PR.
 
 관련 화면 / 사용자 / 우선순위: `docs/FEATURES.md` §3.1 (F-001~F-006).
 
@@ -19,7 +21,7 @@
 
 | Route | 화면 | 진입 조건 |
 |---|---|---|
-| `/auth/landing` | 가입/로그인 진입 (소셜 4개 + 가입/로그인 토글) | 비로그인 상태 |
+| `/auth/landing` | 가입/로그인 진입 (소셜 3개 + 가입/로그인 토글) | 비로그인 상태 |
 | `/auth/signup/role` | 가입 타입 선택 ("팬으로 가입" / "아이돌로 가입") | landing에서 "가입" 선택 후 |
 | `/auth/signup/terms` | 약관 동의 체크박스 (tos/privacy 필수, marketing 선택) | 가입 타입 선택 후 |
 | `/auth/signup/profile` | display_name 입력 (+ 아이돌이면 stage_name, bio) | 약관 동의 + OAuth 콜백 후 |
@@ -40,8 +42,7 @@
 - **쓰기**: 백엔드 API — `POST /auth/signup`, `POST /auth/logout`
 - **Realtime 구독**: 없음
 - **Supabase 직결**:
-  - `supabase.auth.signInWithOAuth({ provider: 'google' | 'apple' })` — Google/Apple
-  - `supabase.auth.signInWithIdToken({ provider, idToken })` — Kakao/Naver (mobile SDK로 ID token 획득 후)
+  - `supabase.auth.signInWithOAuth({ provider: 'google' | 'apple' | 'kakao' })` — 3개 모두 동일 API
   - `supabase.auth.signOut()` — 로그아웃 시 함께 호출
 
 ---
@@ -53,7 +54,11 @@
 - `core.router.app_router` — route 등록 (1줄 import 추가만, 본체 수정 X)
 - `core.widgets.*` — 공용 위젯 (버튼/체크박스/입력 폼)
 
-> Kakao/Naver는 추가 SDK 의존성 필요 (`kakao_flutter_sdk_user`, `flutter_naver_login` 등). pubspec.yaml은 메인 빌더 영역 — **인지 트리거 발생 시 보고 후 분리 작업 단위로 처리**.
+> Google/Apple/Kakao 모두 Supabase native OAuth라 `pubspec.yaml` 변경 불필요 (인지 트리거 #2 해소).
+>
+> 메인 빌더 추가 작업 (Supabase Studio 측):
+> - Authentication → Providers에서 Google/Apple/Kakao 활성 + 각 client_id/secret 입력
+> - 각 OAuth 앱 (Google Cloud Console / Apple Developer / Kakao Developers)에 콜백 URL `https://<project-ref>.supabase.co/auth/v1/callback` 등록
 
 ---
 
@@ -73,7 +78,7 @@
 
 - 이미 다른 소셜로 가입된 이메일로 새 제공자 가입 시도 → Supabase는 별도 user로 생성. `POST /auth/signup`은 정상 진행. (정책 재검토는 차후)
 - OAuth 도중 사용자 취소/뒤로가기 → 가입 화면으로 복귀, 토스트 표시.
-- Kakao/Naver SDK 초기화 실패 (네이티브 키 누락 등) → 해당 버튼만 disabled + 에러 보고.
+- OAuth provider 자체 오류 (Supabase Dashboard 미설정, 잘못된 client_id 등) → 해당 버튼은 표시되지만 OAuth 호출 시 supabase_flutter가 에러 throw → 에러 메시지 표시 + Sentry 보고.
 - 약관 version mismatch (서버가 v2인데 클라가 v1 캐시) → 400 응답 → 동의 화면으로 강제 복귀, 새 version 재표시.
 - 아이돌 신청 후 재로그인 → `/auth/idol-pending` 진입. 단 `idol_signup_applications` 가장 최신 row의 status로 판단:
   - pending → "심사 중" 메시지
@@ -121,11 +126,12 @@ Future<void> forceSignOut();
 5. 백엔드에서 강제로 `idol_signup_applications.status='rejected', rejection_reason='샘플 사유'` UPDATE
 6. 앱 재시작 → `/auth/idol-pending` 거절 사유 표시 + "재신청" 버튼 확인
 
-### 시나리오 3: Kakao/Naver 가입
+### 시나리오 3: Kakao 가입
 1. `/auth/landing` → "가입" → "팬으로 가입" → 약관 체크
-2. "Kakao로 시작" 탭 → Kakao SDK 로그인 → ID token 획득 → `signInWithIdToken` 호출
-3. display_name 입력 → `/discover` 진입
-4. Naver도 동일 흐름
+2. "Kakao로 시작" 탭 → `signInWithOAuth({provider: 'kakao'})` → Kakao 인증 페이지 (in-app browser 또는 redirect)
+3. 인증 완료 → 앱 복귀 → display_name 입력 → `/discover` 진입
+
+> Google/Apple/Kakao 모두 동일한 `signInWithOAuth` 경로. 시나리오 1(Google)/2(Apple) 흐름과 본 시나리오는 provider 인자만 다름.
 
 ### 시나리오 4: 로그아웃 + 자동 로그인 차단
 1. 로그인 상태 → 마이페이지 → 로그아웃 탭

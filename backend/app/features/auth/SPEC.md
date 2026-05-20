@@ -17,7 +17,7 @@
 
 | Method | Path | 설명 | 인증 |
 |---|---|---|---|
-| POST | `/auth/signup` | 소셜 로그인 후 프로필 + (선택)아이돌 신청 + 약관 동의를 한 번에 생성 | Supabase JWT (방금 인증된 신규 사용자) |
+| POST | `/auth/signup` | 소셜 로그인 후 프로필 + (선택)아이돌 신청 + 약관 동의를 한 번에 생성 | `PendingAuthUser` (Supabase JWT만 검증, profile 없어도 OK — 별도 PR로 core.auth에 추가됨) |
 | GET  | `/auth/me` | 현재 사용자의 profiles + (있으면) idol_signup_applications 최신 상태 | AuthedUser |
 | POST | `/auth/logout` | 서버측 토큰 무효화 트리거 (Supabase 세션 종료. 클라이언트가 호출) | AuthedUser |
 | GET  | `/auth/terms/current` | 현재 활성 약관 version 목록 (tos / privacy / marketing) | 비인증 OK |

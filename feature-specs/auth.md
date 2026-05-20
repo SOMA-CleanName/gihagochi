@@ -32,9 +32,10 @@
 - `2026-05-20`: **profiles 스키마는 0001_initial 그대로 사용** — `role` ENUM('fan'/'idol'/'admin'), `status` ENUM('pending'/'active'/'suspended'), `display_name`, `avatar_url`. 추가 컬럼 불필요. (미정 #5 해결)
 - `2026-05-20`: **아이돌 신청은 `idol_signup_applications` 테이블로 별도 트랙** — DB가 이미 분리되어 있어 "일단 팬 가입 → 아이돌 신청 별도 화면" UX가 자연스러움. (미정 #2 옵션 B/C로 수렴 — 세부는 아래)
 - `2026-05-20`: **약관 동의는 `terms_agreements` 테이블에 version별로 기록**. 가입 플로우에 동의 단계 필수. `agreement_type` ENUM = `'tos'`, `'privacy'`, `'marketing'`. tos/privacy 필수, marketing 선택. (미정 #4 부분 해결, 노출 위치는 UX 결정)
-- `2026-05-20`: **소셜 제공자 = Google + Apple + Kakao + Naver 4개**.
-  - Google/Apple: Supabase Auth 기본 OAuth provider 사용
-  - Kakao/Naver: Supabase 미지원 → mobile SDK로 ID token 받고 `supabase.auth.signInWithIdToken()` 또는 백엔드에서 토큰 검증 후 Supabase user 발급 (구현 시점에 어느 경로 갈지 결정. 후자면 메인 빌더 영역 영향 가능 → 인지 트리거 가능성)
+- `2026-05-20`: **소셜 제공자 = Google + Apple + Kakao 3개** (1차 출시). Naver는 P2 재검토 항목으로 보류.
+  - Google/Apple/Kakao: **모두 Supabase Auth가 native OAuth provider로 지원** (https://supabase.com/docs/guides/auth/social-login/auth-kakao 확인). `supabase.auth.signInWithOAuth({ provider })` 단일 API로 처리.
+  - 결과: **mobile native SDK 추가 불필요**. 인지 트리거 #2(pubspec.yaml 변경) 자동 해소.
+  - 메인 빌더 작업: Supabase Studio → Authentication → Providers에서 Google/Apple/Kakao 활성 + 각 client_id/secret 입력 (각 Developer Portal에서 발급). 콜백 URL `https://<project-ref>.supabase.co/auth/v1/callback`을 각 OAuth 앱 설정에 등록.
 - `2026-05-20`: **사용자 타입 분기 = 옵션 C** (가입 화면에서 "팬으로 가입" vs "아이돌로 가입" 선택)
   - 일반(팬) 가입: profiles INSERT (`role='fan', status='active'`) — 즉시 활성
   - 아이돌 가입: profiles INSERT (`role='fan', status='active'`) + idol_signup_applications INSERT (`status='pending'`) → 승인 전까지 팬 기능은 사용 가능, 아이돌 기능만 잠금. 승인 시 `profiles.role='idol'` UPDATE + `idol_profiles` INSERT.
@@ -47,10 +48,7 @@
 
 남은 결정 — 구현 시점 또는 다른 피처 작업 시 정제.
 
-1. **Kakao/Naver OAuth 구현 경로** (Supabase 기본 미지원)
-   - 경로 A: mobile SDK로 ID token 획득 → `supabase.auth.signInWithIdToken(provider, idToken)` (Supabase가 ID token만 검증)
-   - 경로 B: 백엔드가 직접 Kakao/Naver token 검증 + Supabase Admin API로 user 발급 → mobile에 Supabase 세션 토큰 반환 (메인 빌더 영역 영향)
-   - 구현 시점 결정. 경로 A 선호 (메인 빌더 영역 안 건드림).
+1. ~~Kakao/Naver OAuth 구현 경로~~ — **해결**: Kakao는 Supabase native, Naver는 1차 제외 결정 (위 Decisions 참조).
 
 2. **아이돌 신청 거절 사유 표시 UX 디테일**
    - "승인 대기" 화면에서 `rejection_reason` 노출 방식 (전체 텍스트? 요약 + "자세히" 토글?)
