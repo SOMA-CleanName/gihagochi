@@ -23,7 +23,13 @@ class DeviceToken(Base):
         Uuid, ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False
     )
     platform: Mapped[DevicePlatform] = mapped_column(
-        SAEnum(DevicePlatform, name="device_platform", create_type=False), nullable=False
+        SAEnum(
+            DevicePlatform,
+            name="device_platform",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
     )
     token: Mapped[str] = mapped_column(nullable=False, unique=True)
     created_at: Mapped[datetime] = mapped_column(

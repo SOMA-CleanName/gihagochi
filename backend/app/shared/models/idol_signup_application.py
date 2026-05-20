@@ -26,7 +26,12 @@ class IdolSignupApplication(Base):
     bio: Mapped[str | None] = mapped_column()
     application_note: Mapped[str | None] = mapped_column()
     status: Mapped[SignupApplicationStatus] = mapped_column(
-        SAEnum(SignupApplicationStatus, name="signup_application_status", create_type=False),
+        SAEnum(
+            SignupApplicationStatus,
+            name="signup_application_status",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         server_default=text("'pending'::signup_application_status"),
     )

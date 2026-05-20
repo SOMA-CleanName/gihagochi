@@ -26,7 +26,13 @@ class TermsAgreement(Base):
         Uuid, ForeignKey("profiles.id", ondelete="RESTRICT"), nullable=False
     )
     type: Mapped[AgreementType] = mapped_column(
-        SAEnum(AgreementType, name="agreement_type", create_type=False), nullable=False
+        SAEnum(
+            AgreementType,
+            name="agreement_type",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
     )
     version: Mapped[str] = mapped_column(nullable=False)
     agreed_at: Mapped[datetime] = mapped_column(

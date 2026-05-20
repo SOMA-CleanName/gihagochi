@@ -27,12 +27,22 @@ class Report(Base):
     )
     reason: Mapped[str] = mapped_column(nullable=False)
     status: Mapped[ReportStatus] = mapped_column(
-        SAEnum(ReportStatus, name="report_status", create_type=False),
+        SAEnum(
+            ReportStatus,
+            name="report_status",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         server_default=text("'pending'::report_status"),
     )
     resolution_action: Mapped[ReportAction | None] = mapped_column(
-        SAEnum(ReportAction, name="report_action", create_type=False)
+        SAEnum(
+            ReportAction,
+            name="report_action",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        )
     )
     resolution_note: Mapped[str | None] = mapped_column()
     handled_by: Mapped[UUID | None] = mapped_column(
