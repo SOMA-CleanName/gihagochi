@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, dev]
   push:
-    branches: [main]
+    branches: [main, dev]
 
 # 변경 영역만 빌드 — paths-filter로 backend/mobile/admin 별 분기.
 jobs:

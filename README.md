@@ -63,4 +63,6 @@ gihagochi/
 **Vertical slice**. 한 피처는 백엔드 `features/<name>/` + 앱 `features/<name>/` 한 쌍.
 `core/`, `shared/`, DB 스키마는 메인 빌더만 손댐. 새 피처 시작은 `features/_template/` 복사.
 
+**브랜치 모델**: `main`(프로덕션) / `dev`(개발 기본). 모든 작업 브랜치는 `dev`에서 분기 + `dev`로 PR. `main`은 메인 빌더가 release 시점에만 갱신.
+
 상세는 `docs/CONTRIBUTING.md` 참조.
