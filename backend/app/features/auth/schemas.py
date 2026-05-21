@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.shared.enums import SignupApplicationStatus, UserRole, UserStatus
 
-
 # ============================================================
 # /auth/signup — 요청
 # ============================================================

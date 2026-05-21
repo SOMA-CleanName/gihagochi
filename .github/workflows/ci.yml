@@ -87,6 +87,10 @@ jobs:
           cache: true
       - name: Pub get
         run: flutter pub get
+      - name: Create empty .env (gitignored asset placeholder)
+        # pubspec.yaml이 .env를 asset로 선언하고 있어 missing이면 analyze가 warning.
+        # 시크릿은 dart-define으로 주입하므로 CI는 빈 파일이면 충분.
+        run: touch .env
       - name: Code generation (riverpod/freezed/json_serializable)
         run: dart run build_runner build
       - name: Analyze

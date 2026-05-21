@@ -2,6 +2,10 @@
 ///
 /// 백엔드 schemas.py와 wire-compat (snake_case 키 그대로 매핑).
 /// Freezed + json_serializable로 직렬화. 빌드: `dart run build_runner build`.
+//
+// freezed 3 + redirected constructor에 @JsonKey 붙이면 invalid_annotation_target
+// 경고가 뜨지만 generator는 정상 처리. 알려진 freezed 동작이라 파일 단위로 무시.
+// ignore_for_file: invalid_annotation_target
 library;
 
 import 'package:freezed_annotation/freezed_annotation.dart';

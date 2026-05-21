@@ -25,8 +25,7 @@ from app.shared.enums import (
     UserRole,
     UserStatus,
 )
-from app.shared.models import IdolSignupApplication, Profile, TermsAgreement
-
+from app.shared.models import TermsAgreement
 
 # ============================================================
 # 라우터 — 인증 가드
