@@ -73,9 +73,11 @@ def _valid_agreements() -> AgreementsInput:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_signup_fan_creates_profile_and_terms(session: AsyncSession) -> None:
+async def test_signup_fan_creates_profile_and_terms(
+    session: AsyncSession, make_fresh_user
+) -> None:
     """팬 가입 정상 케이스 → profile + 약관 2건(tos, privacy) 생성."""
-    user_id = uuid4()
+    user_id = make_fresh_user()
     req = SignupRequest(
         as_="fan",  # type: ignore[call-arg]
         display_name="테스트팬",
@@ -99,9 +101,11 @@ async def test_signup_fan_creates_profile_and_terms(session: AsyncSession) -> No
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_signup_idol_creates_application(session: AsyncSession) -> None:
+async def test_signup_idol_creates_application(
+    session: AsyncSession, make_fresh_user
+) -> None:
     """아이돌 가입 → profile은 fan/active로 생성 + 신청 row 1개 pending."""
-    user_id = uuid4()
+    user_id = make_fresh_user()
     req = SignupRequest(
         as_="idol",  # type: ignore[call-arg]
         display_name="테스트아이돌",
@@ -136,9 +140,11 @@ async def test_signup_idol_without_stage_name_raises(session: AsyncSession) -> N
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_signup_duplicate_raises_conflict(session: AsyncSession) -> None:
+async def test_signup_duplicate_raises_conflict(
+    session: AsyncSession, make_fresh_user
+) -> None:
     """동일 user_id 두 번째 호출 → ConflictError(409)."""
-    user_id = uuid4()
+    user_id = make_fresh_user()
     req = SignupRequest(
         as_="fan",  # type: ignore[call-arg]
         display_name="중복테스트",
@@ -190,10 +196,10 @@ async def test_signup_version_mismatch_raises(session: AsyncSession) -> None:
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_get_me_returns_profile_with_latest_application(
-    session: AsyncSession,
+    session: AsyncSession, make_fresh_user
 ) -> None:
     """가입 후 get_me는 profile + 최신 idol application 반환."""
-    user_id = uuid4()
+    user_id = make_fresh_user()
     req = SignupRequest(
         as_="idol",  # type: ignore[call-arg]
         display_name="조회테스트",
@@ -212,10 +218,12 @@ async def test_get_me_returns_profile_with_latest_application(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_has_pending_idol_application(session: AsyncSession) -> None:
+async def test_has_pending_idol_application(
+    session: AsyncSession, make_fresh_user
+) -> None:
     """공개 인터페이스 — pending 신청 있을 때 True, 팬만일 때 False."""
-    idol_id = uuid4()
-    fan_id = uuid4()
+    idol_id = make_fresh_user()
+    fan_id = make_fresh_user()
     await service.create_signup(
         session,
         idol_id,
@@ -244,11 +252,11 @@ async def test_has_pending_idol_application(session: AsyncSession) -> None:
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_terms_agreements_marketing_only_when_agreed(
-    session: AsyncSession,
+    session: AsyncSession, make_fresh_user
 ) -> None:
     """marketing.agreed=True일 때만 terms_agreements에 INSERT."""
-    user_with_marketing = uuid4()
-    user_without_marketing = uuid4()
+    user_with_marketing = make_fresh_user()
+    user_without_marketing = make_fresh_user()
     terms = service.get_current_terms()
 
     # marketing=true

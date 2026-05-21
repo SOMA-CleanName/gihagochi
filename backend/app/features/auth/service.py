@@ -71,6 +71,9 @@ async def create_signup(
         display_name=req.display_name,
     )
     session.add(profile)
+    # 후속 INSERT가 profiles.id를 FK로 참조하므로 먼저 flush.
+    # SQLAlchemy는 relationship() 미정의 시 INSERT 순서를 보장 안 함.
+    await session.flush()
 
     # 5. 아이돌이면 신청 row 추가.
     application: IdolSignupApplication | None = None
