@@ -138,7 +138,9 @@ def _validate_agreements(agreements: AgreementsInput) -> None:
     if agreements.privacy.version != expected_privacy:
         raise ValidationError(f"약관 version mismatch: privacy는 {expected_privacy}여야 합니다.")
     if agreements.marketing is not None and agreements.marketing.version != expected_marketing:
-        raise ValidationError(f"약관 version mismatch: marketing은 {expected_marketing}여야 합니다.")
+        raise ValidationError(
+            f"약관 version mismatch: marketing은 {expected_marketing}여야 합니다."
+        )
 
 
 # ============================================================
@@ -193,9 +195,7 @@ def get_current_terms() -> TermsCurrentResponse:
 # ============================================================
 
 
-async def get_profile_summary(
-    session: AsyncSession, user_id: UUID
-) -> ProfileSummary | None:
+async def get_profile_summary(session: AsyncSession, user_id: UUID) -> ProfileSummary | None:
     """프로필 요약. 없으면 None.
 
     다른 피처가 사용자 표시용으로 호출.

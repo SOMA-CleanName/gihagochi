@@ -72,9 +72,7 @@ def _valid_agreements() -> AgreementsInput:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_signup_fan_creates_profile_and_terms(
-    session: AsyncSession, make_fresh_user
-) -> None:
+async def test_signup_fan_creates_profile_and_terms(session: AsyncSession, make_fresh_user) -> None:
     """팬 가입 정상 케이스 → profile + 약관 2건(tos, privacy) 생성."""
     user_id = make_fresh_user()
     req = SignupRequest(
@@ -91,18 +89,14 @@ async def test_signup_fan_creates_profile_and_terms(
     assert result.idol_application is None
 
     # 약관은 tos/privacy 2건 (marketing은 agreed=False라 INSERT 안 됨).
-    rows = await session.scalars(
-        select(TermsAgreement).where(TermsAgreement.user_id == user_id)
-    )
+    rows = await session.scalars(select(TermsAgreement).where(TermsAgreement.user_id == user_id))
     types = {r.type for r in rows}
     assert types == {AgreementType.TOS, AgreementType.PRIVACY}
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_signup_idol_creates_application(
-    session: AsyncSession, make_fresh_user
-) -> None:
+async def test_signup_idol_creates_application(session: AsyncSession, make_fresh_user) -> None:
     """아이돌 가입 → profile은 fan/active로 생성 + 신청 row 1개 pending."""
     user_id = make_fresh_user()
     req = SignupRequest(
@@ -139,9 +133,7 @@ async def test_signup_idol_without_stage_name_raises(session: AsyncSession) -> N
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_signup_duplicate_raises_conflict(
-    session: AsyncSession, make_fresh_user
-) -> None:
+async def test_signup_duplicate_raises_conflict(session: AsyncSession, make_fresh_user) -> None:
     """동일 user_id 두 번째 호출 → ConflictError(409)."""
     user_id = make_fresh_user()
     req = SignupRequest(
@@ -217,9 +209,7 @@ async def test_get_me_returns_profile_with_latest_application(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_has_pending_idol_application(
-    session: AsyncSession, make_fresh_user
-) -> None:
+async def test_has_pending_idol_application(session: AsyncSession, make_fresh_user) -> None:
     """공개 인터페이스 — pending 신청 있을 때 True, 팬만일 때 False."""
     idol_id = make_fresh_user()
     fan_id = make_fresh_user()
@@ -295,9 +285,7 @@ async def test_terms_agreements_marketing_only_when_agreed(
     ).all()
     without_rows = (
         await session.scalars(
-            select(TermsAgreement).where(
-                TermsAgreement.user_id == user_without_marketing
-            )
+            select(TermsAgreement).where(TermsAgreement.user_id == user_without_marketing)
         )
     ).all()
 
