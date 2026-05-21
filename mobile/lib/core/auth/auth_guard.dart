@@ -15,10 +15,6 @@ import 'auth_service.dart';
 /// 보호되지 않는 (인증 없이 접근 가능한) 경로 prefix.
 /// 새 인증 관련 화면 추가 시 여기에 등록.
 const _publicRoutes = <String>{
-  '/login',
-  '/signup',
-  '/terms',
-  '/password-reset',
   '/splash',
   '/auth', // F-001~F-006: /auth/landing, /auth/signup/*, /auth/idol-pending
 };
@@ -29,9 +25,9 @@ String? authGuard(Ref ref, GoRouterState state) {
   final loc = state.matchedLocation;
   final isPublic = _publicRoutes.any((p) => loc.startsWith(p));
 
-  // 미로그인 + 보호 경로 → 로그인으로
+  // 미로그인 + 보호 경로 → auth 랜딩으로
   if (user == null && !isPublic) {
-    return '/login';
+    return '/auth/landing';
   }
 
   // 로그인 + 인증 화면 → 메인으로
