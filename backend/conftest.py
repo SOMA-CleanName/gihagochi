@@ -13,6 +13,8 @@
 - rollback 격리이므로 commit하면 다른 테스트에 영향.
 """
 
+import asyncio
+import sys
 from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -26,6 +28,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.main import app
+
+# Windows + Python 3.14 + asyncpg 조합에서 ProactorEventLoop이 connection
+# teardown 중 "Event loop is closed" race를 일으켜 테스트 격리가 깨짐.
+# SelectorEventLoop은 race가 없음 (asyncpg 공식 권장 조합).
+# import 시점에 정책 변경 — 이후 생성되는 모든 event loop에 적용.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 @pytest_asyncio.fixture
