@@ -77,4 +77,14 @@ class AuthService {
   Future<void> signOut() async {
     await _client.auth.signOut();
   }
+
+  /// Google 소셜 로그인. Supabase Auth가 OAuth flow 전부 처리.
+  /// 콜백 시 onAuthStateChange가 SIGNED_IN 이벤트를 발화.
+  Future<void> signInWithGoogle() async {
+    try {
+      await _client.auth.signInWithOAuth(OAuthProvider.google);
+    } on AuthException catch (e) {
+      throw UnauthorizedError(message: e.message, cause: e);
+    }
+  }
 }
