@@ -81,8 +81,11 @@ cp admin/.env.example admin/.env
 
 ### 2.3 브랜치
 
+**브랜치 모델**: `main`(프로덕션) / `dev`(개발 기본). 모든 작업은 **`dev`에서 분기 + `dev`로 PR**. `main`은 release 시점에만 메인 빌더가 갱신.
+
 ```bash
-git checkout -b feature/<폴더-이름>
+git switch dev && git pull              # 항상 최신 dev에서 시작
+git switch -c feature/<폴더-이름>
 # 예: feature/auth, feature/chat_message
 ```
 
@@ -136,7 +139,7 @@ cp -r mobile/lib/features/_template mobile/lib/features/<내폴더>
 git add backend/app/features/<폴더> mobile/lib/features/<폴더>
 git commit -m "feat(<폴더>): F-XXX 구현"
 git push -u origin feature/<폴더-이름>
-gh pr create
+gh pr create   # base는 default=dev. main 지정 금지.
 ```
 
 PR 템플릿 체크리스트:
@@ -144,12 +147,14 @@ PR 템플릿 체크리스트:
 - [ ] `core/`, `shared/`, 다른 `features/` 수정 없음
 - [ ] 마이그레이션 1개 이하 (있을 경우)
 - [ ] 수동 테스트 시나리오 첨부
+- [ ] **base 브랜치 = `dev`** (main 직접 PR 금지)
 
 ### 3.4 리뷰 / 머지
 
 - 메인 빌더가 인터페이스 / 마이그레이션 영향만 확인
 - 코드 디테일은 안 봄 (격리되어 있으니까)
-- **squash merge**
+- **squash merge → `dev`**
+- `dev` → `main` release는 메인 빌더가 마일스톤 단위로 별도 PR 진행 (컨트리뷰터 무관)
 
 ### 3.5 AI 보조 작업 (바이브 코딩)
 
@@ -227,21 +232,21 @@ PR 영향 범위는 **브랜치 이름만 보고도 알 수 있어야** 함.
 
 ```
 1. 컨트리뷰터: feature 브랜치 작업 중 인지 → feature-specs/<폴더>.md에 기록 + 메인 빌더에게 핑
-2. 메인 빌더: <prefix>/<설명> 별도 브랜치에서 변경 → PR → main 머지
-3. 컨트리뷰터: git fetch && git rebase origin/main → 본 작업 재개
+2. 메인 빌더: <prefix>/<설명> 별도 브랜치에서 변경 → PR (base=dev) → dev 머지
+3. 컨트리뷰터: git fetch && git rebase origin/dev → 본 작업 재개
 ```
 
 가장 흔한 케이스: **migration 동반 피처**
 
 ```
-PR #N   shared/add-message-read-count   (메인 빌더)
+PR #N   shared/add-message-read-count   (메인 빌더, base=dev)
         ├─ migrations/0005_...
         └─ shared/models/message.py
-        → main 머지
+        → dev 머지
 
-PR #N+1 feature/chat-message            (컨트리뷰터, rebase 후)
+PR #N+1 feature/chat-message            (컨트리뷰터, rebase 후, base=dev)
         └─ features/chat_message/...
-        (migration 없음 — 이미 main에 있음)
+        (migration 없음 — 이미 dev에 있음)
 ```
 
 이 흐름은 **1 PR = 1 migration** 룰 + **메인 빌더 영역 격리** 둘 다 동시에 만족.

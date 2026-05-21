@@ -24,6 +24,8 @@
 
 5. **DB 스키마 변경 금지**. `SCHEMA.md` 수정이나 새 마이그레이션 작성 전 사용자 승인 필수.
 
+6. **`main` 직접 작업 금지**. 모든 작업 브랜치(feature/, core/, shared/, infra/, docs/, fix/, admin-core/)는 **`dev`에서 분기 + `dev`로 PR**. `main`은 프로덕션 브랜치 — 메인 빌더가 release 시점에만 dev → main PR로 갱신.
+
 ---
 
 ## 디렉토리 지형
@@ -83,8 +85,9 @@ gihagochi/
 
 1. **사전 검증**
    - `git status` → working tree dirty면 stash 제안 후 중단
-   - 현재 브랜치가 main 아니면 사용자 확인 ("X 브랜치 두고 main으로 전환?")
-2. **main 동기화** — `git switch main && git pull`
+   - 현재 브랜치가 `dev` 아니면 사용자 확인 ("X 브랜치 두고 dev로 전환?")
+   - **`main` 직접 작업 금지** — main은 프로덕션 브랜치, release 시점에만 메인 빌더가 dev → main PR
+2. **dev 동기화** — `git switch dev && git pull`
 3. **폴더명 + F-번호 확정** — [`docs/FEATURES.md`](./docs/FEATURES.md) §2로 매핑. 모호하면 후보 제시
 4. **브랜치 생성** — `git switch -c feature/<폴더-이름>`
 5. **템플릿 복사** — 작업 단위에 포함된 stack만:
@@ -104,7 +107,7 @@ gihagochi/
 1. **자동 셀프 체크** (아래 "머지 전 셀프 체크" 항목 자동 실행):
    - SPEC.md 필수 섹션(API / DB / 비즈니스 룰)이 비어있지 않은가
    - `feature-specs/<폴더>.md`의 **Open Questions** 가 비어있는가 (미정 남기고 머지 X)
-   - `git diff --name-only main...HEAD`가 `features/<폴더>/` + `feature-specs/<폴더>.md`만 포함하는가
+   - `git diff --name-only dev...HEAD`가 `features/<폴더>/` + `feature-specs/<폴더>.md`만 포함하는가
    - 마이그레이션 카운트 ≤ 1 (`backend/migrations/versions/` 신규 파일)
    - 피처 폴더에 테스트 파일 ≥ 1개
    - 위반 항목 있으면 즉시 보고 후 중단 — 사용자가 고치고 트리거 재호출
@@ -115,7 +118,7 @@ gihagochi/
    git add backend/app/features/<폴더> mobile/lib/features/<폴더> feature-specs/<폴더>.md
    git commit -m "feat(<폴더>): F-XXX 구현"
    git push -u origin feature/<폴더-이름>
-   gh pr create   # PR 템플릿 자동 적용
+   gh pr create --base dev   # PR 템플릿 자동 적용. base는 항상 dev (default라 생략 가능)
    ```
 5. **PR URL 보고**
 
@@ -168,20 +171,20 @@ gihagochi/
    git add -A && git commit -m "wip: <간단 설명>"
    git push   # 안전망
    ```
-2. **main 동기화** — `git switch main && git pull`
+2. **dev 동기화** — `git switch dev && git pull`
 3. **분리 브랜치 생성** — `git switch -c <prefix>/<설명>`
 4. **변경 작업** — 해당 영역만. 다른 영역 손대지 말 것.
 5. **셀프 체크** — diff가 해당 prefix 영역만 포함하는가
-6. **사용자 brake** → commit/push/`gh pr create`
-7. **PR 머지 대기** — 머지 후 → rebase 트리거로 자동 진행 안내
+6. **사용자 brake** → commit/push/`gh pr create --base dev`
+7. **PR 머지 대기** (base=dev) — 머지 후 → rebase 트리거로 자동 진행 안내
 
 ### rebase 트리거 — 메인 빌더 영역 PR 머지 후 본 작업 복귀
 
-키워드 예: `"rebase"`, `"main 받아와"`, `"피처로 돌아가기"`
+키워드 예: `"rebase"`, `"dev 받아와"`, `"피처로 돌아가기"`
 
 1. **현재 브랜치 확인** — feature/<폴더>가 아니면 사용자 확인
 2. **WIP 처리** — dirty면 stash
-3. **rebase** — `git fetch origin && git rebase origin/main`
+3. **rebase** — `git fetch origin && git rebase origin/dev`
 4. **충돌 발생 시** — 즉시 중단 보고. 자체 해결 금지 (사용자에게 충돌 파일 + 컨텍스트 제시)
 5. **정상 완료** — `git push --force-with-lease` (사용자 OK 받은 후만)
 6. **WIP 복원** — stash pop (했을 시)
@@ -189,7 +192,7 @@ gihagochi/
 ### 트리거 외 — 작업 중 인터럽트
 
 - `"멈춰"` / `"중단"` → 현재 단계 멈춤. 진행 상황 보고 후 다음 지시 대기
-- `"브랜치 버려"` → 사용자 명시 확인 후 `git switch main && git branch -D feature/<폴더>` (절대 자체 판단 금지)
+- `"브랜치 버려"` → 사용자 명시 확인 후 `git switch dev && git branch -D feature/<폴더>` (절대 자체 판단 금지)
 
 ---
 

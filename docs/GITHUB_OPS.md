@@ -7,22 +7,29 @@
 
 ---
 
+## 0. 브랜치 모델
+
+- **`main`** — 프로덕션. **직접 작업 / 직접 PR 금지**. 메인 빌더가 release 시점에만 dev → main PR로 갱신.
+- **`dev`** — 개발 기본. 모든 작업 브랜치의 **base**. GitHub default branch.
+- **작업 브랜치** — `feature/<폴더>`, `core/<설명>`, `shared/<설명>`, `infra/<설명>`, `docs/<설명>`, `fix/<설명>`, `admin-core/<설명>` — `dev`에서 분기, `dev`로 PR.
+
+---
+
 ## 1. PR 라이프사이클
 
 ### 1.1 작업 시작
 
 ```powershell
-# 최신 main 동기화
-git switch main
+# 최신 dev 동기화
+git switch dev
 git pull
 
-# 브랜치 생성 — 컨벤션 권장
-git switch -c <type>/<설명>
-# type: feat | fix | chore | refactor | test | docs | style
-# 예: feat/auth, fix/login-validation, docs/api-spec
+# 브랜치 생성 — prefix 컨벤션 (CONTRIBUTING.md §5.1 참조)
+git switch -c <prefix>/<설명>
+# 예: feature/auth, fix/login-validation, docs/api-spec
 ```
 
-`main`에는 **직접 push 불가** (branch protection). 항상 별도 브랜치에서 PR.
+`main`은 **직접 push / 직접 PR 금지** (branch protection). `dev`도 직접 push 불가, 항상 별도 브랜치에서 PR.
 
 ### 1.2 작업 + push
 
@@ -50,6 +57,7 @@ remote:      https://github.com/SOMA-CleanName/gihagochi/pull/new/<브랜치>
 **gh CLI**:
 ```powershell
 gh pr create --title "feat(auth): F-001 회원가입" --body "..."
+# base는 default(dev) 자동 적용. main 지정 금지.
 ```
 
 ### 1.4 CI 자동 트리거
@@ -58,19 +66,20 @@ PR 생성/업데이트 즉시 3개 워크플로우 실행 (§2 참조).
 
 머지 가능 조건:
 - [ ] 모든 **Required status checks** 통과
-- [ ] **base branch (main)에 fresh** — outdated 시 "Update branch" 버튼 표시
+- [ ] **base branch (`dev`)에 fresh** — outdated 시 "Update branch" 버튼 표시
 - [ ] (현재 비활성) Required approvals = 0 — 승인 불필요
 
 ### 1.5 머지
 
-CI 그린 → **Squash and merge** 권장:
-- 커밋 메시지 한 줄로 압축됨 → `main` 히스토리 깔끔
+CI 그린 → **Squash and merge → `dev`** 권장:
+- 커밋 메시지 한 줄로 압축됨 → `dev` 히스토리 깔끔
 - "Merge commit"은 `Require linear history` 룰로 비활성
+- `dev` → `main` release는 메인 빌더가 별도 PR로 진행 (마일스톤 단위)
 
 ### 1.6 머지 후 정리
 
 ```powershell
-git switch main
+git switch dev
 git pull
 git branch -d <머지된 브랜치>
 ```
@@ -88,7 +97,7 @@ git push origin --delete <브랜치명>
 
 ### 2.1 `ci.yml` — 빌드 + 테스트
 
-**트리거**: `main` push, `main` 대상 PR
+**트리거**: `main`/`dev` push, `dev`/`main` 대상 PR
 
 **구조**: `detect-changes` job이 paths-filter로 변경 영역 감지 → backend/mobile/admin job 중 변경된 것만 실행.
 
@@ -144,10 +153,10 @@ CI 도는 중. 보통 2~6분. 너무 오래(15분+) 멈춰있으면 GitHub Actio
 대처: backend 영역 변경 없는 PR이라도 빈 commit 하나 더해서 backend job 트리거. 또는 메인 빌더에게 Required check에서 빼달라고 요청.
 
 ### "This branch is out-of-date with the base branch"
-main이 그 사이 업데이트됨. UI의 **"Update branch"** 버튼 또는:
+dev가 그 사이 업데이트됨. UI의 **"Update branch"** 버튼 또는:
 ```powershell
 git switch <브랜치>
-git pull --rebase origin main
+git pull --rebase origin dev
 git push --force-with-lease
 ```
 
@@ -283,6 +292,8 @@ PR이 위 경로를 건드리면 GitHub가 자동으로 메인 빌더를 reviewe
 ### 자동 차단됨
 - `main` 직접 push → `GH013: Repository rule violations found`
 - `main` 강제 push / 삭제 → 동일
+- `dev` 직접 push / 강제 push → 동일
+- 작업 브랜치 → `main` PR (base=main) → 메인 빌더가 reject. base는 항상 `dev`
 - 마이그레이션 2개 이상 한 PR → `migrations.yml`이 fail
 
 ### CI는 안 막지만 룰 위반 (리뷰에서 reject)
