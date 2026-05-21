@@ -50,7 +50,7 @@ dependencies:
   audioplayers: ^6.1.0
 
   # ── 모니터링 ──────────────────────────────────
-  sentry_flutter: ^8.11.0
+  sentry_flutter: ^9.20.0
 
   # ── 환경 변수 ─────────────────────────────────
   # 주: 빌드타임 시크릿은 dart-define 권장. flutter_dotenv는 런타임 설정용.
