@@ -41,10 +41,6 @@ GoRouter appRouter(Ref ref) {
         path: '/',
         builder: (context, state) => const _PlaceholderScreen(label: '홈'),
       ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const _PlaceholderScreen(label: '로그인'),
-      ),
       // 새 피처 추가 시: `...authRoutes,` 처럼 spread
       ...authRoutes,
       // ...chatRoomRoutes,
