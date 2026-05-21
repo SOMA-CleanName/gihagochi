@@ -20,6 +20,7 @@ const _publicRoutes = <String>{
   '/terms',
   '/password-reset',
   '/splash',
+  '/auth', // F-001~F-006: /auth/landing, /auth/signup/*, /auth/idol-pending
 };
 
 /// null 반환 = redirect 없음. 경로 문자열 반환 = 그쪽으로 이동.
