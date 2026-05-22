@@ -15,6 +15,11 @@ import '../error/app_error.dart';
 
 part 'auth_service.g.dart';
 
+/// OAuth 콜백 deep link. mobile/android/app/src/main/AndroidManifest.xml의
+/// intent-filter scheme/host와 동일해야 함. Supabase Dashboard →
+/// Authentication → URL Configuration → Redirect URLs에도 등록 필요.
+const oauthRedirectUrl = 'com.gihagochi.gihagochi://login-callback';
+
 /// Supabase 클라이언트 — main.dart에서 Supabase.initialize() 후 사용 가능.
 @Riverpod(keepAlive: true)
 SupabaseClient supabase(Ref ref) => Supabase.instance.client;
@@ -80,9 +85,14 @@ class AuthService {
 
   /// Google 소셜 로그인. Supabase Auth가 OAuth flow 전부 처리.
   /// 콜백 시 onAuthStateChange가 SIGNED_IN 이벤트를 발화.
+  ///
+  /// redirectTo가 없으면 Supabase가 돌아올 곳을 몰라 "사이트에 접근할 수 없음"으로 죽음.
   Future<void> signInWithGoogle() async {
     try {
-      await _client.auth.signInWithOAuth(OAuthProvider.google);
+      await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: oauthRedirectUrl,
+      );
     } on AuthException catch (e) {
       throw UnauthorizedError(message: e.message, cause: e);
     }

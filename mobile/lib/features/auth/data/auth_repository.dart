@@ -29,11 +29,16 @@ class AuthRepository {
 
   // ── Supabase OAuth ─────────────────────────
 
-  /// Google 소셜 OAuth 시작. Supabase가 in-app browser/redirect 전부 처리.
-  /// 콜백 후 supabase.auth.onAuthStateChange가 SIGNED_IN 이벤트 발화 →
+  /// Google 소셜 OAuth 시작. Supabase가 시스템 브라우저로 Google 로그인 → 동의 →
+  /// `oauthRedirectUrl`(deep link)로 앱 복귀 → onAuthStateChange가 SIGNED_IN 발화 →
   /// 라우터의 refresh 리스너가 redirect 결정.
+  ///
+  /// redirectTo 없으면 Supabase가 콜백 후 갈 곳을 몰라 브라우저에 "사이트에 접근할 수 없음"으로 죽음.
   Future<void> signInWithGoogle() async {
-    await supabase.auth.signInWithOAuth(OAuthProvider.google);
+    await supabase.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: oauthRedirectUrl,
+    );
   }
 
   // ── 백엔드 API ─────────────────────────────
