@@ -268,3 +268,66 @@ F-031 (알림 설정) ── F-029 (푸시)
 - **푸시**: FCM, OS 권한 거부 케이스 케어
 - **모니터링**: Sentry 3 프로젝트
 - **알려진 한계**: Supabase Realtime 동시접속 Pro 500. fan-out 비용은 `발송 1 + 수신 N`
+
+---
+
+## 10. 작업 진행 가이드
+
+§5는 **피처 단위** 의존, 본 §10은 **작업 단위 (=폴더 단위, =1 PR)** 의존. 실무에서는 §10을 본다.
+
+### 10.1 작업 단위 의존 매트릭스
+
+| # | 작업 단위 | 폴더 | 선행 (반드시 완료) | 선행 (검증 위해 권장) | 진행 상태 |
+|---|---|---|---|---|---|
+| 1 | auth | `features/auth` | (root) | — | ✅ F-001~F-006 (PR #12, #17, #18) |
+| 11 | admin | `features/admin` (관리자 웹) | (root) — F-002 데이터 모델은 auth에 이미 있음 | auth (실 운영 시 검증) | ⏳ 미시작 |
+| 9 | profile | `features/profile` | auth | — | ⏳ 미시작 |
+| 2 | idol_discovery | `features/idol_discovery` | admin (F-035 승인된 아이돌만 노출) | — | ⏳ 미시작 |
+| 3 | subscription | `features/subscription` | idol_discovery | — | ⏳ 미시작 (재배치 검토 — §10.4) |
+| 4 | chat_room | `features/chat_room` | idol_discovery, subscription | — | ⏳ 미시작 |
+| 5 | chat_message | `features/chat_message` | chat_room | — | ⏳ 미시작 (분할 검토 — §10.4) |
+| 6 | chat_media | `features/chat_media` | chat_message | — | ⏳ 미시작 |
+| 7 | chat_meta | `features/chat_meta` | chat_message | — | ⏳ 미시작 |
+| 8 | notification | `features/notification` | auth (코드 작성만) | chat_message (종단 검증) | ⏳ 미시작 |
+| 10 | report | `features/report` | chat_message, admin | — | ⏳ 미시작 |
+| 12 | gift | `features/gift` | chat_room | — | ⏳ 미시작 (UI only) |
+
+### 10.2 병렬 작업 가능 조합
+
+서로 다른 코드베이스/폴더라 충돌 0 → 동시 진행 가능.
+
+| 시점 | 병렬 후보 |
+|---|---|
+| auth 직후 | **admin** (관리자 웹, `admin/`) ‖ **profile** (모바일, `mobile/lib/features/profile/`) |
+| admin 직후 | **idol_discovery** 시작 가능 |
+| chat_message 직후 | **chat_media** ‖ **chat_meta** ‖ **notification** ‖ **report**(+ admin 완료 시) |
+
+### 10.3 권장 진행 순서 (auth 완료 기준)
+
+1. **admin** ‖ **profile**  ← 지금 시작 가능
+2. **idol_discovery**  ← admin 완료 후
+3. **chat_room**
+4. **chat_message** (또는 §10.4 분할 권장 적용 시: chat_message_core)
+5. **chat_media** ‖ **chat_meta** ‖ **notification** ‖ **report**  ← 병렬
+6. **subscription** (F-013 응원 취소 — §10.4 검토 후 idol_discovery에 흡수 가능)
+7. **gift** (UI only, 후순위)
+
+### 10.4 작업 단위 재배치 검토 사항
+
+본 절은 **결정 대기** 항목. 다음 피처 시작 전 메인 빌더가 결정 → §2/§10.1 반영.
+
+| # | 이슈 | 현 위치 | 재배치 제안 | 이유 |
+|---|---|---|---|---|
+| 1 | F-024 (아이돌 메인 화면) | 작업 단위 9 `profile` | `chat_message` 또는 신규 `idol_chat` | F-025 (메시지 발행)이 F-024와 같은 화면. 둘은 강결합, profile은 마이페이지 성격. §5 의존 그래프상 F-024는 chat 도메인 |
+| 2 | subscription 크기 작음 | 작업 단위 3 (F-012, F-013) | F-012 보류 시 F-013만 남음 → `idol_discovery`에 흡수 | F-012 P2 (보류 중), F-013만으로 작업 단위 만들 가치 낮음 |
+| 3 | chat_message 크기 큼 | 작업 단위 5 (5개 피처) | `chat_message_core` (F-017/018/022 — 송수신+페이지) + `chat_message_admin` (F-025/026 — 발행/수정/삭제) 2 PR로 분할 | 한 PR로 처리하기엔 영역 넓음. 텍스트 송수신만 먼저 안정화 후 발행/편집 추가 |
+| 4 | auth ↔ admin 공유 테이블 contract 명시 | `idol_signup_applications` | auth `SPEC.md` / admin `SPEC.md` 양쪽에 "어느 컬럼 INSERT/UPDATE/SELECT" 명시 | 둘이 같은 테이블 만짐. RLS 정책도 분리 결정 필요 |
+| 5 | notification 검증 시점 모호 | 작업 단위 8 | "auth 후 코드 가능 / chat_message_core 후 종단 검증" 두 단계로 §10.1에 명시 (이미 반영) | §5에선 auth 후 시작 가능으로만 표기. 실제 푸시 동작 검증은 메시지 없으면 불가 |
+
+### 10.5 작업 단위 시작 시 의존 체크리스트
+
+새 피처 시작 트리거 (`<피처명> 시작할게`) 받으면 [`AGENTS.md`](../AGENTS.md) §시작 트리거에 따라 진행하되, 추가로:
+
+- §10.1 매트릭스에서 본 작업 단위의 **선행 작업 단위가 dev에 머지됐는가** 확인
+- 안 됐으면 사용자에게 보고 ("X 작업 단위가 선행인데 미완료. 그래도 시작?")
+- 머지됐으면 그 SPEC.md의 "공개 인터페이스" 섹션 읽고 호출 가능 함수 파악
