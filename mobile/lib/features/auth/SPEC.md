@@ -42,8 +42,22 @@
 - **쓰기**: 백엔드 API — `POST /auth/signup`, `POST /auth/logout`
 - **Realtime 구독**: 없음
 - **Supabase 직결**:
-  - `supabase.auth.signInWithOAuth({ provider: 'google' })`
+  - `supabase.auth.signInWithOAuth(OAuthProvider.google, redirectTo: oauthRedirectUrl)` — redirectTo 없으면 콜백 못 돌아옴
   - `supabase.auth.signOut()` — 로그아웃 시 함께 호출
+
+### OAuth deep link 흐름
+
+`oauthRedirectUrl = 'com.gihagochi.gihagochi://login-callback'` ([core/auth/auth_service.dart](../../../core/auth/auth_service.dart) 정의)
+
+1. 앱: `signInWithOAuth(provider, redirectTo: oauthRedirectUrl)` 호출
+2. Supabase Auth가 시스템 브라우저(Chrome 등)로 Google 동의 화면 열기
+3. 사용자 동의 → Google이 `https://<project-ref>.supabase.co/auth/v1/callback?code=...`로 redirect
+4. Supabase가 code↔token 교환 → `oauthRedirectUrl`로 추가 redirect
+5. Android가 scheme `com.gihagochi.gihagochi`의 intent-filter 매칭 → 앱 활성화 (MainActivity onNewIntent)
+6. supabase_flutter SDK가 URL 파싱 → 세션 저장 → `onAuthStateChange` SIGNED_IN 발화
+7. 라우터 refresh 리스너가 `/auth/me` 조회 후 적절한 화면으로 redirect
+
+> MainActivity `launchMode="singleTask"` 필수. singleTop이면 Chrome이 deep link를 새 task로 보낼 때 cold restart가 일어나 deep link URL이 손실됨.
 
 ---
 
@@ -58,8 +72,9 @@
 >
 > 메인 빌더 추가 작업 (Supabase Studio 측):
 > - Authentication → Providers에서 Google 활성 + client_id/secret 입력
-> - Google Cloud Console → APIs & Services → Credentials에서 OAuth 2.0 Client ID 발급
-> - 콜백 URL `https://<project-ref>.supabase.co/auth/v1/callback`을 OAuth 앱 설정에 등록
+> - Google Cloud Console → APIs & Services → Credentials에서 OAuth 2.0 Client ID (Web) 발급
+> - Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
+> - Supabase Dashboard → Authentication → URL Configuration → Redirect URLs에 `com.gihagochi.gihagochi://login-callback` 등록 (없으면 deep link 차단됨)
 
 ---
 
