@@ -21,7 +21,11 @@ const _publicRoutes = <String>{
 
 /// null 반환 = redirect 없음. 경로 문자열 반환 = 그쪽으로 이동.
 String? authGuard(Ref ref, GoRouterState state) {
-  final user = ref.read(currentUserProvider);
+  // currentUserProvider는 authStateChangesProvider(StreamProvider)에 의존하는데,
+  // Stream invalidation이 microtask로 지연되어 refresh notifier가 즉시 부르는 redirect
+  // 시점엔 stale null이 반환됨. supabase 내부 currentUser는 SIGNED_IN 발화 전 이미
+  // set되므로 동기 read가 안전 — race 회피.
+  final user = ref.read(supabaseProvider).auth.currentUser;
   final loc = state.matchedLocation;
   final isPublic = _publicRoutes.any((p) => loc.startsWith(p));
 
