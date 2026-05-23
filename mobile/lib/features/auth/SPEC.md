@@ -53,9 +53,11 @@
 2. Supabase Auth가 시스템 브라우저(Chrome 등)로 Google 동의 화면 열기
 3. 사용자 동의 → Google이 `https://<project-ref>.supabase.co/auth/v1/callback?code=...`로 redirect
 4. Supabase가 code↔token 교환 → `oauthRedirectUrl`로 추가 redirect
-5. Android가 scheme `com.gihagochi.gihagochi`의 intent-filter 매칭 → 앱 활성화
+5. Android가 scheme `com.gihagochi.gihagochi`의 intent-filter 매칭 → 앱 활성화 (MainActivity onNewIntent)
 6. supabase_flutter SDK가 URL 파싱 → 세션 저장 → `onAuthStateChange` SIGNED_IN 발화
 7. 라우터 refresh 리스너가 `/auth/me` 조회 후 적절한 화면으로 redirect
+
+> MainActivity `launchMode="singleTask"` 필수. singleTop이면 Chrome이 deep link를 새 task로 보낼 때 cold restart가 일어나 deep link URL이 손실됨.
 
 ---
 
