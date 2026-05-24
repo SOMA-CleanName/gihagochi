@@ -34,9 +34,10 @@ String? authGuard(Ref ref, GoRouterState state) {
     return '/auth/landing';
   }
 
-  // 로그인 + 인증 화면 → 메인으로
+  // 로그인 + 인증 화면 → 팬 메인으로
+  // F-007 메인 화면 라우트. 등록은 features/profile.
   if (user != null && isPublic) {
-    return '/';
+    return '/main';
   }
 
   return null;

@@ -36,13 +36,16 @@ GoRouter appRouter(Ref ref) {
     refreshListenable: refreshNotifier,
     redirect: (context, state) => authGuard(ref, state),
     routes: [
-      // 임시 home — 실제 피처는 features/<폴더>/routes.dart에서 합산.
+      // `/`는 canonical post-login 진입점인 `/main`으로 redirect.
+      // `/main` 자체는 features/profile이 등록 (F-007 팬 메인 화면).
+      // profile 미머지 상태에선 errorBuilder가 잡되, auth_guard도 `/main`을 타겟으로 함.
       GoRoute(
         path: '/',
-        builder: (context, state) => const _PlaceholderScreen(label: '홈'),
+        redirect: (context, state) => '/main',
       ),
       // 새 피처 추가 시: `...authRoutes,` 처럼 spread
       ...authRoutes,
+      // ...profileRoutes,
       // ...chatRoomRoutes,
     ],
     errorBuilder: (context, state) => Scaffold(
@@ -63,18 +66,5 @@ class _GoRouterRefreshStream extends ChangeNotifier {
   void dispose() {
     _subscription.cancel();
     super.dispose();
-  }
-}
-
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(label)),
-      body: Center(child: Text('$label — 피처 미구현')),
-    );
   }
 }
