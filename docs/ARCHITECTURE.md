@@ -181,6 +181,7 @@ CI(`.github/workflows/guard.yml`)가 외부 영역 변경 시 코멘트로 경�
 - **Supabase Realtime**: 채널 구독 캐싱 (`realtime_service.dart`) — 같은 토픽 중복 구독 방지
 - **이미지**: `cached_network_image` 디스크 캐시
 - **에러 분류**: `AppError` 계층 (`Network`, `Unauthorized`, `Server`, `Unknown`) + `ErrorHandler.handle()` → Sentry는 5xx/Unknown만 보냄 (사용자 입력 에러는 노이즈)
+- **API 케이스 변환**: 백엔드는 snake_case JSON, Dart는 camelCase. 신규 슬라이스는 `camelDioProvider`(`core/api/case_interceptor.dart`) 사용 → 모델은 `@JsonKey` 없이 순수 camelCase. 기존 슬라이스는 `dioProvider` + `@JsonKey(name:)` 패턴 그대로 (점진 마이그레이션 가능, opt-in)
 
 ### 6.2 관리자 웹
 - **TanStack Query**: stale 1분, refetchOnWindowFocus off (관리자 화면 자주 새로고침 불필요)

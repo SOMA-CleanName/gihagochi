@@ -24,6 +24,15 @@
   - [admin role JWT 헤더로 호출한 라우터 테스트가 CI(DB 없음)에서 실패](#admin-role-jwt-헤더로-호출한-라우터-테스트가-cidb-없음에서-실패)
 - [Git / GitHub](#git--github)
   - [squash merge + `--delete-branch` 후 브랜치 라벨 사라짐 — 정상 동작](#squash-merge----delete-branch-후-브랜치-라벨-사라짐--정상-동작)
+- [모바일 셋업 / 빌드](#모바일-셋업--빌드)
+  - [Flutter / Dart SDK 버전 mismatch — `dart compile does not support build hooks`](#flutter--dart-sdk-버전-mismatch--dart-compile-does-not-support-build-hooks)
+  - [CocoaPods Sentry/HybridSDK 버전 충돌 — `pod install` 실패](#cocoapods-sentryhybridsdk-버전-충돌--pod-install-실패)
+  - [iOS 빌드 실패 — `GoogleService-Info.plist` 누락](#ios-빌드-실패--googleservice-infoplist-누락)
+  - [Supabase OAuth 콜백 시 "주소 유효하지 않음" Safari 다이얼로그 — iOS URL Scheme 누락](#supabase-oauth-콜백-시-주소-유효하지-않음-safari-다이얼로그--ios-url-scheme-누락)
+  - [`APNS token has not been set` — 시뮬레이터에선 정상](#apns-token-has-not-been-set--시뮬레이터에선-정상)
+- [프론트-백 매핑](#프론트-백-매핑)
+  - [`type 'Null' is not a subtype of type 'String' in type cast` — snake_case JSON ↔ camelCase Dart mismatch](#type-null-is-not-a-subtype-of-type-string-in-type-cast--snake_case-json--camelcase-dart-mismatch)
+  - [`valueOrNull` undefined — riverpod 3.x에서 제거됨](#valueornull-undefined--riverpod-3x에서-제거됨)
 
 ---
 
@@ -316,6 +325,211 @@ if (!profile || profile.role !== 'admin' || profile.status !== 'active') {
 - 머지 정책을 `--no-ff` (merge commit) 로 바꾸면 됨
 - 트레이드오프: history 노이즈 ↑, revert 시 `-m` 인자 필요
 - 본 레포는 squash 채택 중
+
+---
+
+## 모바일 셋업 / 빌드
+
+### Flutter / Dart SDK 버전 mismatch — `dart compile does not support build hooks`
+
+**증상**
+```
+dart compile does not support build hooks, use 'dart build' instead
+```
+- `dart run build_runner build` 실행 시 codegen 단계에서 실패
+- Flutter 3.38.5 / Dart 3.10.4 + build_runner 2.15.0 조합에서 재현
+
+**원인**
+- build_runner 2.15.0이 Dart 3.10.4의 새 build hook 정책을 따라잡지 못함
+- riverpod_lint / freezed의 analyzer 의존성도 SDK 버전과 짝이 맞아야 함
+
+**해결**
+- **Flutter 3.41.0 (Dart 3.10.0)로 고정** — `mobile/AGENTS.md` 권장 버전
+- 다운그레이드 시도 매트릭스(다 fail, 참고용):
+  - 3.27.4 / 3.32.x — Dart 3.8 부족
+  - 3.35.5 — riverpod_lint analyzer mismatch
+  - **3.41.0 — OK ✅**
+- `fvm` 또는 `flutter version 3.41.0` 으로 글로벌 고정
+
+**예방**
+- `mobile/pubspec.yaml`의 `environment.sdk` 범위를 좁게 유지
+- 새 팀원 셋업 시 ONBOARDING의 SDK 버전 먼저 확인
+
+---
+
+### CocoaPods Sentry/HybridSDK 버전 충돌 — `pod install` 실패
+
+**증상**
+```
+[!] CocoaPods could not find compatible versions for pod "Sentry":
+  In Podfile:
+    sentry_flutter (...) was resolved to ..., which depends on
+      Sentry/HybridSDK (= 8.46.0)
+  But: Sentry (8.58.2) was resolved
+```
+- `pod install` 또는 첫 iOS 빌드 시 발생
+
+**원인**
+- `Podfile.lock`에 캐시된 Sentry 버전과 새 sentry_flutter가 요구하는 HybridSDK 버전 불일치
+- `pod install --repo-update` 만으로는 lock 강제 갱신 안 됨
+
+**해결**
+```bash
+cd mobile/ios
+rm Podfile.lock
+pod install
+```
+
+**예방**
+- sentry_flutter 업그레이드 시 항상 `Podfile.lock` 재생성 검토
+- CI 캐시에 Podfile.lock 포함 시 주의
+
+---
+
+### iOS 빌드 실패 — `GoogleService-Info.plist` 누락
+
+**증상**
+- Xcode 빌드 단계에서 `error: Build input file cannot be found: '.../Runner/GoogleService-Info.plist'`
+- 또는 런타임에 `Firebase.initializeApp()` 호출 시 throw
+
+**원인**
+- Firebase Console에서 받는 iOS 설정 파일이 git에 안 들어감 (gitignore)
+- 새 환경에서 받아 직접 배치해야 함
+
+**해결**
+1. Firebase Console → 프로젝트 설정 → 본인 iOS 앱 → `GoogleService-Info.plist` 다운로드
+2. `mobile/ios/Runner/GoogleService-Info.plist` 경로에 배치
+3. Xcode에서 Runner 타겟에 add (자동 인식되기도 함)
+4. `flutter clean && flutter run`
+
+**참고**
+- Android는 `mobile/android/app/google-services.json` 동일 패턴
+- `main.dart`의 Firebase init은 try/catch로 graceful degrade — Push 없이 앱은 동작
+
+---
+
+### Supabase OAuth 콜백 시 "주소 유효하지 않음" Safari 다이얼로그 — iOS URL Scheme 누락
+
+**증상**
+- 카카오/구글 로그인 → 외부 브라우저 인증 성공 → 앱 복귀 단계에서 Safari가 "주소가 유효하지 않습니다" 다이얼로그 표시
+- 무한 로딩 또는 앱 미복귀
+
+**원인**
+- Supabase Redirect URLs에 deep link (`com.gihagochi.gihagochi://...`)는 등록되어 있으나
+- **iOS Info.plist의 `CFBundleURLTypes`에 해당 scheme 미등록** → iOS가 URL을 본 앱으로 라우팅 안 함
+
+**해결** — `mobile/ios/Runner/Info.plist`에 추가:
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleTypeRole</key><string>Editor</string>
+    <key>CFBundleURLName</key><string>com.gihagochi.gihagochi</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>com.gihagochi.gihagochi</string>
+    </array>
+  </dict>
+</array>
+```
+
+**예방**
+- Supabase Redirect URLs 등록 → iOS `CFBundleURLTypes` 등록 → Android `<intent-filter>` 등록 3개를 항상 한 묶음으로 확인
+
+---
+
+### `APNS token has not been set` — 시뮬레이터에선 정상
+
+**증상**
+```
+[firebase_messaging/unknown] APNS token has not been set
+```
+- 시뮬레이터에서 `PushService.init` 실행 시 throw
+- 실기기에선 정상
+
+**원인**
+- iOS Simulator는 APNS(Apple Push Notification Service)를 지원하지 않음 (디바이스만)
+- Firebase Messaging은 APNS 토큰 없이 FCM 토큰 발급 불가
+
+**해결**
+- 시뮬레이터에선 무시 — `main.dart` 또는 `PushInitializer`의 try/catch로 graceful degrade 처리 (앱은 정상 동작, 푸시만 X)
+- 푸시 실제 검증은 실기기 또는 FCM Console 수동 전송으로
+
+---
+
+## 프론트-백 매핑
+
+### `type 'Null' is not a subtype of type 'String' in type cast` — snake_case JSON ↔ camelCase Dart mismatch
+
+**증상**
+```
+type 'Null' is not a subtype of type 'String' in type cast
+  → _$IdolListItemFromJson (idol_models.g.dart)
+```
+- 백엔드 정상 응답 받았는데 `fromJson` 단계에서 throw
+
+**원인**
+- 백엔드 Pydantic은 snake_case로 직렬화 (`stage_name`, `activated_at`)
+- Dart freezed 모델은 camelCase (`stageName`, `activatedAt`) → 매핑 어노테이션 없으면 `null` 캐스트 실패
+
+**해결 (선택 1)** — 모델 필드마다 `@JsonKey` 매핑:
+```dart
+// ignore_for_file: invalid_annotation_target
+
+@freezed
+abstract class IdolListItem with _$IdolListItem {
+  const factory IdolListItem({
+    @JsonKey(name: 'stage_name') required String stageName,
+    @JsonKey(name: 'activated_at') required DateTime activatedAt,
+  }) = _IdolListItem;
+}
+```
+
+**해결 (선택 2, 권장)** — `camelDioProvider` 사용 (`core/api/case_interceptor.dart`):
+```dart
+@riverpod
+MyRepository myRepository(Ref ref) {
+  return MyRepository(dio: ref.watch(camelDioProvider));  // ← camelDio
+}
+
+// 모델: @JsonKey 없이 순수 camelCase
+const factory IdolListItem({
+  required String stageName,
+  required DateTime activatedAt,
+}) = _IdolListItem;
+```
+interceptor가 양방향 자동 변환 — 신규 슬라이스는 선택 2 권장.
+
+**참고**
+- 기존 슬라이스 4개(auth/idol_discovery/subscription/notification)는 선택 1 패턴
+- camelDio 도입 PR: [#44](https://github.com/SOMA-CleanName/gihagochi/pull/44)
+
+---
+
+### `valueOrNull` undefined — riverpod 3.x에서 제거됨
+
+**증상**
+```
+The getter 'valueOrNull' isn't defined for the type 'AsyncValue<T>'.
+```
+- riverpod 2.x → 3.x 업그레이드 후 CI 컴파일 실패
+
+**원인**
+- riverpod 3.x에서 `AsyncValue.valueOrNull` API 제거
+- `mobile/pubspec.yaml`이 riverpod 3.x 사용 중
+
+**해결**
+```dart
+// before (2.x)
+final value = state.valueOrNull;
+
+// after (3.x)
+final value = state.asData?.value;
+```
+
+**예방**
+- 새 코드에 `valueOrNull` 패턴 쓰지 말 것
+- riverpod 3.x 마이그레이션 가이드 참고
 
 ---
 
