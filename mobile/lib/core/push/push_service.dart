@@ -39,6 +39,17 @@ class PushService {
 
     await _setupLocalNotifications();
 
+    // iOS foreground에서도 시스템 배너/사운드/뱃지 표시 — 기본은 silent.
+    // foreground 메시지는 onMessage stream에도 들어와서 flutter_local_notifications로
+    // 표시되지만, iOS 시스템 배너가 동시에 뜨는 게 사용자 기대치에 가까움.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
+
     // iOS는 APNs 토큰이 set된 후에야 FCM 토큰 발급 가능.
     // 시뮬레이터(iOS 16+)/실기기 모두 등록이 약간 늦어 race 발생 → 짧게 poll.
     // poll 실패 시 graceful skip — 권한 거부/Push entitlement 미설정 환경.
@@ -54,12 +65,22 @@ class PushService {
 
     // 토큰 발급 + 등록
     final token = await _messaging.getToken();
+    if (kDebugMode) {
+      final preview = token == null ? 'null' : '${token.substring(0, 30)}... (len=${token.length})';
+      debugPrint('[Push] FCM token: $preview');
+    }
     if (token != null && _registrar != null) {
-      await _registrar!(token, _platformName());
+      try {
+        await _registrar!(token, _platformName());
+        if (kDebugMode) debugPrint('[Push] 백엔드 등록 완료');
+      } catch (e) {
+        if (kDebugMode) debugPrint('[Push] 백엔드 등록 실패 (silent): $e');
+      }
     }
 
     // 토큰 갱신 시 재등록
     _messaging.onTokenRefresh.listen((newToken) async {
+      if (kDebugMode) debugPrint('[Push] FCM token refreshed: ${newToken.substring(0, 30)}...');
       if (_registrar != null) await _registrar!(newToken, _platformName());
     });
 
@@ -77,6 +98,9 @@ class PushService {
 
   static Future<void> _onForegroundMessage(RemoteMessage message) async {
     final notif = message.notification;
+    if (kDebugMode) {
+      debugPrint('[Push] foreground 메시지: title="${notif?.title}" body="${notif?.body}"');
+    }
     if (notif == null) return;
 
     await _local.show(
