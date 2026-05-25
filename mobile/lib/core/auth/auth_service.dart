@@ -87,11 +87,16 @@ class AuthService {
   /// 콜백 시 onAuthStateChange가 SIGNED_IN 이벤트를 발화.
   ///
   /// redirectTo가 없으면 Supabase가 돌아올 곳을 몰라 "사이트에 접근할 수 없음"으로 죽음.
+  ///
+  /// `queryParams: {'prompt': 'select_account'}` — 매번 Google 계정 선택 화면 강제.
+  /// 자동 로그인(세션 복원) 흐름과는 무관 — 본 메서드는 명시적 로그인 버튼 흐름에만 호출됨.
+  /// 로그아웃 후 다른 계정으로 로그인하고 싶을 때 이전 계정이 자동 선택되는 문제 방지.
   Future<void> signInWithGoogle() async {
     try {
       await _client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: oauthRedirectUrl,
+        queryParams: const {'prompt': 'select_account'},
       );
     } on AuthException catch (e) {
       throw UnauthorizedError(message: e.message, cause: e);
