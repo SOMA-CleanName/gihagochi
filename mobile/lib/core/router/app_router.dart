@@ -18,6 +18,7 @@ import '../auth/auth_service.dart';
 // 피처 라우트 import — 새 피처 추가 시 여기에 한 줄 추가.
 import '../../features/auth/routes.dart';
 import '../../features/chat_room/routes.dart';
+import '../../features/idol_discovery/routes.dart';
 import '../../features/profile/routes.dart';
 // ...
 
@@ -48,6 +49,7 @@ GoRouter appRouter(Ref ref) {
       ...authRoutes,
       ...profileRoutes,
       ...chatRoomRoutes,
+      ...idolDiscoveryRoutes,
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(child: Text('경로 없음: ${state.matchedLocation}')),
