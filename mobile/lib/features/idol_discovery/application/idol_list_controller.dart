@@ -74,7 +74,7 @@ class IdolListController extends _$IdolListController {
   /// 무한 스크롤 — 다음 페이지를 fetch 후 items 끝에 append.
   /// hasMore=false 거나 이미 loading 중이면 noop.
   Future<void> loadMore() async {
-    final current = state.valueOrNull;
+    final current = state.asData?.value;
     if (current == null || !current.hasMore || current.isLoadingMore) {
       return;
     }
