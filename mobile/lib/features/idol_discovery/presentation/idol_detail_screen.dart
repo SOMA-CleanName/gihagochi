@@ -1,6 +1,7 @@
 /// F-011 아이돌 상세 화면.
 ///
-/// "응원하기" 버튼은 placeholder. subscription 슬라이스 합류 시 실제 액션 연결.
+/// "응원하기" 버튼은 subscription 슬라이스의 controller 호출.
+/// 액션 완료 후 상세 controller invalidate → fan_count / is_subscribed 자동 갱신.
 library;
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
+import '../../subscription/application/subscription_controller.dart';
 import '../application/idol_detail_controller.dart';
 
 class IdolDetailScreen extends ConsumerWidget {
@@ -19,7 +21,28 @@ class IdolDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(idolDetailControllerProvider(idolId));
+    final subscriptionState = ref.watch(subscriptionControllerProvider);
     final theme = Theme.of(context);
+
+    Future<void> handleToggle(bool currentlySubscribed) async {
+      final notifier = ref.read(subscriptionControllerProvider.notifier);
+      // 응원 토글: 현재 응원 중이면 취소, 아니면 시작.
+      if (currentlySubscribed) {
+        await notifier.unsubscribe(idolId);
+      } else {
+        await notifier.subscribe(idolId);
+      }
+      // 액션 결과(error/data) 반영 후 상세 정보 새로고침.
+      final error = ref.read(subscriptionControllerProvider).asError;
+      if (!context.mounted) return;
+      if (error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('처리 실패: ${error.error}')),
+        );
+        return;
+      }
+      ref.invalidate(idolDetailControllerProvider(idolId));
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('아이돌 상세')),
@@ -31,6 +54,7 @@ class IdolDetailScreen extends ConsumerWidget {
               ref.read(idolDetailControllerProvider(idolId).notifier).refresh(),
         ),
         data: (idol) {
+          final isProcessing = subscriptionState.isLoading;
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -67,15 +91,14 @@ class IdolDetailScreen extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  // subscription 슬라이스 합류 전 placeholder.
-                  // 본인이 아이돌 본인이면 백엔드가 is_subscribed=false로 반환하므로
-                  // 응원 가능처럼 보일 수 있음 → 추후 본인 비교 로직 추가.
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('응원 기능은 준비 중입니다.')),
-                    );
-                  },
-                  child: Text(idol.isSubscribed ? '응원 중' : '응원하기'),
+                  onPressed: isProcessing
+                      ? null
+                      : () => handleToggle(idol.isSubscribed),
+                  child: Text(
+                    isProcessing
+                        ? '처리 중…'
+                        : (idol.isSubscribed ? '응원 중' : '응원하기'),
+                  ),
                 ),
               ),
             ],
