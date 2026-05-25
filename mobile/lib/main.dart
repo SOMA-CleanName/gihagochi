@@ -17,11 +17,11 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/env.dart';
-import 'core/push/push_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 // 피처 슬롯 override — 새 피처가 다른 피처의 슬롯을 채울 때 여기에 1줄씩 추가.
 import 'features/chat_room/presentation/fan_chat_list.dart';
+import 'features/notification/presentation/push_initializer.dart';
 import 'features/profile/application/slot_providers.dart';
 
 Future<void> main() async {
@@ -44,13 +44,8 @@ Future<void> main() async {
     debug: Env.isDev,
   );
 
-  // 푸시 — features/notification에서 TokenRegistrar 주입 가능.
-  // 시뮬레이터/Push entitlement 미설정 환경에선 APNS 토큰 부재로 throw — graceful degrade.
-  try {
-    await PushService.init();
-  } catch (e) {
-    debugPrint('[main] PushService init 실패 (FCM 토큰 비활성): $e');
-  }
+  // 푸시 init은 ProviderScope 이후에 호출돼야 ref.read로 repository 얻을 수 있음 →
+  // features/notification/presentation/push_initializer.dart가 ProviderScope 내부에서 호출.
 
   // Sentry로 감싼 runApp. DSN 없으면 init 자체가 no-op.
   await SentryFlutter.init(
@@ -66,7 +61,8 @@ Future<void> main() async {
           // chat_room 이 profile 의 채팅방 리스트 슬롯을 채움.
           chatListSlotProvider.overrideWith((ref) => const FanChatList()),
         ],
-        child: const _GihagochiApp(),
+        // PushInitializer: ProviderScope 내부에서 FCM 토큰 발급 + 백엔드 등록.
+        child: const PushInitializer(child: _GihagochiApp()),
       ),
     ),
   );
