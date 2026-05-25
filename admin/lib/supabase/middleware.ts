@@ -59,9 +59,15 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 관리자 role 체크 (user_metadata.role 기준 — 실제 스키마 확정 시 조정)
-  const role = user.app_metadata?.role ?? user.user_metadata?.role;
-  if (role !== 'admin') {
+  // 관리자 role 게이트 — profiles 테이블이 진실의 원천 (JWT metadata 아님).
+  // 정지된 관리자(status='suspended')는 동일하게 차단.
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role, status')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profileError || !profile || profile.role !== 'admin' || profile.status !== 'active') {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('error', 'unauthorized');
