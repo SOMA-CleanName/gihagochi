@@ -29,7 +29,12 @@
   - [CocoaPods Sentry/HybridSDK 버전 충돌 — `pod install` 실패](#cocoapods-sentryhybridsdk-버전-충돌--pod-install-실패)
   - [iOS 빌드 실패 — `GoogleService-Info.plist` 누락](#ios-빌드-실패--googleservice-infoplist-누락)
   - [Supabase OAuth 콜백 시 "주소 유효하지 않음" Safari 다이얼로그 — iOS URL Scheme 누락](#supabase-oauth-콜백-시-주소-유효하지-않음-safari-다이얼로그--ios-url-scheme-누락)
-  - [`APNS token has not been set` — 시뮬레이터에선 정상](#apns-token-has-not-been-set--시뮬레이터에선-정상)
+- [FCM 푸시 셋업 (iOS)](#fcm-푸시-셋업-ios)
+  - [`APNS token has not been set` — 시뮬레이터에서도 동작 가능 (정정)](#apns-token-has-not-been-set--시뮬레이터에서도-동작-가능-정정)
+  - [Push Notifications capability/entitlement 누락 — APNs 등록 X](#push-notifications-capabilityentitlement-누락--apns-등록-x)
+  - [AppDelegate `registerForRemoteNotifications` 누락 — Flutter 3.40+ 패턴](#appdelegate-registerforremotenotifications-누락--flutter-340-패턴)
+  - [APNs Auth Key Firebase Console 미등록 — FCM → APNS 라우팅 실패](#apns-auth-key-firebase-console-미등록--fcm--apns-라우팅-실패)
+  - [iOS foreground 알림이 silent — `setForegroundNotificationPresentationOptions` 미설정](#ios-foreground-알림이-silent--setforegroundnotificationpresentationoptions-미설정)
 - [프론트-백 매핑](#프론트-백-매핑)
   - [`type 'Null' is not a subtype of type 'String' in type cast` — snake_case JSON ↔ camelCase Dart mismatch](#type-null-is-not-a-subtype-of-type-string-in-type-cast--snake_case-json--camelcase-dart-mismatch)
   - [`valueOrNull` undefined — riverpod 3.x에서 제거됨](#valueornull-undefined--riverpod-3x에서-제거됨)
@@ -438,22 +443,158 @@ pod install
 
 ---
 
-### `APNS token has not been set` — 시뮬레이터에선 정상
+---
+
+## FCM 푸시 셋업 (iOS)
+
+> **iOS 푸시는 5단계 모두 맞아야 동작**. 한 단계라도 빠지면 silent fail.
+> 본 섹션은 실제 디버깅 순서대로 누적된 사례.
+
+### 체크리스트 (순서대로)
+1. **Push Notifications capability + Background Modes(remote-notification) entitlement** — Xcode "Signing & Capabilities"
+2. **AppDelegate에서 `application.registerForRemoteNotifications()` 명시 호출** (Flutter 3.40+ 신패턴)
+3. **APNs Auth Key (.p8) Firebase Console 등록** — Cloud Messaging → Apple 앱 구성
+4. **APNs token wait (race 회피)** — `getAPNSToken()` poll 후 `getToken()` 호출
+5. **foreground 표시 옵션** — `setForegroundNotificationPresentationOptions(alert/badge/sound: true)`
+
+5개 다 만족하면 **시뮬레이터(iOS 16+/Apple Silicon Mac)에서도** 푸시 동작.
+
+---
+
+### `APNS token has not been set` — 시뮬레이터에서도 동작 가능 (정정)
 
 **증상**
 ```
-[firebase_messaging/unknown] APNS token has not been set
+[firebase_messaging/apns-token-not-set] APNS token has not been set yet.
+Please ensure the APNS token is available by calling `getAPNSToken()`.
 ```
-- 시뮬레이터에서 `PushService.init` 실행 시 throw
-- 실기기에선 정상
 
-**원인**
-- iOS Simulator는 APNS(Apple Push Notification Service)를 지원하지 않음 (디바이스만)
-- Firebase Messaging은 APNS 토큰 없이 FCM 토큰 발급 불가
+**원인 (정정)**
+이전엔 "시뮬레이터는 APNS 미지원이라 무시"로 안내했으나, 실제 디버깅 결과 **시뮬레이터(iOS 16+/Apple Silicon Mac)에서도 동작 가능**.
+진짜 원인은 아래 항목들 중 하나:
+- Push Notifications capability/entitlement 누락
+- AppDelegate `registerForRemoteNotifications` 명시 호출 누락 (Flutter 3.40+)
+- APNs Auth Key Firebase Console 미등록
+- APNs token race (10초 wait도 안 받으면 위 셋업 문제)
 
 **해결**
-- 시뮬레이터에선 무시 — `main.dart` 또는 `PushInitializer`의 try/catch로 graceful degrade 처리 (앱은 정상 동작, 푸시만 X)
-- 푸시 실제 검증은 실기기 또는 FCM Console 수동 전송으로
+아래 4개 항목 순서대로 점검.
+
+**참고**
+- PR #48 (APNs wait loop), #49 (entitlement), #50 (AppDelegate register) 시리즈로 해결
+
+---
+
+### Push Notifications capability/entitlement 누락 — APNs 등록 X
+
+**증상**
+- `getAPNSToken()`이 영원히 nil 반환
+- 빌드는 통과하지만 APNs 등록 자체가 시스템 레벨에서 실행 안 됨
+
+**원인**
+iOS는 Push Notifications capability(entitlement) 없으면 APNs 토큰 발급 안 함. `mobile/ios/Runner/Runner.entitlements`에 `aps-environment` key 없으면 OS가 막음.
+
+**해결** (Xcode GUI)
+1. `open mobile/ios/Runner.xcworkspace`
+2. 좌측 트리 **Runner** → 중앙 **TARGETS > Runner** → 상단 **Signing & Capabilities** 탭
+3. **+ Capability** → "Push Notifications" 더블클릭
+4. **+ Capability** → "Background Modes" → "Remote notifications" 체크
+5. Xcode가 자동으로 생성/갱신:
+   - `mobile/ios/Runner/Runner.entitlements` (`aps-environment = development`)
+   - `mobile/ios/Runner.xcodeproj/project.pbxproj` (3개 BuildConfig에 `CODE_SIGN_ENTITLEMENTS`)
+   - `mobile/ios/Runner/Info.plist` (`UIBackgroundModes = [remote-notification]`)
+6. Cmd+S 저장 후 `flutter clean && flutter run`
+
+**참고**: PR #49
+
+---
+
+### AppDelegate `registerForRemoteNotifications` 누락 — Flutter 3.40+ 패턴
+
+**증상**
+- entitlement 추가했는데도 `getAPNSToken()` nil
+- 옛 프로젝트(Flutter 3.x 이전)에선 잘 됐던 동일 설정이 새 프로젝트에선 안 됨
+
+**원인**
+Flutter 3.40+ 신패턴 `FlutterImplicitEngineDelegate`:
+```swift
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+  }
+}
+```
+- plugin 등록이 `didInitializeImplicitFlutterEngine` 콜백 시점 — `didFinishLaunchingWithOptions`보다 늦음
+- firebase_messaging은 plugin init 시 swizzling으로 APNs 등록을 시도하는데, 시점이 늦어 system event 사이클을 놓침
+- 결과: APNs 등록 자체가 실행 안 됨
+
+옛 Flutter 패턴은 `GeneratedPluginRegistrant.register(with: self)`를 `didFinishLaunchingWithOptions`에서 직접 호출 → swizzling 정상 작동.
+
+**해결** — AppDelegate의 `didFinishLaunchingWithOptions`에 명시 호출 추가:
+```swift
+override func application(
+  _ application: UIApplication,
+  didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+) -> Bool {
+  application.registerForRemoteNotifications()  // ← 한 줄 추가
+  return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+}
+```
+
+swizzling 의존 없이 시스템 APNs 등록을 직접 트리거.
+
+**참고**: PR #50 — 본 세션 푸시 디버깅의 **결정타**
+
+---
+
+### APNs Auth Key Firebase Console 미등록 — FCM → APNS 라우팅 실패
+
+**증상**
+- 시뮬레이터/실기기 모두 FCM 토큰 발급은 정상
+- 하지만 Firebase Console에서 "테스트 메시지 전송" → 도착 안 함 (silent)
+
+**원인**
+APNs 토큰 발급(앱 → APNs)과 FCM 발송(Firebase → APNS)은 별개 경로. Firebase는 APNs Auth Key (.p8)로 Apple APNS 서버에 인증해서 발송해야 함.
+
+**해결**
+1. Apple Developer Console → Certificates → Keys → "+" → APNs 선택 → 등록 → `.p8` 다운로드 + Key ID 메모
+2. [Firebase Console](https://console.firebase.google.com) → 프로젝트 → ⚙️ 설정 → Cloud Messaging → Apple 앱 구성 → "APN 인증 키" → **업로드**
+3. 입력:
+   - 인증 키 파일: `.p8`
+   - Key ID
+   - Team ID (Apple Developer 우상단)
+4. 저장 → 개발/프로덕션 둘 다 채워짐 (.p8 키 1개로 양쪽 지원)
+
+---
+
+### iOS foreground 알림이 silent — `setForegroundNotificationPresentationOptions` 미설정
+
+**증상**
+- 백엔드/Console에서 푸시 전송 → background/잠금 상태에선 알림 보이지만 **foreground에선 silent**
+- 사용자는 "안 왔다"고 인식
+
+**원인**
+iOS 기본 동작: foreground 앱은 시스템 배너 표시 안 함. `FirebaseMessaging.onMessage` stream에는 들어오지만 OS가 사용자에게 안 보여줌.
+
+**해결** — `PushService.init`에 호출:
+```dart
+if (defaultTargetPlatform == TargetPlatform.iOS) {
+  await _messaging.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+}
+```
+
+foreground 상태에서도 시스템 배너 + 사운드 + 뱃지 노출. `flutter_local_notifications`로 추가 표시할지는 선택.
+
+**디버깅 팁** — push_service.dart에 로그 박아두면 추적 쉬움:
+- `[Push] FCM token: <prefix>... (len=N)` — 발급 확인
+- `[Push] 백엔드 등록 완료` — 등록 확인
+- `[Push] foreground 메시지: title="..." body="..."` — 도착 확인
+
+**참고**: PR #51
 
 ---
 
