@@ -17,6 +17,7 @@ import '../auth/auth_guard.dart';
 import '../auth/auth_service.dart';
 // 피처 라우트 import — 새 피처 추가 시 여기에 한 줄 추가.
 import '../../features/auth/routes.dart';
+import '../../features/profile/routes.dart';
 // import '../../features/chat_room/routes.dart';
 // ...
 
@@ -45,7 +46,7 @@ GoRouter appRouter(Ref ref) {
       ),
       // 새 피처 추가 시: `...authRoutes,` 처럼 spread
       ...authRoutes,
-      // ...profileRoutes,
+      ...profileRoutes,
       // ...chatRoomRoutes,
     ],
     errorBuilder: (context, state) => Scaffold(
