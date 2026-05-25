@@ -22,7 +22,6 @@ from app.features.notification.schemas import (
 from app.shared.enums import DevicePlatform
 from app.shared.models import DeviceToken, NotificationPref
 
-
 # ============================================================
 # device_tokens
 # ============================================================
@@ -41,9 +40,7 @@ async def register_device_token(
     - 같은 token + 다른 user_id → user_id reassign (계정 전환 시 잘못 발송 방지)
     - 토큰 없으면 신규 INSERT
     """
-    existing = await session.scalar(
-        select(DeviceToken).where(DeviceToken.token == token)
-    )
+    existing = await session.scalar(select(DeviceToken).where(DeviceToken.token == token))
     now = datetime.now(UTC)
 
     if existing is None:
@@ -88,9 +85,7 @@ async def get_active_tokens_for_user(
     user_id: UUID,
 ) -> list[DeviceToken]:
     """공개 — 푸시 발송 시 대상 사용자의 모든 FCM 토큰 조회."""
-    result = await session.scalars(
-        select(DeviceToken).where(DeviceToken.user_id == user_id)
-    )
+    result = await session.scalars(select(DeviceToken).where(DeviceToken.user_id == user_id))
     return list(result.all())
 
 
@@ -133,9 +128,7 @@ async def is_notification_enabled(
     kind: NotificationKind,
 ) -> bool:
     """공개 — 발송 측이 호출. row 없으면 SCHEMA default 기준 반환."""
-    row = await session.scalar(
-        select(NotificationPref).where(NotificationPref.user_id == user_id)
-    )
+    row = await session.scalar(select(NotificationPref).where(NotificationPref.user_id == user_id))
     if row is None:
         # SCHEMA 4.9 default.
         defaults = {
@@ -157,12 +150,8 @@ async def is_notification_enabled(
 # ============================================================
 
 
-async def _load_or_create_prefs(
-    session: AsyncSession, user_id: UUID
-) -> NotificationPref:
-    row = await session.scalar(
-        select(NotificationPref).where(NotificationPref.user_id == user_id)
-    )
+async def _load_or_create_prefs(session: AsyncSession, user_id: UUID) -> NotificationPref:
+    row = await session.scalar(select(NotificationPref).where(NotificationPref.user_id == user_id))
     if row is not None:
         return row
     row = NotificationPref(user_id=user_id)
