@@ -39,6 +39,19 @@ class PushService {
 
     await _setupLocalNotifications();
 
+    // iOS는 APNs 토큰이 set된 후에야 FCM 토큰 발급 가능.
+    // 시뮬레이터(iOS 16+)/실기기 모두 등록이 약간 늦어 race 발생 → 짧게 poll.
+    // poll 실패 시 graceful skip — 권한 거부/Push entitlement 미설정 환경.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final ok = await _waitForApnsToken();
+      if (!ok) {
+        if (kDebugMode) {
+          debugPrint('[Push] APNS token timeout — FCM 토큰 발급 skip');
+        }
+        return;
+      }
+    }
+
     // 토큰 발급 + 등록
     final token = await _messaging.getToken();
     if (token != null && _registrar != null) {
@@ -87,5 +100,21 @@ class PushService {
     if (defaultTargetPlatform == TargetPlatform.iOS) return 'ios';
     if (defaultTargetPlatform == TargetPlatform.android) return 'android';
     return 'unknown';
+  }
+
+  /// iOS APNs 토큰이 set될 때까지 짧게 poll (최대 10초).
+  /// `true` = 받음 / `false` = 타임아웃.
+  static Future<bool> _waitForApnsToken() async {
+    const interval = Duration(milliseconds: 500);
+    const maxAttempts = 20; // 10초
+    for (var i = 0; i < maxAttempts; i++) {
+      final apns = await _messaging.getAPNSToken();
+      if (apns != null) {
+        if (kDebugMode) debugPrint('[Push] APNS token received (attempt ${i + 1})');
+        return true;
+      }
+      await Future.delayed(interval);
+    }
+    return false;
   }
 }
