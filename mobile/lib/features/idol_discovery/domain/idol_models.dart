@@ -4,6 +4,10 @@
 /// → `idol_models.freezed.dart` + `idol_models.g.dart` 생성됨.
 library;
 
+// freezed factory parameter에 @JsonKey 부착은 analyzer가 invalid_annotation_target
+// warning을 띄우지만 codegen은 정상 동작 — 백엔드 snake_case 매핑 의도.
+// ignore_for_file: invalid_annotation_target
+
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'idol_models.freezed.dart';
