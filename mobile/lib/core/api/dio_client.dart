@@ -2,10 +2,13 @@
 ///
 /// 인터셉터:
 /// - request: Supabase 세션의 JWT 자동 첨부
+/// - (opt-in) request body camelCase → snake_case / response 역방향
 /// - response: 4xx/5xx → AppError 변환
 /// - 401 시: Supabase가 자동으로 refresh (supabase_flutter 내장). 그래도 401이면 UnauthorizedError.
 ///
-/// Riverpod provider로 노출. 화면에서 `ref.read(dioProvider)`.
+/// Provider:
+/// - `dioProvider`: 기존 features용. case 변환 없음 (모델에 `@JsonKey(name: 'snake')`).
+/// - `camelDioProvider`: **신규 features 권장**. case 변환 자동. 모델은 순수 camelCase.
 library;
 
 import 'package:dio/dio.dart';
@@ -14,11 +17,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/env.dart';
 import '../error/app_error.dart';
+import 'case_interceptor.dart';
 
 part 'dio_client.g.dart';
 
 @Riverpod(keepAlive: true)
-Dio dio(Ref ref) {
+Dio dio(Ref ref) => _buildDio(withCaseInterceptor: false);
+
+/// case_interceptor가 적용된 dio. **신규 features 권장 (opt-in)**.
+///
+/// 모델에서 `@JsonKey(name: 'snake_case')` 없이 camelCase 그대로 사용 가능.
+/// 특정 요청만 변환 끄려면 `Options(extra: {kSkipCaseTransform: true})`.
+@Riverpod(keepAlive: true)
+Dio camelDio(Ref ref) => _buildDio(withCaseInterceptor: true);
+
+Dio _buildDio({required bool withCaseInterceptor}) {
   final dio = Dio(
     BaseOptions(
       baseUrl: Env.apiBaseUrl,
@@ -29,6 +42,10 @@ Dio dio(Ref ref) {
   );
 
   dio.interceptors.add(_AuthInterceptor());
+  // CaseInterceptor는 ErrorInterceptor보다 먼저 — request 변환을 응답 매핑 전에 한 번.
+  if (withCaseInterceptor) {
+    dio.interceptors.add(CaseInterceptor());
+  }
   dio.interceptors.add(_ErrorInterceptor());
 
   return dio;
