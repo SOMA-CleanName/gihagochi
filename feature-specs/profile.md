@@ -34,8 +34,8 @@
   - 회원 탈퇴: **soft delete** — `profiles.deleted_at = NOW()` UPDATE. 메시지/구독은 보존. 30일 후 hard delete (운영 자동화는 본 PR 범위 외)
   - `deleted_at` 컬럼은 [profile.py:47](backend/app/shared/models/profile.py#L47)에 이미 존재 — 마이그레이션 0개
 - [ ] **F-034 약관/개인정보/고객센터**
-  - 약관 / 개인정보 처리방침: 정적 페이지 (assets/legal/*.md → flutter_markdown으로 렌더링)
-  - 1차 문안 미확보 → placeholder 텍스트 + 메인 빌더에 문안 요청 (출시 전 필수)
+  - 약관 / 개인정보 처리방침: **hardcoded placeholder 텍스트** (assets/pubspec.yaml 변경 없음, 결정사항 참조)
+  - 1차 문안 미확보 → placeholder + 메인 빌더에 문안 요청 (출시 전 필수)
   - 고객센터: `mailto:` 링크 (지원 이메일 1차). Jotform 등 외부 폼 도입은 운영 시 검토
 
 ---
@@ -49,10 +49,12 @@
 - `2026-05-25`: **비밀번호 변경 UI 없음** — auth가 Google OAuth only라 자명. "Google 계정에서 관리" 안내만.
 - `2026-05-25`: **회원 탈퇴 = soft delete**. `profiles.deleted_at = NOW()` UPDATE. 컬럼 이미 존재 → 마이그레이션 0. 메시지/구독 보존. 30일 후 hard delete cron은 본 PR 범위 외 (운영 자동화).
 - `2026-05-25`: **아이돌 편집 필드 = `stage_name`, `bio`, `thumbnail_url`**. [idol_profile.py](backend/app/shared/models/idol_profile.py) OWNER 주석에 `profile (편집, F-030)` 명시되어 UPDATE 권한 있음. avatar(profiles)와 thumbnail(idol_profiles)는 별개 — UI에서 둘 다 노출.
-- `2026-05-25`: **팬 메인 라우트 = `/main`** (root `/`는 그대로 placeholder 유지). auth가 가입 후 `/discover`로 보내는 흐름은 그대로. `/main`은 마이페이지 / 추후 네비바에서 진입. core/router placeholder는 안 건드림.
-- `2026-05-25`: **약관 1차 = placeholder + assets 정적 마크다운**. 문안 확보는 메인 빌더 책임 (출시 전 필수, 본 PR 범위 외).
+- `2026-05-25`: **팬 메인 라우트 = `/main`**. core PR #33이 root `/`를 `/main`으로 redirect + auth_guard 타겟도 `/main`으로 전환. profile은 `/main`만 등록하면 결합 완성.
+- `2026-05-25`: **약관 1차 = hardcoded placeholder 텍스트** (assets/pubspec.yaml 안 건드림). 문안 확보는 메인 빌더 책임 (출시 전 필수, 본 PR 범위 외). 옵션 C에서 a 선택.
 - `2026-05-25`: **하단 네비 = 2탭** (메인 / 마이페이지). idol_discovery / notification 추가 시 확장.
 - `2026-05-25`: **아이돌 임시 진입점 = 마이페이지**. 아이돌 로그인 시 본격 메인(F-024) 머지 전까지 마이페이지로 라우팅. 마이페이지 상단에 "메시지 발행은 준비 중" 안내 배너.
+- `2026-05-25`: **Storage 버킷 (avatars, idol-thumbnails) = private + 8개 RLS 정책 + 5MB / JPEG·PNG 제한** dev 적용 완료 (asyncpg로 직접 SQL 실행). 옵션 B에서 a 선택 — 메인 빌더 사전 셋업 후 진행. staging/prod 재현용 알렘빅 migration은 **후속 작업** 항목 참조.
+- `2026-05-25`: **avatar/thumbnail URL 패턴은 잠정 private + signed URL** (RLS와 일관). 캐싱 효율 떨어지면 public 전환 검토 — 구현 시 cached_network_image 사용성 보고 결정.
 
 ---
 
@@ -89,11 +91,21 @@
 
 확정되어 SPEC.md(계약)로 옮긴 항목 체크.
 
-- [ ] 화면 라우트 (`/main`, `/my`, `/my/edit`, `/my/account`, `/my/legal/*`)
-- [ ] 읽기/쓰기 테이블 (profiles, idol_profiles, terms_agreements 읽기 / profiles UPDATE)
-- [ ] Supabase Storage 버킷 사용 (`avatars`)
-- [ ] 공개 인터페이스 (다른 피처가 끼울 수 있는 슬롯 — MainScreen 채팅 리스트 slot, 마이페이지 응원 중 슬롯)
-- [ ] 비즈니스 룰 (탈퇴 = soft delete, 활동명 즉시 반영, 비번 변경 UI 없음)
+- [x] 화면 라우트 (`/main`, `/my`, `/my/edit/{fan,idol}`, `/my/account`, `/my/legal/{tos,privacy,contact}`)
+- [x] 읽기/쓰기 테이블 (profiles, idol_profiles, idol_signup_applications 읽기 / profiles, idol_profiles UPDATE)
+- [x] Supabase Storage 버킷 사용 (`avatars` + `idol-thumbnails`, 둘 다 private + 8개 RLS)
+- [x] 공개 인터페이스 (3개 슬롯 Provider — chat_room/subscription/notification이 override)
+- [x] 비즈니스 룰 (탈퇴 = soft delete via deleted_at, 활동명 즉시 반영, 비번 변경 UI 없음, 약관 hardcoded)
+
+---
+
+## 후속 작업 (본 PR 범위 외)
+
+- **알렘빅 migration `infra/storage-rls`** — 현재 RLS 정책 + 버킷 설정이 dev DB에만 적용된 상태. SQL 텍스트는 본 대화 기록에서 가져와서 `op.execute()`로 캡처. staging/prod 환경 셋업 시 필수
+- **F-024 (아이돌 메인)** — chat 도메인 작업 단위로 이동. `docs/FEATURES.md` §2/§10.1 갱신은 별도 `docs/` PR로
+- **약관/개인정보 실제 문안 확보 + hardcoded 텍스트 교체** — 출시 전 메인 빌더 책임
+- **약관 버전 변경 시 재동의 모달** — 별도 작업 단위
+- **회원 탈퇴 30일 후 hard delete cron** — 운영 자동화 작업
 
 ---
 
