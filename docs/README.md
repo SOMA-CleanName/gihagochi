@@ -17,6 +17,7 @@
 | [FEATURES.md](./FEATURES.md) | 🧑 사람 + 🤖 AI 컨텍스트 | 38개 피처 명세 + 12개 작업 단위 매핑 + 의존 관계 | 피처 할당받기 직전 / 다른 피처와의 관계 확인 |
 | [VSA.md](./VSA.md) | 🧑 사람 | Vertical Slice Architecture 채택 이유와 슬라이스 경계 정의 | "왜 폴더가 이렇게 잘려있지?" 의문 들 때 |
 | [VSA_CHECKLIST.md](./VSA_CHECKLIST.md) | 🧑 사람 (주로 메인 빌더) | 하네스 갖춰졌나 + 12개 슬라이스 진행도 | 새 슬라이스 시작 전 인프라 확인 / 진행 점검 |
+| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | 🧑 사람 | 셋업 / 배포 / Supabase / JWT / 어드민 운영 중 마주친 함정과 해결 | 셋업 / 검증 / 배포 중 막혔을 때 / 같은 함정 예방 |
 
 ---
 
