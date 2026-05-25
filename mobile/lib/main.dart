@@ -20,6 +20,9 @@ import 'core/config/env.dart';
 import 'core/push/push_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+// 피처 슬롯 override — 새 피처가 다른 피처의 슬롯을 채울 때 여기에 1줄씩 추가.
+import 'features/chat_room/presentation/fan_chat_list.dart';
+import 'features/profile/application/slot_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,7 +61,13 @@ Future<void> main() async {
       options.sendDefaultPii = false;
     },
     appRunner: () => runApp(
-      const ProviderScope(child: _GihagochiApp()),
+      ProviderScope(
+        overrides: [
+          // chat_room 이 profile 의 채팅방 리스트 슬롯을 채움.
+          chatListSlotProvider.overrideWith((ref) => const FanChatList()),
+        ],
+        child: const _GihagochiApp(),
+      ),
     ),
   );
 }
