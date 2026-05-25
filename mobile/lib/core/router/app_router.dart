@@ -20,6 +20,7 @@ import '../../features/auth/routes.dart';
 import '../../features/chat_room/routes.dart';
 import '../../features/idol_discovery/routes.dart';
 import '../../features/profile/routes.dart';
+import '../../features/subscription/routes.dart';
 // ...
 
 part 'app_router.g.dart';
@@ -50,6 +51,7 @@ GoRouter appRouter(Ref ref) {
       ...profileRoutes,
       ...chatRoomRoutes,
       ...idolDiscoveryRoutes,
+      ...subscriptionRoutes,
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(child: Text('경로 없음: ${state.matchedLocation}')),
