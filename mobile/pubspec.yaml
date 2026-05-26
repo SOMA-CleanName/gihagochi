@@ -42,12 +42,17 @@ dependencies:
   cached_network_image: ^3.4.1
   image_picker: ^1.1.2
   image_cropper: ^8.0.2
+  # 사진 메시지 업로드 전 다운스케일 + JPEG 변환용 (F-019: 장변 2048px / 5MB).
+  flutter_image_compress: ^2.4.0
 
   # ── 음성 (녹음 + 재생) ────────────────────────
   # 음성 메시지 재생용으로는 audioplayers 단독으로 충분.
   # 스트리밍/큐 같은 고급 기능 필요해지면 just_audio 추가.
   record: ^6.2.0
   audioplayers: ^6.1.0
+
+  # ── 권한 (카메라/마이크 거절 시 설정 이동 UX) ─
+  permission_handler: ^11.3.1
 
   # ── 모니터링 ──────────────────────────────────
   sentry_flutter: ^9.20.0

@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- chat_media F-019/F-020: 사진/음성 메시지용 권한 -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Android 13+ 사진 picker. 시스템 picker(image_picker)는 권한 없어도 동작하지만 일부 OEM/구버전 호환용 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+
     <application
         android:label="gihagochi"
         android:name="${applicationName}"
