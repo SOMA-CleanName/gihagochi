@@ -41,6 +41,15 @@ class AuthRepository {
     );
   }
 
+  /// 이메일 + 비밀번호 로그인 — dev 전용 빠른 로그인용.
+  /// production 플로우에서 호출 X. landing 화면의 dev 버튼이 kDebugMode 가드로만 호출.
+  Future<void> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    await supabase.auth.signInWithPassword(email: email, password: password);
+  }
+
   // ── 백엔드 API ─────────────────────────────
 
   /// POST /auth/signup — 프로필 + (선택)아이돌 신청 + 약관 동의 트랜잭션 생성.
