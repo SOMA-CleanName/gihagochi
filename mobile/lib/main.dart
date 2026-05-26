@@ -20,6 +20,8 @@ import 'core/config/env.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 // 피처 슬롯 override — 새 피처가 다른 피처의 슬롯을 채울 때 여기에 1줄씩 추가.
+import 'features/chat_message/presentation/message_input.dart';
+import 'features/chat_message/presentation/message_list.dart';
 import 'features/chat_room/application/slot_providers.dart' as chat_slots;
 import 'features/chat_room/presentation/fan_chat_list.dart';
 import 'features/gift/integration/gift_menu_action.dart';
@@ -71,6 +73,11 @@ Future<void> main() async {
           chat_slots.chatRoomMenuActionsProvider.overrideWith(
             (ref) => [giftMenuAction()],
           ),
+          // chat_message 가 chat_room 의 메시지/입력창 슬롯을 채움.
+          chat_slots.chatMessageListSlotProvider
+              .overrideWith((ref, idolId) => MessageList(idolId: idolId)),
+          chat_slots.chatMessageInputSlotProvider
+              .overrideWith((ref, idolId) => MessageInput(idolId: idolId)),
         ],
         // PushInitializer: ProviderScope 내부에서 FCM 토큰 발급 + 백엔드 등록.
         child: const PushInitializer(child: _GihagochiApp()),
