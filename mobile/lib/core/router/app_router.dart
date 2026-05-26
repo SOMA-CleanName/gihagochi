@@ -28,6 +28,12 @@ import '../../features/subscription/routes.dart';
 
 part 'app_router.g.dart';
 
+/// GoRouter가 내부 Navigator에 부착하는 key.
+/// MaterialApp.router의 builder context는 Navigator 위쪽이라
+/// dev_overlay 같은 floating UI가 showDialog/showModalBottomSheet 호출 시
+/// 본 key의 currentContext를 사용해야 Navigator 찾음.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
   // riverpod 3에서 provider.stream 제거 — supabase auth stream 직접 사용.
@@ -38,6 +44,7 @@ GoRouter appRouter(Ref ref) {
   ref.onDispose(refreshNotifier.dispose);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     refreshListenable: refreshNotifier,
     redirect: (context, state) => authGuard(ref, state),
