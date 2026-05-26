@@ -83,5 +83,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>채팅방에서 사진 메시지를 촬영하기 위해 카메라를 사용합니다.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>채팅방에서 음성 메시지를 녹음하기 위해 마이크를 사용합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>채팅방에 보낼 사진을 선택하기 위해 사진 라이브러리에 접근합니다.</string>
 </dict>
 </plist>
