@@ -66,6 +66,29 @@ class Env {
   static bool get isDev => env == 'dev';
   static bool get isProd => env == 'prod';
 
+  // ── (선택) dev 전용 빠른 로그인 ──
+  // .env에 DEV_QUICK_LOGIN_EMAIL/PASSWORD 가 있고 kDebugMode일 때만 landing 화면에 버튼 노출.
+  // release 빌드는 kReleaseMode 가드로 자동 제외.
+  static String? get devQuickLoginEmail {
+    const fromDefine = String.fromEnvironment('DEV_QUICK_LOGIN_EMAIL');
+    if (fromDefine.isNotEmpty) return fromDefine;
+    final v = dotenv.maybeGet('DEV_QUICK_LOGIN_EMAIL');
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
+  static String? get devQuickLoginPassword {
+    const fromDefine = String.fromEnvironment('DEV_QUICK_LOGIN_PASSWORD');
+    if (fromDefine.isNotEmpty) return fromDefine;
+    final v = dotenv.maybeGet('DEV_QUICK_LOGIN_PASSWORD');
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
+  static String get devQuickLoginLabel {
+    const fromDefine = String.fromEnvironment('DEV_QUICK_LOGIN_LABEL');
+    if (fromDefine.isNotEmpty) return fromDefine;
+    return dotenv.maybeGet('DEV_QUICK_LOGIN_LABEL') ?? '테스트 계정';
+  }
+
   /// 필수 값 검증. main()에서 init() 직후 호출 권장.
   static void assertRequired() {
     final missing = <String>[];

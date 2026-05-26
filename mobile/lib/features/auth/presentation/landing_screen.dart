@@ -4,10 +4,12 @@
 ///       Supabase OAuth → 콜백 시 라우터가 redirect 결정.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/env.dart';
 import '../../../core/widgets/app_button.dart';
 import '../data/auth_repository.dart';
 
@@ -32,6 +34,29 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
       // OAuth 콜백 후 onAuthStateChange → 라우터가 다음 화면 결정.
     } catch (e) {
       if (mounted) setState(() => _error = '로그인 실패: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// dev 전용 빠른 로그인 — kDebugMode + Env에 자격 증명 설정된 경우만 동작.
+  /// release 빌드에선 kReleaseMode 가드로 본 함수 자체가 호출 안 됨.
+  Future<void> _devQuickLogin() async {
+    final email = Env.devQuickLoginEmail;
+    final password = Env.devQuickLoginPassword;
+    if (email == null || password == null) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(authRepositoryProvider).signInWithPassword(
+            email: email,
+            password: password,
+          );
+    } catch (e) {
+      if (mounted) setState(() => _error = 'dev 로그인 실패: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -65,6 +90,39 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                     _busy ? null : () => context.go('/auth/signup/role'),
                 child: const Text('아이돌로 가입하기'),
               ),
+              // ─── dev 전용 빠른 로그인 ───
+              // kDebugMode + .env DEV_QUICK_LOGIN_EMAIL/PASSWORD 둘 다 있을 때만 노출.
+              // release 빌드에선 tree-shaken.
+              if (kDebugMode &&
+                  Env.devQuickLoginEmail != null &&
+                  Env.devQuickLoginPassword != null) ...[
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.amber.shade400),
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.amber.shade50,
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '🔧 DEV ONLY',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.amber.shade900,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      OutlinedButton(
+                        onPressed: _busy ? null : _devQuickLogin,
+                        child: Text('${Env.devQuickLoginLabel}로 빠른 로그인'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(
