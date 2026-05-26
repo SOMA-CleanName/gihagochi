@@ -11,6 +11,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/auth/auth_service.dart';
+import '../../chat_meta/data/chat_meta_repository.dart';
 import '../../chat_room/application/chat_list_controller.dart';
 import '../data/message_repository.dart';
 import '../domain/chat_item.dart';
@@ -53,11 +54,24 @@ class ChatMessagesController extends _$ChatMessagesController {
       if (ch != null) unawaited(supabase.removeChannel(ch));
     });
 
+    // F-021 채팅방 진입 → 읽음 처리. 응원 row 없으면(아이돌이 자기 채팅방) silent 0 row.
+    unawaited(ref.read(chatMetaRepositoryProvider).markRoomRead(idolId));
+
+    // 화면에 표시되는 broadcast 메시지에 read 통계 INSERT (멱등).
+    for (final m in messages) {
+      if (_isBroadcast(m) && m.senderId != me) {
+        unawaited(ref.read(chatMetaRepositoryProvider).markBroadcastAsRead(m.id));
+      }
+    }
+
     // DESC fetch 결과를 ASC 로 reverse.
     return messages.reversed
         .map<ChatItem>((m) => ConfirmedItem(message: m, isMine: m.senderId == me))
         .toList();
   }
+
+  bool _isBroadcast(Message m) =>
+      m.type == MessageType.idolToFans || m.type == MessageType.idolReply;
 
   bool get hasMore => _hasMore;
 
@@ -90,6 +104,11 @@ class ChatMessagesController extends _$ChatMessagesController {
       state = AsyncValue.data(next);
     } else {
       state = AsyncValue.data([...current, confirmed]);
+    }
+
+    // F-021 broadcast 메시지 도착 → 읽음 통계 INSERT (본인 sender 제외, 멱등).
+    if (_isBroadcast(message) && message.senderId != me) {
+      unawaited(ref.read(chatMetaRepositoryProvider).markBroadcastAsRead(message.id));
     }
 
     // chat_room 카드 미리보기 갱신 (broadcast hook).

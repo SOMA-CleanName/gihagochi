@@ -9,9 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_error.dart';
+import '../../../core/auth/auth_service.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/message_bubble.dart';
+import '../../chat_meta/presentation/reply_composer_sheet.dart';
 import '../application/chat_messages_controller.dart';
 import '../domain/chat_item.dart';
 import '../domain/message.dart';
@@ -155,13 +157,13 @@ class _ItemRow extends StatelessWidget {
   }
 }
 
-class _ConfirmedRow extends StatelessWidget {
+class _ConfirmedRow extends ConsumerWidget {
   const _ConfirmedRow({required this.message, required this.isMine});
   final Message message;
   final bool isMine;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final body = switch (message.mediaType) {
       MediaType.text => message.content ?? '',
       MediaType.image => '[사진]',
@@ -174,10 +176,25 @@ class _ConfirmedRow extends StatelessWidget {
         isMine: isMine,
       );
     }
-    return MessageBubble(
+    final bubble = MessageBubble(
       text: body,
       createdAt: message.createdAt,
       isMine: isMine,
+    );
+    // F-023: 아이돌이 자기 채팅방의 fan_to_idol 메시지에 답글 가능.
+    // 본인 = idol_id이고 message.type=fan_to_idol일 때만 longPress 활성.
+    final me = ref.watch(supabaseProvider).auth.currentUser?.id;
+    final canReply = me != null &&
+        me == message.idolId &&
+        message.type == MessageType.fanToIdol;
+    if (!canReply) return bubble;
+    return GestureDetector(
+      onLongPress: () => showReplyComposerSheet(
+        context,
+        parentMessageId: message.id,
+        parentPreviewContent: message.content,
+      ),
+      child: bubble,
     );
   }
 }
