@@ -16,6 +16,7 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/auth_service.dart';
 import '../config/env.dart';
+import '../router/app_router.dart' show rootNavigatorKey;
 
 class DevOverlay extends ConsumerWidget {
   const DevOverlay({super.key, required this.child});
@@ -59,12 +60,17 @@ class _DevFab extends ConsumerWidget {
     );
   }
 
-  Future<void> _showMenu(BuildContext context, WidgetRef ref) {
+  Future<void> _showMenu(BuildContext _, WidgetRef ref) {
+    // MaterialApp.router builder의 context는 Navigator 위쪽 → showModalBottomSheet 실패.
+    // GoRouter의 navigatorKey context 사용 (Navigator scope 안).
+    final navContext = rootNavigatorKey.currentContext;
+    if (navContext == null) return Future.value();
+
     final user = ref.read(supabaseProvider).auth.currentUser;
     final userId = user?.id;
 
     return showModalBottomSheet<void>(
-      context: context,
+      context: navContext,
       showDragHandle: true,
       builder: (sheetContext) => SafeArea(
         child: Padding(
@@ -100,7 +106,7 @@ class _DevFab extends ConsumerWidget {
                     ? null
                     : () {
                         Navigator.of(sheetContext).pop();
-                        context.push('/chat/$userId');
+                        rootNavigatorKey.currentContext?.push('/chat/$userId');
                       },
               ),
 
@@ -110,7 +116,7 @@ class _DevFab extends ConsumerWidget {
                 title: const Text('채팅방 진입 (idolId 직접 입력)'),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  await _showIdolIdDialog(context);
+                  await _showIdolIdDialog();
                 },
               ),
 
@@ -121,7 +127,7 @@ class _DevFab extends ConsumerWidget {
                 subtitle: const Text('/discover, /settings/notifications 등'),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  await _showRouteDialog(context);
+                  await _showRouteDialog();
                 },
               ),
             ],
@@ -131,10 +137,12 @@ class _DevFab extends ConsumerWidget {
     );
   }
 
-  Future<void> _showIdolIdDialog(BuildContext context) async {
+  Future<void> _showIdolIdDialog() async {
+    final navContext = rootNavigatorKey.currentContext;
+    if (navContext == null) return;
     final controller = TextEditingController();
     final id = await showDialog<String>(
-      context: context,
+      context: navContext,
       builder: (dialogContext) => AlertDialog(
         title: const Text('채팅방 진입'),
         content: TextField(
@@ -154,15 +162,17 @@ class _DevFab extends ConsumerWidget {
         ],
       ),
     );
-    if (id != null && id.isNotEmpty && context.mounted) {
-      context.push('/chat/$id');
+    if (id != null && id.isNotEmpty) {
+      rootNavigatorKey.currentContext?.push('/chat/$id');
     }
   }
 
-  Future<void> _showRouteDialog(BuildContext context) async {
+  Future<void> _showRouteDialog() async {
+    final navContext = rootNavigatorKey.currentContext;
+    if (navContext == null) return;
     final controller = TextEditingController(text: '/');
     final route = await showDialog<String>(
-      context: context,
+      context: navContext,
       builder: (dialogContext) => AlertDialog(
         title: const Text('경로 직접 이동'),
         content: TextField(
@@ -182,8 +192,8 @@ class _DevFab extends ConsumerWidget {
         ],
       ),
     );
-    if (route != null && route.isNotEmpty && context.mounted) {
-      context.push(route);
+    if (route != null && route.isNotEmpty) {
+      rootNavigatorKey.currentContext?.push(route);
     }
   }
 }
