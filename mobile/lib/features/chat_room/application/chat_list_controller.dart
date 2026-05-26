@@ -6,6 +6,7 @@ library;
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/auth/auth_service.dart';
 import '../data/chat_room_repository.dart';
 import '../domain/chat_room_models.dart';
 
@@ -25,8 +26,13 @@ class ChatListController extends _$ChatListController {
 }
 
 /// 채팅방 진입 시 활성 subscription 검증 — 단발 fetch.
+///
+/// 본인 = idolId면 자동 통과 (F-024 아이돌 본인 채팅방 진입). 자기 응원 subscription은
+/// 정책상 불가능하므로(subscription service가 자기 응원 차단) 별도 분기 필요.
 @riverpod
 Future<bool> isActiveSubscription(Ref ref, String idolId) {
+  final myId = ref.watch(supabaseProvider).auth.currentUser?.id;
+  if (myId != null && myId == idolId) return Future.value(true);
   return ref.watch(chatRoomRepositoryProvider).isActiveSubscription(idolId);
 }
 
