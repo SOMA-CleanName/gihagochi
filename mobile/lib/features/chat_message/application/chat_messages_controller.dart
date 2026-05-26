@@ -116,16 +116,30 @@ class ChatMessagesController extends _$ChatMessagesController {
     state = AsyncValue.data([...current, pending]);
 
     try {
-      final inserted = await ref.read(messageRepositoryProvider).sendFanText(
-            idolId: idolId,
-            content: trimmed,
-            clientMessageId: clientId,
-          );
+      final inserted = await _sendByRole(content: trimmed, clientMessageId: clientId);
       _replacePending(clientId, inserted);
     } catch (_) {
       _markFailed(clientId);
       rethrow;
     }
+  }
+
+  /// 본인 = idolId면 idol broadcast(type='idol_to_fans', recipient=null),
+  /// 아니면 fan_to_idol. RLS 정책 + messages_type_consistency 제약 매칭.
+  Future<Message> _sendByRole({
+    required String content,
+    required String clientMessageId,
+  }) {
+    final repo = ref.read(messageRepositoryProvider);
+    final me = ref.read(supabaseProvider).auth.currentUser?.id;
+    if (me != null && me == idolId) {
+      return repo.sendIdolBroadcast(content: content, clientMessageId: clientMessageId);
+    }
+    return repo.sendFanText(
+      idolId: idolId,
+      content: content,
+      clientMessageId: clientMessageId,
+    );
   }
 
   /// 실패한 pending 재전송 — 같은 client_message_id 재사용으로 멱등성 보장.
@@ -143,11 +157,7 @@ class ChatMessagesController extends _$ChatMessagesController {
     state = AsyncValue.data(next);
 
     try {
-      final inserted = await ref.read(messageRepositoryProvider).sendFanText(
-            idolId: idolId,
-            content: p.content,
-            clientMessageId: clientId,
-          );
+      final inserted = await _sendByRole(content: p.content, clientMessageId: clientId);
       _replacePending(clientId, inserted);
     } catch (_) {
       // 중복 / 기타 → 이미 INSERT 됐는지 확인.

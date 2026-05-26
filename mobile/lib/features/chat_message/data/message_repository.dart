@@ -93,6 +93,40 @@ class MessageRepository {
     }
   }
 
+  /// 아이돌→팬들 broadcast 텍스트 메시지 INSERT. F-024.
+  /// type='idol_to_fans', recipient_id=NULL (broadcast — 모든 응원 팬 대상).
+  /// `messages_type_consistency` 제약과 매칭.
+  Future<Message> sendIdolBroadcast({
+    required String content,
+    required String clientMessageId,
+  }) async {
+    final userId = _userId; // 아이돌 본인 = sender = idol_id
+    try {
+      final row = await supabase
+          .from('messages')
+          .insert({
+            'client_message_id': clientMessageId,
+            'type': 'idol_to_fans',
+            'sender_id': userId,
+            'idol_id': userId,
+            // recipient_id: 명시 X (NULL — broadcast)
+            'content': content,
+            'media_type': 'text',
+          })
+          .select()
+          .single();
+      return Message.fromJson(row);
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        throw ValidationError(message: '메시지가 이미 전송되었습니다.', cause: e);
+      }
+      throw ValidationError(
+        message: '메시지 전송에 실패했습니다. (${e.message})',
+        cause: e,
+      );
+    }
+  }
+
   /// 중복 INSERT 시 / 재전송 시 기존 row 조회.
   Future<Message?> findByClientMessageId(String clientMessageId) async {
     final userId = _userId;
