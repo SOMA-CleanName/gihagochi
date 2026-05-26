@@ -115,9 +115,9 @@ class ChatRoomRepository {
 
   String? _formatPreview({required String? mediaType, required String? content}) {
     switch (mediaType) {
-      case 'image':
+      case 'photo':
         return '[사진]';
-      case 'audio':
+      case 'voice':
         return '[음성]';
       case 'text':
       default:

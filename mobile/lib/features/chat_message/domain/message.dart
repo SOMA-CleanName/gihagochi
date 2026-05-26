@@ -24,13 +24,16 @@ enum MessageType {
 }
 
 /// DB enum `media_type` 와 1:1.
+///
+/// 실제 DB enum: `text`, `photo`, `voice` (backend `MediaType` StrEnum + migrations/0001_initial).
+/// 초기 mobile 모델이 `image`/`audio`로 잘못 정의되어 있어 chat_media(F-019/F-020) 작업 전 정정.
 enum MediaType {
   @JsonValue('text')
   text,
-  @JsonValue('image')
-  image,
-  @JsonValue('audio')
-  audio,
+  @JsonValue('photo')
+  photo,
+  @JsonValue('voice')
+  voice,
 }
 
 /// messages 테이블 row.

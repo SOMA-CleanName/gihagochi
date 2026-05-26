@@ -166,8 +166,8 @@ class _ConfirmedRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final body = switch (message.mediaType) {
       MediaType.text => message.content ?? '',
-      MediaType.image => '[사진]',
-      MediaType.audio => '[음성]',
+      MediaType.photo => '[사진]',
+      MediaType.voice => '[음성]',
     };
     if (message.deletedAt != null) {
       return MessageBubble(
