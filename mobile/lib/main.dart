@@ -17,6 +17,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/env.dart';
+import 'core/dev/dev_overlay.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 // 피처 슬롯 override — 새 피처가 다른 피처의 슬롯을 채울 때 여기에 1줄씩 추가.
@@ -98,6 +99,10 @@ class _GihagochiApp extends ConsumerWidget {
       darkTheme: AppTheme.dark,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      // DevOverlay: kDebugMode + Env.isDev + .env DEV_QUICK_LOGIN 설정 시
+      // 우측 하단에 floating debug FAB 노출. release 빌드 tree-shaken.
+      builder: (context, child) =>
+          DevOverlay(child: child ?? const SizedBox.shrink()),
     );
   }
 }
