@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/auth/auth_service.dart';
@@ -433,6 +434,7 @@ class _ConfirmedRow extends ConsumerWidget {
     }
 
     // 상대 메시지 — 좌측 sender 아바타 + 닉네임(#7a).
+    // sender가 아이돌이면 아바타/닉네임 탭 → 아이돌 프로필 화면(#7b).
     final senderAsync = ref.watch(
       senderProfileProvider(senderId: message.senderId, idolId: message.idolId),
     );
@@ -440,35 +442,54 @@ class _ConfirmedRow extends ConsumerWidget {
       data: (s) => s.displayName,
       orElse: () => '',
     );
+    final senderIsIdol = senderAsync.maybeWhen(
+      data: (s) => s.isIdol,
+      orElse: () => false,
+    );
+    final avatarWidget = Padding(
+      padding: const EdgeInsets.only(top: 18),
+      child: Avatar(
+        imageUrl: null,
+        fallbackText: senderName.isNotEmpty ? senderName : '?',
+        size: 32,
+      ),
+    );
+    final nameWidget = senderName.isEmpty
+        ? const SizedBox.shrink()
+        : Padding(
+            padding: const EdgeInsets.only(left: 14, bottom: 2, top: 2),
+            child: Text(
+              senderName,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+            ),
+          );
     final withSender = Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(width: 8),
-          Padding(
-            padding: const EdgeInsets.only(top: 18),
-            child: Avatar(
-              imageUrl: null,
-              fallbackText: senderName.isNotEmpty ? senderName : '?',
-              size: 32,
-            ),
-          ),
+          if (senderIsIdol)
+            GestureDetector(
+              onTap: () => context.push('/discover/${message.idolId}'),
+              child: avatarWidget,
+            )
+          else
+            avatarWidget,
           const SizedBox(width: 4),
           Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (senderName.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 14, bottom: 2, top: 2),
-                    child: Text(
-                      senderName,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                    ),
-                  ),
+                if (senderIsIdol && senderName.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => context.push('/discover/${message.idolId}'),
+                    child: nameWidget,
+                  )
+                else
+                  nameWidget,
                 bubbleWithEdited,
               ],
             ),
