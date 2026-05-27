@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/message_bubble.dart';
@@ -18,6 +19,7 @@ import '../../chat_media/presentation/voice_message_bubble.dart';
 import '../../chat_meta/presentation/reply_badge.dart';
 import '../../chat_meta/presentation/reply_composer_sheet.dart';
 import '../application/chat_messages_controller.dart';
+import '../application/sender_profile.dart';
 import '../domain/chat_item.dart';
 import '../domain/message.dart';
 
@@ -430,19 +432,64 @@ class _ConfirmedRow extends ConsumerWidget {
       );
     }
 
+    // 상대 메시지 — 좌측 sender 아바타 + 닉네임(#7a).
+    final senderAsync = ref.watch(
+      senderProfileProvider(senderId: message.senderId, idolId: message.idolId),
+    );
+    final senderName = senderAsync.maybeWhen(
+      data: (s) => s.displayName,
+      orElse: () => '',
+    );
+    final withSender = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(width: 8),
+          Padding(
+            padding: const EdgeInsets.only(top: 18),
+            child: Avatar(
+              imageUrl: null,
+              fallbackText: senderName.isNotEmpty ? senderName : '?',
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (senderName.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 14, bottom: 2, top: 2),
+                    child: Text(
+                      senderName,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                    ),
+                  ),
+                bubbleWithEdited,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
     // 아이돌이 받은 fan_to_idol → F-023 reply composer.
     final me = ref.watch(supabaseProvider).auth.currentUser?.id;
     final canReply = me != null &&
         me == message.idolId &&
         message.type == MessageType.fanToIdol;
-    if (!canReply) return bubbleWithEdited;
+    if (!canReply) return withSender;
     return GestureDetector(
       onLongPress: () => showReplyComposerSheet(
         context,
         parentMessageId: message.id,
         parentPreviewContent: message.content,
       ),
-      child: bubbleWithEdited,
+      child: withSender,
     );
   }
 
