@@ -1,9 +1,13 @@
 /// F-017 — 메시지 입력창. chat_room 의 `chatMessageInputSlotProvider` override 대상.
+///
+/// 정책: 사진/음성은 **아이돌만** 송신 가능 (1:N 컨텐츠 발행).
+/// 팬은 텍스트만 송신 — 입력창에 사진/마이크 버튼 자체가 안 보임.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/auth_service.dart';
 import '../../../core/error/app_error.dart';
 import '../../chat_media/presentation/photo_picker_sheet.dart';
 import '../../chat_media/presentation/voice_recorder_button.dart';
@@ -61,6 +65,12 @@ class _MessageInputState extends ConsumerState<MessageInput> {
 
   @override
   Widget build(BuildContext context) {
+    // 본인 = 채팅방 idolId 이면 아이돌 — 사진/음성 노출.
+    // 그 외(팬)는 텍스트만.
+    final me = ref.watch(supabaseProvider).auth.currentUser?.id;
+    final isIdolSelf = me != null && me == widget.idolId;
+    final hasText = _ctrl.text.trim().isNotEmpty;
+
     return SafeArea(
       top: false,
       child: Container(
@@ -74,15 +84,16 @@ class _MessageInputState extends ConsumerState<MessageInput> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // F-019 사진
-            IconButton(
-              tooltip: '사진',
-              icon: const Icon(Icons.photo_camera_outlined),
-              onPressed: () => showPhotoPickerSheet(
-                context,
-                idolId: widget.idolId,
+            // F-019 사진 — 아이돌만.
+            if (isIdolSelf)
+              IconButton(
+                tooltip: '사진',
+                icon: const Icon(Icons.photo_camera_outlined),
+                onPressed: () => showPhotoPickerSheet(
+                  context,
+                  idolId: widget.idolId,
+                ),
               ),
-            ),
             Expanded(
               child: TextField(
                 controller: _ctrl,
@@ -100,8 +111,9 @@ class _MessageInputState extends ConsumerState<MessageInput> {
               ),
             ),
             const SizedBox(width: 4),
-            // 입력 비어있으면 F-020 음성 버튼, 있으면 전송 버튼.
-            if (_ctrl.text.trim().isEmpty && !_sending)
+            // 아이돌 + 입력 비어있을 때만 F-020 음성 버튼.
+            // 팬은 입력 비어있으면 전송 disabled 버튼만.
+            if (isIdolSelf && !hasText && !_sending)
               VoiceRecorderButton(idolId: widget.idolId)
             else
               IconButton(
@@ -113,7 +125,7 @@ class _MessageInputState extends ConsumerState<MessageInput> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.send),
-                onPressed: _sending ? null : _send,
+                onPressed: (!hasText || _sending) ? null : _send,
               ),
           ],
         ),
