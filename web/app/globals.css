@@ -49,10 +49,14 @@
 
 /* ── 섹션 단위 스냅 + 스크롤 ──────────────────────── */
 html {
-  scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
   scroll-padding-top: 0;
   background: var(--color-bg);
+}
+
+/* 메인 페이지(.snap-section 보유)에서만 mandatory snap. */
+html:has(.snap-section) {
+  scroll-snap-type: y mandatory;
 }
 
 body {
