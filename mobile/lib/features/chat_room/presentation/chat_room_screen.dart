@@ -1,8 +1,11 @@
 /// F-016 — 채팅방 (`/chat/:idolId`).
 ///
-/// AppBar (thumbnail + 닉네임 + ⋮ 메뉴) + 캐릭터 슬롯(접기 가능) + 메시지 + 입력.
-/// 활성 subscription 아니거나 idol 정보 없으면 진입 차단.
+/// AppBar (thumbnail + 닉네임 + ⋮ 메뉴) + 캐릭터 슬롯(드래그 접기) + 메시지 + 입력.
+/// 캐릭터 영역 하단 capsule 핸들을 위/아래로 드래그하면 height 자유 조절.
+/// 드래그 end 시 가까운 상태(접힘/펴짐)로 snap.
 library;
+
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,13 +31,10 @@ class ChatRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
-  bool _characterCollapsed = false;
-
   @override
   Widget build(BuildContext context) {
     final activeAsync = ref.watch(isActiveSubscriptionProvider(widget.idolId));
     final headerAsync = ref.watch(idolHeaderProvider(widget.idolId));
-    // 본인 == idolId면 ⋮ 메뉴 / AppBar 탭 비활성.
     final me = ref.watch(supabaseProvider).auth.currentUser?.id;
     final isIdolSelf = me != null && me == widget.idolId;
 
@@ -102,13 +102,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             data: (header) {
               if (header == null) return const _NotFoundView();
               if (header.suspended) return const _SuspendedView();
-              return _ChatBody(
-                idolId: widget.idolId,
-                characterCollapsed: _characterCollapsed,
-                onToggleCharacter: () => setState(
-                  () => _characterCollapsed = !_characterCollapsed,
-                ),
-              );
+              return _ChatBody(idolId: widget.idolId);
             },
           );
         },
@@ -117,85 +111,150 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   }
 }
 
-class _ChatBody extends ConsumerWidget {
-  const _ChatBody({
-    required this.idolId,
-    required this.characterCollapsed,
-    required this.onToggleCharacter,
-  });
-
+class _ChatBody extends ConsumerStatefulWidget {
+  const _ChatBody({required this.idolId});
   final String idolId;
-  final bool characterCollapsed;
-  final VoidCallback onToggleCharacter;
-
-  static const double _collapsedHeight = 36;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // 키보드 안 보일 때 캐릭터 ~38%, 열려있을 때 ~22%.
+  ConsumerState<_ChatBody> createState() => _ChatBodyState();
+}
+
+class _ChatBodyState extends ConsumerState<_ChatBody>
+    with SingleTickerProviderStateMixin {
+  /// 0.0 = 접힘 (캐릭터 영역 = _collapsedHeight)
+  /// 1.0 = 펼침 (캐릭터 영역 = fullHeight)
+  late final AnimationController _heightCtrl;
+  bool _isDragging = false;
+
+  static const double _collapsedHeight = 32;
+
+  @override
+  void initState() {
+    super.initState();
+    _heightCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+      value: 1.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _heightCtrl.dispose();
+    super.dispose();
+  }
+
+  double _fullHeight(BuildContext context) {
     final mq = MediaQuery.of(context);
     final keyboardOpen = mq.viewInsets.bottom > 0;
-    final fullHeight = (keyboardOpen ? 0.22 : 0.38) * mq.size.height;
-    final charHeight = characterCollapsed ? _collapsedHeight : fullHeight;
+    return (keyboardOpen ? 0.22 : 0.38) * mq.size.height;
+  }
 
-    return Column(
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOutCubic,
-          height: charHeight,
-          child: ClipRect(
-            child: _CharacterPanel(
-              idolId: idolId,
-              collapsed: characterCollapsed,
-              onToggle: onToggleCharacter,
+  void _onDragStart(DragStartDetails _) {
+    _heightCtrl.stop();
+    setState(() => _isDragging = true);
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    final full = _fullHeight(context);
+    final range = full - _collapsedHeight;
+    if (range <= 0) return;
+    // 위로 드래그 (dy < 0) → height 감소 (접힘) → value 감소
+    // 아래로 드래그 (dy > 0) → height 증가 (펴짐) → value 증가
+    _heightCtrl.value =
+        (_heightCtrl.value + details.delta.dy / range).clamp(0.0, 1.0);
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    setState(() => _isDragging = false);
+    final velocity = details.velocity.pixelsPerSecond.dy;
+    // 빠른 swipe 우선, 그 외엔 가까운 쪽으로 snap.
+    final target = velocity.abs() > 400
+        ? (velocity > 0 ? 1.0 : 0.0)
+        : (_heightCtrl.value > 0.5 ? 1.0 : 0.0);
+    _heightCtrl.animateTo(target, curve: Curves.easeOutCubic);
+  }
+
+  void _toggleTap() {
+    final target = _heightCtrl.value > 0.5 ? 0.0 : 1.0;
+    _heightCtrl.animateTo(target, curve: Curves.easeOutCubic);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _heightCtrl,
+      builder: (context, _) {
+        final full = _fullHeight(context);
+        final h = lerpDouble(_collapsedHeight, full, _heightCtrl.value)!;
+        return Column(
+          children: [
+            SizedBox(
+              height: h,
+              child: _CharacterPanel(
+                idolId: widget.idolId,
+                value: _heightCtrl.value,
+                isDragging: _isDragging,
+                onDragStart: _onDragStart,
+                onDragUpdate: _onDragUpdate,
+                onDragEnd: _onDragEnd,
+                onHandleTap: _toggleTap,
+              ),
             ),
-          ),
-        ),
-        Expanded(child: ref.watch(chatMessageListSlotProvider(idolId))),
-        ref.watch(chatMessageInputSlotProvider(idolId)),
-      ],
+            Expanded(
+              child: ref.watch(chatMessageListSlotProvider(widget.idolId)),
+            ),
+            ref.watch(chatMessageInputSlotProvider(widget.idolId)),
+          ],
+        );
+      },
     );
   }
 }
 
-/// 캐릭터 슬롯 + 접기/펴기 핸들.
 class _CharacterPanel extends ConsumerWidget {
   const _CharacterPanel({
     required this.idolId,
-    required this.collapsed,
-    required this.onToggle,
+    required this.value,
+    required this.isDragging,
+    required this.onDragStart,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.onHandleTap,
   });
 
   final String idolId;
-  final bool collapsed;
-  final VoidCallback onToggle;
+  final double value; // 0..1
+  final bool isDragging;
+  final GestureDragStartCallback onDragStart;
+  final GestureDragUpdateCallback onDragUpdate;
+  final GestureDragEndCallback onDragEnd;
+  final VoidCallback onHandleTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (collapsed) {
-      // 접힌 상태: 가는 capsule + 펴기 chevron.
-      return Container(
-        color: AppColors.surface.withValues(alpha: 0.6),
-        alignment: Alignment.center,
-        child: _HandleButton(
-          icon: Icons.expand_more,
-          tooltip: '캐릭터 펴기',
-          onTap: onToggle,
-        ),
-      );
-    }
-    // 펼쳐진 상태: 캐릭터 슬롯 + 우상단 접기 핸들.
+    // 거의 접혔을 때(<0.08)는 캐릭터 슬롯 paint X — 핸들만 노출.
+    final showCharacter = value > 0.08;
     return Stack(
+      clipBehavior: Clip.hardEdge,
       children: [
-        Positioned.fill(child: ref.watch(chatRoomCharacterSlotProvider(idolId))),
+        if (showCharacter)
+          Positioned.fill(
+            child: Opacity(
+              opacity: value.clamp(0.0, 1.0),
+              child: ref.watch(chatRoomCharacterSlotProvider(idolId)),
+            ),
+          ),
         Positioned(
-          top: AppSpacing.sm,
-          right: AppSpacing.sm,
-          child: _HandleButton(
-            icon: Icons.expand_less,
-            tooltip: '캐릭터 접기',
-            onTap: onToggle,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _DragHandle(
+            isDragging: isDragging,
+            onDragStart: onDragStart,
+            onDragUpdate: onDragUpdate,
+            onDragEnd: onDragEnd,
+            onTap: onHandleTap,
           ),
         ),
       ],
@@ -203,33 +262,44 @@ class _CharacterPanel extends ConsumerWidget {
   }
 }
 
-class _HandleButton extends StatelessWidget {
-  const _HandleButton({
-    required this.icon,
-    required this.tooltip,
+/// 캐릭터 영역 하단의 드래그 핸들 (iOS-style capsule pill).
+class _DragHandle extends StatelessWidget {
+  const _DragHandle({
+    required this.isDragging,
+    required this.onDragStart,
+    required this.onDragUpdate,
+    required this.onDragEnd,
     required this.onTap,
   });
 
-  final IconData icon;
-  final String tooltip;
+  final bool isDragging;
+  final GestureDragStartCallback onDragStart;
+  final GestureDragUpdateCallback onDragUpdate;
+  final GestureDragEndCallback onDragEnd;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: AppColors.surfaceContainerHigh.withValues(alpha: 0.85),
-        shape: const StadiumBorder(),
-        child: InkWell(
-          customBorder: const StadiumBorder(),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.xs,
-            ),
-            child: Icon(icon, size: 18, color: AppColors.onSurfaceVariant),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragStart: onDragStart,
+      onVerticalDragUpdate: onDragUpdate,
+      onVerticalDragEnd: onDragEnd,
+      onTap: onTap,
+      child: Container(
+        height: 24,
+        // 위쪽 영역까지 hit 잡히도록 투명 배경.
+        color: Colors.transparent,
+        alignment: Alignment.center,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: isDragging ? 56 : 44,
+          height: 5,
+          decoration: BoxDecoration(
+            color: isDragging
+                ? AppColors.primary.withValues(alpha: 0.8)
+                : AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(3),
           ),
         ),
       ),
