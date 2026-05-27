@@ -109,6 +109,14 @@ final chatMessageInputSlotProvider =
   (ref, idolId) => PlaceholderMessageInput(idolId: idolId),
 );
 
+// 채팅방 상단 2.5D AI 캐릭터 슬롯 — character 슬라이스가 머지 시 override.
+// ChatRoomScreen이 키보드 닫혀있을 때 화면의 ~38%, 열려있을 때 ~22% 높이로 노출.
+// default = PlaceholderCharacter ("AI 캐릭터 준비 중").
+final chatRoomCharacterSlotProvider =
+    Provider.family<Widget, String /*idolId*/>(
+  (ref, idolId) => PlaceholderCharacter(idolId: idolId),
+);
+
 // 채팅방 메뉴 액션 리스트 — report / subscription / notification이 머지 시
 // 자기 액션 추가. default = `[]`.
 final chatRoomMenuActionsProvider = Provider<List<ChatRoomMenuAction>>((_) => []);

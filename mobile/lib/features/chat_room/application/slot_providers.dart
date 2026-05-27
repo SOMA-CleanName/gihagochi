@@ -23,6 +23,12 @@ Widget chatMessageListSlot(Ref ref, String idolId) =>
 Widget chatMessageInputSlot(Ref ref, String idolId) =>
     PlaceholderMessageInput(idolId: idolId);
 
+/// 채팅방 상단 2.5D AI 캐릭터 영역 — character 슬라이스 머지 시 override.
+/// default = placeholder. 위치는 ChatRoomScreen이 `SizedBox(height: 화면*0.4)`로 결정.
+@riverpod
+Widget chatRoomCharacterSlot(Ref ref, String idolId) =>
+    PlaceholderCharacter(idolId: idolId);
+
 /// 채팅방 메뉴 (롱프레스 / AppBar ⋮) 액션 리스트.
 ///
 /// subscription / report / notification 이 머지될 때 자기 액션을 add해서
