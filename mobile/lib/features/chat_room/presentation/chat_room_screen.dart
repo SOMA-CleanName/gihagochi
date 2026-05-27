@@ -84,8 +84,18 @@ class ChatRoomScreen extends ConsumerWidget {
           if (header == null) return const _NotFoundView();
           if (header.suspended) return const _SuspendedView();
 
+          // 키보드 안 보일 때 캐릭터는 화면의 ~38% (절반 미만).
+          // 키보드 올라오면 더 작게 (~22%) — 입력 가시성 보호.
+          final mq = MediaQuery.of(context);
+          final keyboardOpen = mq.viewInsets.bottom > 0;
+          final charHeight =
+              (keyboardOpen ? 0.22 : 0.38) * mq.size.height;
           return Column(
             children: [
+              SizedBox(
+                height: charHeight,
+                child: ref.watch(chatRoomCharacterSlotProvider(idolId)),
+              ),
               Expanded(child: ref.watch(chatMessageListSlotProvider(idolId))),
               ref.watch(chatMessageInputSlotProvider(idolId)),
             ],
