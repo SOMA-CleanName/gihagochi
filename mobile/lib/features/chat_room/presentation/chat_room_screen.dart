@@ -34,23 +34,33 @@ class ChatRoomScreen extends ConsumerWidget {
         title: headerAsync.when(
           loading: () => const Text(''),
           error: (_, __) => const Text(''),
-          data: (h) => Row(
-            children: [
-              Avatar(
-                imageUrl: h?.thumbnailUrl,
-                fallbackText: h?.displayName ?? '?',
-                size: 36,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  h?.displayName ?? '',
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
+          data: (h) {
+            // 아바타+닉네임 탭 → 아이돌 프로필 화면 (#7b).
+            // 본인 채팅방이면 탭 비활성 (자기 프로필은 마이 탭).
+            final tappable = !isIdolSelf && h != null;
+            final inner = Row(
+              children: [
+                Avatar(
+                  imageUrl: h?.thumbnailUrl,
+                  fallbackText: h?.displayName ?? '?',
+                  size: 36,
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    h?.displayName ?? '',
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            );
+            if (!tappable) return inner;
+            return InkWell(
+              onTap: () => context.push('/discover/$idolId'),
+              child: inner,
+            );
+          },
         ),
         actions: [
           if (!isIdolSelf)
