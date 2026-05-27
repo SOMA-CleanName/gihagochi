@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_error.dart';
+import '../../chat_media/presentation/photo_picker_sheet.dart';
+import '../../chat_media/presentation/voice_recorder_button.dart';
 import '../application/chat_messages_controller.dart';
 
 class MessageInput extends ConsumerStatefulWidget {
@@ -20,7 +22,19 @@ class _MessageInputState extends ConsumerState<MessageInput> {
   bool _sending = false;
 
   @override
+  void initState() {
+    super.initState();
+    // 입력 비어있을 때 음성 버튼, 있을 때 전송 버튼 — 토글용 rebuild.
+    _ctrl.addListener(_onChanged);
+  }
+
+  void _onChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    _ctrl.removeListener(_onChanged);
     _ctrl.dispose();
     super.dispose();
   }
@@ -60,6 +74,15 @@ class _MessageInputState extends ConsumerState<MessageInput> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // F-019 사진
+            IconButton(
+              tooltip: '사진',
+              icon: const Icon(Icons.photo_camera_outlined),
+              onPressed: () => showPhotoPickerSheet(
+                context,
+                idolId: widget.idolId,
+              ),
+            ),
             Expanded(
               child: TextField(
                 controller: _ctrl,
@@ -77,17 +100,21 @@ class _MessageInputState extends ConsumerState<MessageInput> {
               ),
             ),
             const SizedBox(width: 4),
-            IconButton(
-              tooltip: '전송',
-              icon: _sending
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send),
-              onPressed: _sending ? null : _send,
-            ),
+            // 입력 비어있으면 F-020 음성 버튼, 있으면 전송 버튼.
+            if (_ctrl.text.trim().isEmpty && !_sending)
+              VoiceRecorderButton(idolId: widget.idolId)
+            else
+              IconButton(
+                tooltip: '전송',
+                icon: _sending
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send),
+                onPressed: _sending ? null : _send,
+              ),
           ],
         ),
       ),
