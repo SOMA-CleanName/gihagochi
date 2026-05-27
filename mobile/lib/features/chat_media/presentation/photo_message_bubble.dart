@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../chat_message/domain/message.dart';
 import '../data/chat_media_repository.dart';
 
 class PhotoMessageBubble extends ConsumerWidget {
@@ -62,7 +63,10 @@ class _SignedImage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return FutureBuilder<String>(
-      future: ref.read(chatMediaRepositoryProvider).getSignedMediaUrl(storagePath),
+      future: ref.read(chatMediaRepositoryProvider).getSignedMediaUrl(
+            storagePath,
+            mediaType: MediaType.photo,
+          ),
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return Container(

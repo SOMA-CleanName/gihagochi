@@ -22,7 +22,9 @@ import '../../chat_message/domain/message.dart';
 part 'chat_media_repository.g.dart';
 
 /// Storage 버킷명 — Supabase Dashboard에서 동일 이름으로 생성되어 있어야 함.
-const String chatMediaBucket = 'chat-media';
+/// 사진/음성은 별도 버킷 (Dashboard 운영자 결정 — MIME/사이즈 제한 분리 관리).
+const String chatPhotoBucket = 'chat-photo';
+const String chatVoiceBucket = 'chat-voice';
 
 /// 사진 다운스케일 최대 장변(px).
 const int photoMaxSide = 2048;
@@ -56,13 +58,16 @@ class ChatMediaRepository {
   // ── 다운로드 ─────────────────────────────────
 
   /// Storage path → signed URL. 만료 시 호출자가 다시 호출.
+  /// 호출자가 mediaType을 알아야 버킷 결정 가능 (photo/voice 분리 버킷).
   Future<String> getSignedMediaUrl(
     String storagePath, {
+    required MediaType mediaType,
     int expiresInSeconds = signedUrlTtlSeconds,
   }) async {
+    final bucket = _bucketFor(mediaType);
     try {
       return await supabase.storage
-          .from(chatMediaBucket)
+          .from(bucket)
           .createSignedUrl(storagePath, expiresInSeconds);
     } on StorageException catch (e) {
       throw ValidationError(
@@ -71,6 +76,12 @@ class ChatMediaRepository {
       );
     }
   }
+
+  String _bucketFor(MediaType t) => switch (t) {
+        MediaType.photo => chatPhotoBucket,
+        MediaType.voice => chatVoiceBucket,
+        MediaType.text => throw ArgumentError('text 메시지는 Storage 사용 안 함'),
+      };
 
   // ── 사진 송신 (F-019) ────────────────────────
 
@@ -94,7 +105,7 @@ class ChatMediaRepository {
     final storagePath = '$idolId/$messageId.jpg';
 
     try {
-      await supabase.storage.from(chatMediaBucket).uploadBinary(
+      await supabase.storage.from(chatPhotoBucket).uploadBinary(
             storagePath,
             compressed,
             fileOptions: const FileOptions(
@@ -121,7 +132,7 @@ class ChatMediaRepository {
       // best-effort cleanup — RLS 거부로 INSERT 실패한 경우 객체 남으면 고아.
       unawaited(
         supabase.storage
-            .from(chatMediaBucket)
+            .from(chatPhotoBucket)
             .remove([storagePath])
             .catchError((_) => <FileObject>[]),
       );
@@ -147,7 +158,7 @@ class ChatMediaRepository {
     final storagePath = '$idolId/$messageId.m4a';
 
     try {
-      await supabase.storage.from(chatMediaBucket).uploadBinary(
+      await supabase.storage.from(chatVoiceBucket).uploadBinary(
             storagePath,
             bytes,
             fileOptions: const FileOptions(
@@ -173,7 +184,7 @@ class ChatMediaRepository {
     } catch (e) {
       unawaited(
         supabase.storage
-            .from(chatMediaBucket)
+            .from(chatVoiceBucket)
             .remove([storagePath])
             .catchError((_) => <FileObject>[]),
       );
