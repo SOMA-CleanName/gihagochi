@@ -45,14 +45,8 @@ class MyPage extends ConsumerWidget {
               ProfileCard(profile: profile),
               if (isIdol) const _IdolPendingBanner(),
               const Divider(height: 1),
-              if (!isIdol) ...[
-                const _SectionHeader(title: '응원 중인 아이돌'),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ref.watch(subscriptionListSlotProvider),
-                ),
-                const SizedBox(height: 8),
-              ],
+              // 정책 2026-05-27: '응원 중인 아이돌' 섹션 제거 — 채팅 탭에서
+              // 이미 동일 정보 노출. 마이페이지에 중복할 이유 없음.
               const _SectionHeader(title: '알림'),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),

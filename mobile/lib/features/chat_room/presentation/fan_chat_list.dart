@@ -1,11 +1,11 @@
 /// F-007(data) / F-014 — profile 의 `chatListSlotProvider` 를 override 하는 위젯.
 ///
-/// `main.dart` 의 `ProviderScope.overrides` 에서 등록되어 `/main` 에 표시됨.
+/// `main.dart` 의 `ProviderScope.overrides` 에서 등록되어 `/main` 채팅 탭에 표시.
+/// 자체 Scaffold + AppBar 가짐 (status bar 침범 방지). FAB은 BottomNav '탐색' 탭으로 대체 → 제거.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -19,53 +19,29 @@ class FanChatList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(chatListControllerProvider);
 
-    final list = RefreshIndicator(
-      onRefresh: () => ref.read(chatListControllerProvider.notifier).refresh(),
-      child: async.when(
-        loading: () => const LoadingView(),
-        error: (e, _) => ErrorView(
-          error: e,
-          onRetry: () =>
-              ref.read(chatListControllerProvider.notifier).refresh(),
-        ),
-        data: (cards) {
-          if (cards.isEmpty) return const _EmptyChatRoomList();
-          return ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            // 마지막 카드 아래 FAB과 겹치지 않게 여유.
-            padding: const EdgeInsets.only(bottom: 96),
-            itemCount: cards.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, indent: 88),
-            itemBuilder: (_, i) => ChatRoomCardTile(card: cards[i]),
-          );
-        },
-      ),
-    );
-
-    return Stack(
-      children: [
-        Positioned.fill(child: list),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton.extended(
-            heroTag: 'fan_discover_fab',
-            onPressed: () => _goDiscover(context),
-            icon: const Icon(Icons.search),
-            label: const Text('아이돌 찾기'),
+    return Scaffold(
+      appBar: AppBar(title: const Text('내 채팅')),
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(chatListControllerProvider.notifier).refresh(),
+        child: async.when(
+          loading: () => const LoadingView(),
+          error: (e, _) => ErrorView(
+            error: e,
+            onRetry: () =>
+                ref.read(chatListControllerProvider.notifier).refresh(),
           ),
+          data: (cards) {
+            if (cards.isEmpty) return const _EmptyChatRoomList();
+            return ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: cards.length,
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 1, indent: 88),
+              itemBuilder: (_, i) => ChatRoomCardTile(card: cards[i]),
+            );
+          },
         ),
-      ],
-    );
-  }
-}
-
-void _goDiscover(BuildContext context) {
-  try {
-    context.push('/discover');
-  } catch (_) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('아이돌 탐색을 열 수 없습니다.')),
+      ),
     );
   }
 }
@@ -97,17 +73,11 @@ class _EmptyChatRoomList extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '좋아하는 아이돌을 찾아 응원을 시작해보세요.',
+                  '하단 "탐색" 탭에서 응원할 아이돌을 찾아보세요.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFF757575),
                       ),
                   textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('아이돌 추가하기'),
-                  onPressed: () => _goDiscover(context),
                 ),
               ],
             ),
@@ -116,5 +86,4 @@ class _EmptyChatRoomList extends StatelessWidget {
       ],
     );
   }
-
 }
