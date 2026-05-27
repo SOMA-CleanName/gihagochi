@@ -111,9 +111,11 @@ class _MessageListState extends ConsumerState<MessageList> {
         // 아이돌(idolId)이 보낸 메시지만.
         final me = ref.watch(supabaseProvider).auth.currentUser?.id;
         final isIdolSelf = me != null && me == widget.idolId;
-        final rows = isIdolSelf
+        final baseRows = isIdolSelf
             ? _buildIdolRows(items, widget.idolId)
             : _buildFanRows(items, widget.idolId, me);
+        // #5a — 날짜가 바뀌는 첫 메시지 위에 _DateSeparator 삽입 (카톡식).
+        final rows = _injectDateSeparators(baseRows);
 
         return ListView.builder(
           controller: _scroll,
@@ -135,6 +137,7 @@ class _MessageListState extends ConsumerState<MessageList> {
                   parentMessageId: pid,
                   count: c,
                 ),
+              _DateSeparator(date: final d) => _DateSeparatorView(date: d),
             };
           },
         );
@@ -156,6 +159,74 @@ class _BadgeRow extends _Row {
   _BadgeRow({required this.parentMessageId, required this.count});
   final String parentMessageId;
   final int count;
+}
+
+class _DateSeparator extends _Row {
+  _DateSeparator(this.date);
+  final DateTime date;
+}
+
+/// 메시지 사이에 날짜가 바뀌는 시점마다 _DateSeparator 한 줄 삽입.
+/// 입력은 ASC 정렬 가정 (chat_messages_controller가 그렇게 빌드).
+List<_Row> _injectDateSeparators(List<_Row> rows) {
+  final out = <_Row>[];
+  DateTime? lastDate;
+  for (final r in rows) {
+    DateTime? rowDate;
+    if (r is _MessageRow) {
+      rowDate = r.item.createdAt.toLocal();
+    }
+    if (rowDate != null) {
+      final day = DateTime(rowDate.year, rowDate.month, rowDate.day);
+      if (lastDate == null || day != lastDate) {
+        out.add(_DateSeparator(day));
+        lastDate = day;
+      }
+    }
+    out.add(r);
+  }
+  return out;
+}
+
+class _DateSeparatorView extends StatelessWidget {
+  const _DateSeparatorView({required this.date});
+  final DateTime date;
+
+  String _label(DateTime d) {
+    final today = DateTime.now();
+    final today0 = DateTime(today.year, today.month, today.day);
+    final diffDays = today0.difference(d).inDays;
+    if (diffDays == 0) return '오늘';
+    if (diffDays == 1) return '어제';
+    const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    final wd = weekdays[d.weekday - 1];
+    return '${d.year}년 ${d.month}월 ${d.day}일 ($wd)';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(color: scheme.outlineVariant, height: 1),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              _label(date),
+              style: TextStyle(fontSize: 11, color: scheme.outline),
+            ),
+          ),
+          Expanded(
+            child: Divider(color: scheme.outlineVariant, height: 1),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// 아이돌 본인 채팅방 그룹화:
