@@ -46,7 +46,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6750A4",
+  themeColor: "#0a0a0f",
+  colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
 };
@@ -64,9 +65,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
         />
       </head>
-      <body className="min-h-full bg-background text-foreground kr-keep">
-        {children}
-      </body>
+      <body className="min-h-full bg-bg text-fg kr-keep">{children}</body>
     </html>
   );
 }
