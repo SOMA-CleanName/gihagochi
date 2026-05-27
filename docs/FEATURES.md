@@ -225,24 +225,39 @@ F-031 (알림 설정) ── F-029 (푸시)
 
 ---
 
-## 8. 미결 정책 사항 (TBD)
+## 8. 정책 결정 사항 (1차 결정 완료)
 
-본격 개발 전/중에 결정 필요. 결정되면 본 문서 + 해당 피처 SPEC.md 업데이트.
+§2 작업 단위 모두 머지 완료된 2026-05-27 기준 정리. 각 결정의 상세 근거는 해당 피처의 `feature-specs/<폴더>.md` (Decisions 섹션) 와 `mobile/lib/features/<폴더>/SPEC.md` (또는 `backend/app/features/<폴더>/SPEC.md`) 에 기록.
 
-| ID | 기능 | 미결 사항 | 결정 시점 |
+| ID | 기능 | 결정 사항 | 참조 |
 |---|---|---|---|
-| F-001 | 팬 회원가입 | 이메일 vs 소셜 로그인 | auth 피처 작업 시 |
-| F-013 | 응원 취소 | 과거 메시지 보존 여부 | subscription 피처 작업 시 |
-| F-019 | 사진 메시지 | 용량/해상도/포맷 제한 | chat_media 피처 작업 시 |
-| F-021 | 읽음 처리 | 개별 표시 vs 통합 통계 | chat_meta 피처 작업 시 |
-| F-026 | 메시지 수정/삭제 | 가능 시간 정책 (예: 5분 이내) | chat_message 피처 작업 시 |
-| F-029 | 푸시 알림 | 우선순위 P2 → P0/P1 재검토 | 즉시 |
-| F-012 | 응원 시작 | 우선순위 P2 → P0/P1 재검토 | 즉시 |
-| F-030 | 프로필 편집 | 활동명/소개 수정 시 관리자 승인 여부 | profile 피처 작업 시 |
-| F-032 | 회원 탈퇴 | 즉시 삭제 vs 보존 정책 | profile 피처 작업 시 |
-| F-034 | 약관/개인정보 | 법적 문안 확보 | 출시 전 |
-| F-037 | 신고 처리 | 무시/삭제/경고/정지 적용 기준 | report 피처 작업 시 |
-| 비기능 | 플랫폼 | iOS/Android 최저 OS 버전 | mobile 하네스 작업 시 |
+| F-001 | 팬 회원가입 | **소셜 로그인 (Google) 단독**. 이메일/비번 X. Apple/Kakao/Naver 1차 제외. | [`feature-specs/auth.md`](../feature-specs/auth.md) |
+| F-012 | 응원 시작 | P0 로 진행 (P2 → P0). 무료. | [`feature-specs/subscription.md`](../feature-specs/subscription.md) |
+| F-013 | 응원 취소 | unsubscribed_at NULL/NOT NULL 으로 토글. 과거 메시지 보존. | [`feature-specs/subscription.md`](../feature-specs/subscription.md) |
+| F-019 | 사진 메시지 | 5MB / JPEG·PNG / 클라 리사이즈 (상세는 chat_media SPEC). | [`feature-specs/chat_media.md`](../feature-specs/chat_media.md) |
+| F-021 | 읽음 처리 | 팬별 개별 행 (message_reads). 아이돌 화면엔 통합 통계만. | [`feature-specs/chat_meta.md`](../feature-specs/chat_meta.md) |
+| F-026 | 메시지 수정/삭제 | **시간 제한 없음**. 본인 메시지면 언제든. 삭제 = soft delete. | [`feature-specs/chat_message.md`](../feature-specs/chat_message.md) |
+| F-029 | 푸시 알림 | P1 로 진행 (P2 → P1). FCM + iOS APNs. | [`feature-specs/notification.md`](../feature-specs/notification.md) |
+| F-030 | 프로필 편집 | 활동명/소개 즉시 반영 (관리자 승인 없음). 운영 보고 정책 재검토. | [`feature-specs/profile.md`](../feature-specs/profile.md) |
+| F-032 | 회원 탈퇴 | soft delete (`profiles.deleted_at = NOW()`). 30일 후 hard delete 는 운영 자동화. | [`feature-specs/profile.md`](../feature-specs/profile.md) |
+| F-034 | 약관/개인정보 | hardcoded placeholder 진행. **출시 전 실제 문안 교체 필수**. | [`feature-specs/profile.md`](../feature-specs/profile.md) |
+| F-037 | 신고 처리 | 무시 / 메시지 삭제 / 경고 / 정지 4종 액션. | [`feature-specs/report.md`](../feature-specs/report.md) |
+| 비기능 | 플랫폼 | Android API 36 / iOS 14+ (검증 기기 기준). 정식 최저 OS 정책은 출시 직전. | — |
+
+---
+
+## 8.1. 출시 전 필수 후속 작업
+
+§2 작업 단위는 다 머지됐지만, 운영 / 출시 전에 별도 처리가 필요한 항목.
+
+| 항목 | 책임 | 비고 |
+|---|---|---|
+| 약관 / 개인정보 처리방침 실제 문안 | 메인 빌더 + 법무 | profile 의 hardcoded placeholder 교체 |
+| Supabase **prod 프로젝트** 분리 (현재 dev 만) | 메인 빌더 | env / 키 / RLS / Storage / publication 동일 셋업 |
+| `0002_storage_rls` / `0003_realtime_publication` migration 적용 (prod) | 메인 빌더 | alembic upgrade head |
+| 회원 탈퇴 30일 후 hard delete cron | 운영 자동화 | profiles.deleted_at 기준 |
+| 약관 버전 변경 시 재동의 모달 | profile 후속 작업 | 별도 작업 단위 |
+| Apple Sign in with Apple 추가 (다른 소셜 추가 시) | auth 후속 | App Store 가이드라인 4.8 |
 
 ---
 
@@ -275,26 +290,26 @@ F-031 (알림 설정) ── F-029 (푸시)
 
 §5는 **피처 단위** 의존, 본 §10은 **작업 단위 (=폴더 단위, =1 PR)** 의존. 실무에서는 §10을 본다.
 
-### 10.1 작업 단위 의존 매트릭스
+### 10.1 작업 단위 의존 매트릭스 (전부 1차 머지 완료)
 
-| # | 작업 단위 | 폴더 | 선행 (반드시 완료) | 선행 (검증 위해 권장) | 진행 상태 |
-|---|---|---|---|---|---|
-| 1 | auth | `features/auth` | (root) | — | ✅ F-001~F-006 (PR #12, #17, #18) |
-| 11 | admin | `features/admin` (관리자 웹) | (root) — F-002 데이터 모델은 auth에 이미 있음 | auth (실 운영 시 검증) | ⏳ 미시작 |
-| 9 | profile | `features/profile` | auth | — | ⏳ 미시작 |
-| 2 | idol_discovery | `features/idol_discovery` | admin (F-035 승인된 아이돌만 노출) | — | ⏳ 미시작 |
-| 3 | subscription | `features/subscription` | idol_discovery | — | ⏳ 미시작 (재배치 검토 — §10.4) |
-| 4 | chat_room | `features/chat_room` | idol_discovery, subscription | — | ⏳ 미시작 |
-| 5 | chat_message | `features/chat_message` | chat_room | — | ⏳ 미시작 (분할 검토 — §10.4) |
-| 6 | chat_media | `features/chat_media` | chat_message | — | ⏳ 미시작 |
-| 7 | chat_meta | `features/chat_meta` | chat_message | — | ⏳ 미시작 |
-| 8 | notification | `features/notification` | auth (코드 작성만) | chat_message (종단 검증) | ⏳ 미시작 |
-| 10 | report | `features/report` | chat_message, admin | — | ⏳ 미시작 |
-| 12 | gift | `features/gift` | chat_room | — | ⏳ 미시작 (UI only) |
+| # | 작업 단위 | 폴더 | 선행 | 진행 상태 |
+|---|---|---|---|---|
+| 1 | auth | `features/auth` | (root) | ✅ PR #12 (+ #16/#17/#18 fix) |
+| 11 | admin | `features/admin` (관리자 웹) | auth | ✅ PR #36/#37/#54 |
+| 9 | profile | `features/profile` | auth | ✅ PR #34 |
+| 2 | idol_discovery | `features/idol_discovery` | admin | ✅ PR #39 |
+| 3 | subscription | `features/subscription` | idol_discovery | ✅ PR #40 |
+| 4 | chat_room | `features/chat_room` | idol_discovery, subscription | ✅ PR #35 (+ #59 fix) |
+| 5 | chat_message | `features/chat_message` | chat_room | ✅ core PR #41 / broadcast #60 / admin #65 |
+| 6 | chat_media | `features/chat_media` | chat_message | ✅ PR #62/#63/#64 |
+| 7 | chat_meta | `features/chat_meta` | chat_message | ✅ PR #61 |
+| 8 | notification | `features/notification` | auth + chat_message (종단) | ✅ PR #43 (+ iOS push #48~#52) |
+| 10 | report | `features/report` | chat_message, admin | ✅ PR #53 |
+| 12 | gift | `features/gift` | chat_room | ✅ PR #46 (UI only) |
 
-### 10.2 병렬 작업 가능 조합
+### 10.2 병렬 작업 가능 조합 (1차 머지 완료 — 참고 보존)
 
-서로 다른 코드베이스/폴더라 충돌 0 → 동시 진행 가능.
+서로 다른 코드베이스/폴더라 충돌 0 → 동시 진행 가능했던 조합:
 
 | 시점 | 병렬 후보 |
 |---|---|
@@ -302,27 +317,25 @@ F-031 (알림 설정) ── F-029 (푸시)
 | admin 직후 | **idol_discovery** 시작 가능 |
 | chat_message 직후 | **chat_media** ‖ **chat_meta** ‖ **notification** ‖ **report**(+ admin 완료 시) |
 
-### 10.3 권장 진행 순서 (auth 완료 기준)
+### 10.3 실제 진행 순서 (회고)
 
-1. **admin** ‖ **profile**  ← 지금 시작 가능
-2. **idol_discovery**  ← admin 완료 후
-3. **chat_room**
-4. **chat_message** (또는 §10.4 분할 권장 적용 시: chat_message_core)
-5. **chat_media** ‖ **chat_meta** ‖ **notification** ‖ **report**  ← 병렬
-6. **subscription** (F-013 응원 취소 — §10.4 검토 후 idol_discovery에 흡수 가능)
-7. **gift** (UI only, 후순위)
+1. auth → core/auth fix들
+2. profile (PR #34) → core/post-login-route (#33)
+3. chat_room (#35)
+4. chat_message_core (#41)
+5. admin / idol_discovery / subscription / gift / notification / report / chat_meta (#36~#61 — 다수 병렬)
+6. chat_media (#62~#64)
+7. **chat_message_admin (#65 — F-026 수정/삭제)** ← 마지막
 
-### 10.4 작업 단위 재배치 검토 사항
+### 10.4 작업 단위 재배치 검토 사항 — 처리 결과
 
-본 절은 **결정 대기** 항목. 다음 피처 시작 전 메인 빌더가 결정 → §2/§10.1 반영.
-
-| # | 이슈 | 현 위치 | 재배치 제안 | 이유 |
-|---|---|---|---|---|
-| 1 | F-024 (아이돌 메인 화면) | 작업 단위 9 `profile` | `chat_message` 또는 신규 `idol_chat` | F-025 (메시지 발행)이 F-024와 같은 화면. 둘은 강결합, profile은 마이페이지 성격. §5 의존 그래프상 F-024는 chat 도메인 |
-| 2 | subscription 크기 작음 | 작업 단위 3 (F-012, F-013) | F-012 보류 시 F-013만 남음 → `idol_discovery`에 흡수 | F-012 P2 (보류 중), F-013만으로 작업 단위 만들 가치 낮음 |
-| 3 | chat_message 크기 큼 | 작업 단위 5 (5개 피처) | `chat_message_core` (F-017/018/022 — 송수신+페이지) + `chat_message_admin` (F-025/026 — 발행/수정/삭제) 2 PR로 분할 | 한 PR로 처리하기엔 영역 넓음. 텍스트 송수신만 먼저 안정화 후 발행/편집 추가 |
-| 4 | auth ↔ admin 공유 테이블 contract 명시 | `idol_signup_applications` | auth `SPEC.md` / admin `SPEC.md` 양쪽에 "어느 컬럼 INSERT/UPDATE/SELECT" 명시 | 둘이 같은 테이블 만짐. RLS 정책도 분리 결정 필요 |
-| 5 | notification 검증 시점 모호 | 작업 단위 8 | "auth 후 코드 가능 / chat_message_core 후 종단 검증" 두 단계로 §10.1에 명시 (이미 반영) | §5에선 auth 후 시작 가능으로만 표기. 실제 푸시 동작 검증은 메시지 없으면 불가 |
+| # | 이슈 | 결과 |
+|---|---|---|
+| 1 | F-024 (아이돌 메인 화면) — profile 에서 chat 도메인으로 | **chat_room 에 흡수**. PR #59 에서 본인 = idol_id 시 isActiveSubscription 자동 통과 → 아이돌이 자기 채팅방 진입 OK. 별도 `idol_chat` 폴더 미생성. |
+| 2 | subscription 크기 작음 → idol_discovery 흡수 | **그대로 작업 단위 유지**. F-012 도 P0 로 격상되어 단독 작업 충분. |
+| 3 | chat_message 분할 | **분할 적용**. core (#41) + broadcast (#60) + admin (#65) 3 PR. |
+| 4 | auth ↔ admin 공유 테이블 contract | auth / admin 양쪽 SPEC.md 에 명시 완료. |
+| 5 | notification 검증 시점 | "auth 후 코드 가능 / chat_message_core 후 종단 검증" 으로 §10.1 에 적용됨. |
 
 ### 10.5 작업 단위 시작 시 의존 체크리스트
 
