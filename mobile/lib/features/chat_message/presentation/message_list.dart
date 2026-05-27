@@ -452,6 +452,7 @@ class _ConfirmedRow extends ConsumerWidget {
         imageUrl: null,
         fallbackText: senderName.isNotEmpty ? senderName : '?',
         size: 32,
+        idolRing: senderIsIdol,
       ),
     );
     final nameWidget = senderName.isEmpty

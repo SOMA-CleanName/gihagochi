@@ -32,7 +32,8 @@ class ChatRoomCardTile extends ConsumerWidget {
         child: Avatar(
           imageUrl: card.thumbnailUrl,
           fallbackText: card.displayName,
-          size: 56,
+          size: 52,
+          idolRing: !dim,
         ),
       ),
       title: Row(

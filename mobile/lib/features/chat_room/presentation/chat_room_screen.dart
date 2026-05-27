@@ -44,6 +44,7 @@ class ChatRoomScreen extends ConsumerWidget {
                   imageUrl: h?.thumbnailUrl,
                   fallbackText: h?.displayName ?? '?',
                   size: 36,
+                  idolRing: true,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
