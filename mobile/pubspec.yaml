@@ -82,8 +82,22 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # assets / fonts는 화면 작업 시 추가
   assets:
     - .env
-  # assets:
-  #   - assets/images/
+
+  # Pretendard — 한국어 표준 폰트. OFL license. orioncactus/pretendard v1.3.9.
+  # 5개 weight (Regular/Medium/SemiBold/Bold/ExtraBold) ~7.5MB.
+  # design system text_styles.dart의 AppFontWeight에 매핑됨.
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/pretendard/Pretendard-Regular.otf
+          weight: 400
+        - asset: assets/fonts/pretendard/Pretendard-Medium.otf
+          weight: 500
+        - asset: assets/fonts/pretendard/Pretendard-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/pretendard/Pretendard-Bold.otf
+          weight: 700
+        - asset: assets/fonts/pretendard/Pretendard-ExtraBold.otf
+          weight: 800
