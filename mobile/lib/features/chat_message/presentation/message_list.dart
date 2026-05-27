@@ -104,11 +104,16 @@ class _MessageListState extends ConsumerState<MessageList> {
 
         // 아이돌 본인 모드: fan_to_idol 메시지는 list에서 직접 노출 X,
         // 각 broadcast 다음에 그 사이 답장 카운트로 ReplyBadge 삽입.
+        //
+        // 팬(또는 admin) 모드: 채팅방은 본인 ↔ 아이돌 1:1.
+        // RLS가 다른 팬 fan_to_idol을 가려야 하지만, admin/오너로 진입한 경우
+        // RLS가 모두 노출하므로 클라이언트에서도 한 번 더 가드 — 본인이 보냈거나
+        // 아이돌(idolId)이 보낸 메시지만.
         final me = ref.watch(supabaseProvider).auth.currentUser?.id;
         final isIdolSelf = me != null && me == widget.idolId;
         final rows = isIdolSelf
             ? _buildIdolRows(items, widget.idolId)
-            : items.map<_Row>(_MessageRow.new).toList(growable: false);
+            : _buildFanRows(items, widget.idolId, me);
 
         return ListView.builder(
           controller: _scroll,
@@ -204,6 +209,32 @@ List<_Row> _buildIdolRows(List<ChatItem> items, String idolId) {
     }
   }
   flushBadge();
+  return out;
+}
+
+/// 팬(또는 admin) 모드 row 빌더 — 본인 ↔ 아이돌 1:1 뷰.
+/// - 본인이 보낸 메시지(sender == me)는 노출
+/// - 아이돌이 보낸 broadcast(sender == idolId, type idol_to_fans/idol_reply)는 노출
+/// - 그 외(다른 팬의 fan_to_idol 등)는 숨김
+/// - pending(본인 송신 중)은 항상 노출
+List<_Row> _buildFanRows(List<ChatItem> items, String idolId, String? me) {
+  final out = <_Row>[];
+  for (final item in items) {
+    if (item is ConfirmedItem) {
+      final m = item.message;
+      final isMine = me != null && m.senderId == me;
+      final isIdolBroadcast = m.senderId == idolId &&
+          (m.type == MessageType.idolToFans ||
+              m.type == MessageType.idolReply);
+      if (isMine || isIdolBroadcast) {
+        out.add(_MessageRow(item));
+      }
+      // 그 외 (다른 팬 fan_to_idol 등) — 숨김.
+    } else {
+      // pending — 항상 본인 송신 중.
+      out.add(_MessageRow(item));
+    }
+  }
   return out;
 }
 
