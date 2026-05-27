@@ -1,9 +1,10 @@
-# F-017 / F-018 / F-022 / (F-025 / F-026) 메시지 송수신 — 요구사항 노트
+# F-017 / F-018 / F-022 / F-025 / F-026 메시지 송수신 — 요구사항 노트
 
 > 작업 단위 #5 (메시지 송수신). 폴더: `features/chat_message`.
-> **§10.4 이슈 #3 권장 분할**: 본 작업 단위는 PR 2개로 분할.
->   - **core PR (이 PR)**: F-017 (팬→아이돌), F-018 (1:N 수신), F-022 (페이지네이션)
->   - **admin PR (후속)**: F-025 (아이돌 발행), F-026 (수정/삭제) — 같은 폴더에 점진 추가
+> **§10.4 이슈 #3 권장 분할 — 진행 현황**:
+>   - **core PR #41 (머지됨)**: F-017 (팬→아이돌), F-018 (1:N 수신), F-022 (페이지네이션)
+>   - **F-025 (아이돌 발행) — PR #60에서 사실상 처리됨**: `sendIdolBroadcast` + role 기반 분기. 입력 UI 재사용
+>   - **admin PR (이 PR)**: F-026 (수정/삭제) — 같은 폴더에 점진 추가
 >
 > 본 문서는 **진화하는 요구사항 공간**. 확정 항목은 → `mobile/lib/features/chat_message/SPEC.md` 로 옮긴다.
 
@@ -15,21 +16,36 @@
 
 ---
 
-## 요구사항 (core PR)
+## 요구사항 (core PR — 머지됨)
 
-- [ ] **F-017 팬→아이돌 텍스트 전송** — 입력창에 텍스트 입력 → 전송 버튼 → DB INSERT (type=fan_to_idol, recipient_id=idol_id). 멱등성용 client_message_id UUID 생성. 전송 중/실패/완료 시각 표시
-- [ ] **F-018 1:N broadcast 수신** — `messages` 테이블의 INSERT를 Supabase Realtime 구독. RLS가 자동 필터링 (구독 중인 아이돌의 idol_to_fans만 도착). 도착 즉시 메시지 리스트에 prepend
-- [ ] **F-022 페이지네이션** — 초기 fetch 50개 (최신). 위로 스크롤 시 cursor 기반으로 추가 50개 (created_at < cursor). infinite scroll
-- [ ] **chat_room 슬롯 override** — chat_message_core가 머지될 때 main.dart의 ProviderScope.overrides에 `chatMessageListSlotProvider` + `chatMessageInputSlotProvider` 추가
-- [ ] **chat_room 카드 자동 갱신** — Realtime broadcast 도착 시 `chatListControllerProvider.invalidateSelf()` 호출해서 카드 미리보기 갱신
+- [x] **F-017 팬→아이돌 텍스트 전송** — PR #41
+- [x] **F-018 1:N broadcast 수신** — PR #41
+- [x] **F-022 페이지네이션** — PR #41
+- [x] **chat_room 슬롯 override** — PR #41
+- [x] **chat_room 카드 자동 갱신** — PR #41
+
+---
+
+## 요구사항 (F-025 아이돌 발행 — PR #60에서 처리)
+
+- [x] **F-025 아이돌 메시지 발행** — PR #60 `sendIdolBroadcast` 메서드 + `_sendByRole` 분기 (현재 사용자 == idol_id면 broadcast, 그 외 fan_to_idol). 입력 UI 재사용.
+
+---
+
+## 요구사항 (admin PR — 이 PR)
+
+- [ ] **F-026 메시지 수정** — 본인 메시지 롱프레스 → "수정" → 기존 텍스트 prefill 다이얼로그 → `messages` UPDATE (`content`, `edited_at = NOW()`). 시간 제한 없음 (사용자 결정).
+- [ ] **F-026 메시지 삭제 (soft delete)** — 본인 메시지 롱프레스 → "삭제" 확인 모달 → `messages` UPDATE (`deleted_at = NOW()`). 시간 제한 없음. 다른 팬 화면에서는 즉시 "(삭제된 메시지)" placeholder로 갱신 (UPDATE Realtime 이벤트 구독).
+- [ ] **Realtime UPDATE 이벤트 구독 추가** — 채팅방 진입 시 INSERT + UPDATE 둘 다 구독. UPDATE 도착 시 해당 message id 매칭하여 state 교체.
+- [ ] **수정된 메시지 표시** — `edited_at != null` 인 메시지는 시각 옆에 "(수정됨)" 라벨 작게 표시.
+- [ ] **삭제된 메시지 표시** — `deleted_at != null` 인 메시지는 본문을 "(삭제된 메시지)" placeholder로 교체 (이미 core PR에서 처리되어 있음).
 
 ---
 
 ## 본 PR 제외 (후속 작업)
 
-- F-025 (아이돌 발행), F-026 (수정/삭제) — chat_message_admin PR
-- F-019 (사진), F-020 (음성) — chat_media 영역. 본 PR은 media_type='image'/'audio' 메시지 도착 시 `[사진]` / `[음성]` 라벨로만 표시
-- F-021 (읽음 처리), F-023 (답장 표시) — chat_meta 영역
+- F-019 (사진), F-020 (음성) — chat_media 영역. PR #62~#64 머지 완료.
+- F-021 (읽음 처리), F-023 (답장 표시) — chat_meta 영역. PR #61 머지 완료.
 - 타이핑 인디케이터, 새 메시지 알림 뱃지 — 향후
 
 ---
@@ -47,6 +63,10 @@
 - `2026-05-25`: **broadcast 도착 시 chat_room 카드 갱신** — `chatListControllerProvider.invalidateSelf()` 호출. chat_room SPEC에 명시된 hook 패턴.
 - `2026-05-25`: **사진/음성 메시지 도착 시** — media_type 검사 → `[사진]` / `[음성]` 텍스트로만 표시. 본 PR scope X. chat_media 머지 시 렌더링 슬롯 추가 예정.
 - `2026-05-25`: **메인 빌더 영역 변경 1건** — `mobile/lib/main.dart`의 ProviderScope.overrides에 `chatMessageListSlotProvider.overrideWith(...)` + `chatMessageInputSlotProvider.overrideWith(...)` 2줄 + import 추가. chat_room의 첫 override와 같은 확장 메커니즘.
+- `2026-05-27`: **F-026 메시지 수정/삭제 — 시간 제한 없음**. 아이돌이 자기 발행 메시지를 언제든 수정/삭제. 팬은 자기가 보낸 fan_to_idol 메시지를 언제든 수정/삭제. 단순성 우선.
+- `2026-05-27`: **삭제 = soft delete** (`deleted_at = NOW()` UPDATE). DB 행 보존. 표시는 "(삭제된 메시지)" placeholder.
+- `2026-05-27`: **수정된 메시지 = "(수정됨)" 라벨 작게 표시**. `edited_at != null` 인 메시지에만 시각 옆에 노출. core widget `MessageBubble` 확장 또는 wrapper.
+- `2026-05-27`: **Realtime UPDATE 이벤트 구독 추가** — 채팅방 진입 시 INSERT + UPDATE 둘 다 구독. 동일 채널에 두 이벤트 등록. UPDATE 도착 시 controller가 message id 매칭하여 state 교체.
 
 ---
 

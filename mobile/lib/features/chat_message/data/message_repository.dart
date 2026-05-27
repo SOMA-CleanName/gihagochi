@@ -138,4 +138,57 @@ class MessageRepository {
         .maybeSingle();
     return row == null ? null : Message.fromJson(row);
   }
+
+  // ── 수정 / 삭제 (F-026) ─────────────────────
+
+  /// 본인 메시지 본문 수정. `edited_at = NOW()` 표시 (수정됨 라벨용).
+  /// RLS `messages_update_self` 가 sender_id/deleted_at 검증.
+  /// 시간 제한 없음 — 본인 메시지면 언제든.
+  Future<Message> updateContent({
+    required String messageId,
+    required String newContent,
+  }) async {
+    final userId = _userId;
+    try {
+      final row = await supabase
+          .from('messages')
+          .update({
+            'content': newContent,
+            'edited_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', messageId)
+          .eq('sender_id', userId)
+          .select()
+          .single();
+      return Message.fromJson(row);
+    } on PostgrestException catch (e) {
+      throw ValidationError(
+        message: '메시지 수정에 실패했습니다. (${e.message})',
+        cause: e,
+      );
+    }
+  }
+
+  /// 본인 메시지 soft delete. `deleted_at = NOW()` UPDATE.
+  /// DB row 보존 — 표시는 "(삭제된 메시지)" placeholder.
+  Future<Message> softDelete({required String messageId}) async {
+    final userId = _userId;
+    try {
+      final row = await supabase
+          .from('messages')
+          .update({
+            'deleted_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', messageId)
+          .eq('sender_id', userId)
+          .select()
+          .single();
+      return Message.fromJson(row);
+    } on PostgrestException catch (e) {
+      throw ValidationError(
+        message: '메시지 삭제에 실패했습니다. (${e.message})',
+        cause: e,
+      );
+    }
+  }
 }

@@ -1,9 +1,13 @@
-# F-017 / F-018 / F-022 메시지 송수신 (chat_message_core) — 모바일
+# F-017 / F-018 / F-022 / F-025 / F-026 메시지 송수신 (chat_message) — 모바일
 
 > 작업 단위 #5 (메시지 송수신). backend SPEC 없음 (모바일 단독, Supabase 직결 + RLS).
 > 진화하는 요구사항: [`../../../../feature-specs/chat_message.md`](../../../../feature-specs/chat_message.md)
 >
-> **§10.4 이슈 #3 분할 권장**: 본 PR = core (F-017/018/022). 후속 admin PR(F-025/026)이 같은 폴더에 추가.
+> **§10.4 이슈 #3 분할 진행 현황**:
+>   - core PR #41 (머지됨): F-017 / F-018 / F-022
+>   - PR #60 (머지됨): F-025 — `sendIdolBroadcast` + role 분기로 사실상 처리
+>   - **admin PR (이 SPEC 갱신본의 마지막 단계)**: F-026 수정/삭제
+>
 > 폴더명: `chat_message`. 라우트 신규 X — `chat_room`의 슬롯 2개를 ProviderScope.overrides로 채움.
 
 ---
@@ -46,12 +50,13 @@ chatMessageInputSlotProvider(<dynamic>).overrideWith((ref, idolId) => MessageInp
   - `messages` (idol_id=X) — SELECT page 50개, ORDER BY created_at DESC
   - RLS `messages_select_visible` 가 자동 필터: 본인 sender + idol_to_fans/idol_reply(구독자) + fan_to_idol(아이돌만 본인 + 본인 fan)
 - **쓰기 (Supabase 직결)**:
-  - `messages` INSERT — type=fan_to_idol, sender_id=me, idol_id=X, recipient_id=X, parent_message_id=null, content=text, media_type='text'
+  - `messages` INSERT — type=fan_to_idol (팬) 또는 idol_to_fans (본인=idol_id 일 때 broadcast)
   - client_message_id = UUID v4 (멱등성)
-  - RLS `messages_insert_fan` 이 검증: sender=me, type=fan_to_idol, recipient=idol_id, parent NULL, is_subscribed_to(idol_id)
+  - RLS `messages_insert_fan` / `messages_insert_idol` 가 type/recipient 검증
+  - **F-026 수정/삭제**: `messages` UPDATE — 본인 메시지만. RLS `messages_update_self` 가 `sender_id == me AND deleted_at IS NULL` 강제. soft delete = `deleted_at = NOW()` UPDATE.
 - **Realtime 구독**:
   - 채널: `public:messages:idol_id=eq.<idolId>`
-  - 이벤트: INSERT
+  - 이벤트: **INSERT + UPDATE** (F-026 후 UPDATE 추가)
   - 채팅방 진입 시 subscribe, 이탈 시 unsubscribe
 - **백엔드 API**: 없음
 - **Storage**: 없음 (텍스트만)
@@ -92,8 +97,18 @@ chatMessageInputSlotProvider(<dynamic>).overrideWith((ref, idolId) => MessageInp
   - 자기 sender_id의 INSERT (자기 전송) → 이미 optimistic으로 표시됨. 임시 메시지 → DB row로 교체 (client_message_id 매칭).
   - 다른 sender_id INSERT (아이돌 broadcast) → 리스트 아래에 append + 사용자가 최하단에 있으면 자동 스크롤, 아니면 "새 메시지 ↓" 인디케이터.
   - 모든 INSERT 도착 시 → `chatListControllerProvider.invalidateSelf()` 호출해서 chat_room 카드 미리보기 갱신.
-- 사진/음성 메시지 (media_type='image'/'audio') 도착 시 → `[사진]` / `[음성]` 라벨로 fallback 렌더링 (chat_media 머지 시 실제 위젯 슬롯).
+- 사진/음성 메시지 (media_type='photo'/'voice') 도착 시 → chat_media 위젯 슬롯이 렌더링 (PR #62~64).
 - 채팅방 이탈 (route pop, dispose) → Realtime 구독 해제. Provider auto-dispose 패턴 활용.
+
+### F-026 메시지 수정/삭제 (admin PR)
+
+- **수정 트리거**: 본인 메시지 (`sender_id == auth.uid()`) 롱프레스 → ActionSheet "메시지 수정" → 다이얼로그 (기존 content prefill, 멀티라인) → 저장 → `messages` UPDATE (`content = <new>`, `edited_at = NOW()`).
+- **삭제 트리거**: 본인 메시지 롱프레스 → "메시지 삭제" → 확인 모달 ("정말 삭제하시겠습니까?") → `messages` UPDATE (`deleted_at = NOW()`).
+- **시간 제한 없음** — 사용자 결정. 본인 메시지면 언제든 수정/삭제.
+- **수정된 메시지 표시** — `edited_at != null` 인 메시지는 시각 옆에 "(수정됨)" 작은 라벨.
+- **삭제된 메시지 표시** — 본문을 "(삭제된 메시지)" placeholder 로 교체 (core PR 에서 이미 처리).
+- **Realtime UPDATE 도착 시** — 동일 message id 매칭 → ConfirmedItem 의 message 교체. UI 자동 재렌더링.
+- **다른 사람 메시지 롱프레스 시** — ActionSheet 액션 비활성 (자기 메시지가 아니면 "메시지 수정" / "메시지 삭제" 표시 X). 기존 chat_meta 의 메뉴 옵션은 그대로 살림.
 
 ---
 
@@ -109,6 +124,13 @@ chatMessageInputSlotProvider(<dynamic>).overrideWith((ref, idolId) => MessageInp
 - **본인 deleted_at != null** (탈퇴 직후 라이브 세션) → RLS가 모든 INSERT 차단. 사용자는 auth_guard에 의해 곧 logout.
 - **페이지네이션 중 새 메시지 도착** → 추가 fetch는 오래된 쪽이라 무관. append만 발생.
 - **route pop 후 메시지 도착** → 구독 해제됐으므로 이벤트 못 받음. 다음 채팅방 진입 시 fresh fetch로 동기화.
+
+### F-026 엣지 케이스
+
+- **수정 중 메시지가 다른 곳에서 삭제됨** (이론상 본인이 다른 기기로) → UPDATE Realtime이 도착해서 (삭제된 메시지)로 갱신. 수정 다이얼로그는 그대로 열려 있다가 저장 시 RLS의 `deleted_at IS NULL` 조건이 0 row 매칭으로 silent fail 또는 PostgrestException. 토스트 후 닫기.
+- **삭제 후 즉시 같은 자리에 다시 메시지 INSERT** — DB row는 별개 (id 다름). 정상 동작.
+- **이미 삭제된 메시지 다시 삭제 시도** — RLS의 `deleted_at IS NULL` 조건이 0 row 매칭 → silent. UI는 이미 (삭제된 메시지) 표시 중이라 차이 없음.
+- **수정된 본문이 공백/빈 문자열** → 클라이언트 측에서 차단 (trim() 후 빈 문자열이면 저장 비활성).
 
 ---
 
