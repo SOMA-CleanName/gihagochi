@@ -21,7 +21,8 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: appColorScheme,
-      scaffoldBackgroundColor: AppColors.background,
+      // AppBackground가 main.dart builder에서 모든 화면을 wrap — Scaffold는 투명.
+      scaffoldBackgroundColor: Colors.transparent,
       canvasColor: AppColors.background,
       textTheme: appTextTheme,
       primaryTextTheme: appTextTheme,
@@ -29,7 +30,7 @@ class AppTheme {
 
       // ── AppBar ──
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.onSurface,
         elevation: 0,
         scrolledUnderElevation: 0,
