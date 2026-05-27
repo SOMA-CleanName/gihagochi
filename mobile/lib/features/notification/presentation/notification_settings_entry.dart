@@ -10,40 +10,42 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/colors.dart';
+import '../../../core/theme/radius.dart';
+import '../../../core/theme/spacing.dart';
+import '../../../core/theme/text_styles.dart';
+
 class NotificationSettingsEntry extends StatelessWidget {
   const NotificationSettingsEntry({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(12),
+      color: AppColors.surfaceContainer,
+      borderRadius: AppBorderRadius.md,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppBorderRadius.md,
         onTap: () => context.push('/settings/notifications'),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
-            children: [
-              const Icon(Icons.notifications_none, color: Color(0xFF616161)),
-              const SizedBox(width: 12),
+            children: const [
+              Icon(Icons.notifications_none, color: AppColors.onSurfaceVariant),
+              SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('알림 설정', style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 4),
+                    Text('알림 설정', style: AppTextStyles.titleSm),
+                    SizedBox(height: AppSpacing.xs),
                     Text(
                       '푸시 알림 / 메시지 / 마케팅 알림 관리',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF757575),
-                      ),
+                      style: AppTextStyles.bodySm,
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Color(0xFF9E9E9E)),
+              Icon(Icons.chevron_right, color: AppColors.onSurfaceMuted),
             ],
           ),
         ),
