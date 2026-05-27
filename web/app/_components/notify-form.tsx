@@ -28,7 +28,7 @@ export function NotifyForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-10 mx-auto flex w-full max-w-md flex-col gap-2 sm:flex-row"
+      className="mt-10 mx-auto flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:gap-2"
     >
       <label htmlFor="notify-email" className="sr-only">
         이메일 주소
@@ -39,13 +39,13 @@ export function NotifyForm() {
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="이메일 주소"
+        placeholder="이메일 주소를 입력하세요"
         autoComplete="email"
-        className="h-12 flex-1 rounded-full border border-outline bg-surface/70 px-5 text-sm text-fg outline-none placeholder:text-fg-faint focus:border-primary"
+        className="h-14 flex-1 rounded-full border border-outline bg-surface/70 px-6 text-base text-fg outline-none placeholder:text-fg-faint focus:border-primary"
       />
       <button
         type="submit"
-        className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-on transition hover:bg-primary-hover"
+        className="inline-flex h-14 shrink-0 items-center justify-center rounded-full bg-primary px-7 text-sm font-semibold text-primary-on transition hover:bg-primary-hover"
       >
         알림 받기
       </button>

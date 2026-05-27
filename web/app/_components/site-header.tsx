@@ -24,12 +24,12 @@ export function SiteHeader() {
             구조
           </Link>
         </nav>
-        <a
-          href="mailto:hello@encore.app?subject=아이돌%20활동%20문의"
+        <Link
+          href="/apply"
           className="rounded-full border border-outline px-3.5 py-1.5 text-sm font-medium text-fg transition hover:border-primary hover:text-primary"
         >
           아이돌로 활동하기
-        </a>
+        </Link>
       </div>
     </header>
   );

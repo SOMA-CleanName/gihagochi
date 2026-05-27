@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { NotifyForm } from "./_components/notify-form";
 import { SiteFooter } from "./_components/site-footer";
 import { SiteHeader } from "./_components/site-header";
@@ -72,12 +74,12 @@ function Hero() {
           >
             출시 알림 받기
           </a>
-          <a
-            href="mailto:hello@encore.app?subject=아이돌%20활동%20문의"
+          <Link
+            href="/apply"
             className="inline-flex h-12 items-center justify-center rounded-full border border-outline px-6 text-sm font-medium text-fg transition hover:border-primary hover:text-primary"
           >
             아이돌로 활동하기
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -468,12 +470,12 @@ function Finale() {
 
           <p className="mt-6 text-xs text-fg-faint">
             아이돌로 활동하고 싶으신가요?{" "}
-            <a
-              href="mailto:hello@encore.app?subject=아이돌%20활동%20문의"
+            <Link
+              href="/apply"
               className="text-fg-muted underline decoration-fg-faint underline-offset-4 transition hover:text-primary hover:decoration-primary"
             >
-              hello@encore.app
-            </a>
+              신청하러 가기
+            </Link>
           </p>
         </div>
       </div>
