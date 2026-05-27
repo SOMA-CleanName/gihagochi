@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/auth/auth_service.dart';
+import '../../../core/theme/spacing.dart';
+import '../../../core/theme/text_styles.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../data/chat_meta_repository.dart';
@@ -73,20 +75,13 @@ class _ParentPreview extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '내가 보낸 메시지',
-            style: TextStyle(
-              fontSize: 11,
-              color: scheme.outline,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
+          Text('내가 보낸 메시지', style: AppTextStyles.labelSm),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             (content == null || content!.trim().isEmpty)
                 ? '(텍스트 없음)'
                 : content!,
-            style: const TextStyle(fontSize: 14),
+            style: AppTextStyles.bodyMd,
             maxLines: 4,
             overflow: TextOverflow.ellipsis,
           ),
@@ -102,23 +97,19 @@ class _ReplyRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final time = DateFormat('MM-dd HH:mm').format(reply.createdAt.toLocal());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(
-              reply.sender.displayName,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-            ),
-            const SizedBox(width: 8),
-            Text(time, style: TextStyle(fontSize: 11, color: scheme.outline)),
+            Text(reply.sender.displayName, style: AppTextStyles.titleSm),
+            const SizedBox(width: AppSpacing.sm),
+            Text(time, style: AppTextStyles.labelSm),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(reply.content ?? '', style: const TextStyle(fontSize: 14)),
+        const SizedBox(height: AppSpacing.xs),
+        Text(reply.content ?? '', style: AppTextStyles.bodyMd),
       ],
     );
   }

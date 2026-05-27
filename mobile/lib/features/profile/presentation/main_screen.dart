@@ -12,6 +12,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/colors.dart';
+import '../../../core/theme/spacing.dart';
+import '../../../core/theme/text_styles.dart';
+import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../auth/domain/auth_models.dart' show UserRole;
@@ -98,26 +102,47 @@ class _IdolSelfChatTab extends StatelessWidget {
       appBar: AppBar(title: const Text('내 채팅방')),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xxl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.forum_outlined, size: 56, color: Color(0xFFBDBDBD)),
-              const SizedBox(height: 16),
-              Text('내 채팅방', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.3),
+                      AppColors.tertiary.withValues(alpha: 0.3),
+                    ],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.forum_outlined,
+                  size: 44,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text('내 채팅방', style: AppTextStyles.titleLg),
+              const SizedBox(height: AppSpacing.sm),
               Text(
-                '팬들에게 메시지를 발행하고 답장을 확인할 수 있어요.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF757575),
-                    ),
+                '팬들에게 메시지를 발행하고\n답장을 확인할 수 있어요.',
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                icon: const Icon(Icons.arrow_forward),
-                label: const Text('채팅방 들어가기'),
+              const SizedBox(height: AppSpacing.xl),
+              AppButton(
+                label: '채팅방 들어가기',
                 onPressed: () => context.push('/chat/$idolId'),
+                icon: Icons.arrow_forward,
+                glow: true,
+                fullWidth: false,
               ),
             ],
           ),
