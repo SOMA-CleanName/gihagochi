@@ -1,6 +1,7 @@
 // chat_media — Storage 상수 sanity (버킷명/TTL/사진 한도).
 //
 // SPEC.md "Storage 정책" + "비즈니스 룰" 과 코드 상수가 어긋나지 않는지 잠금.
+// Supabase Dashboard 운영자가 만든 버킷명과 동기화되어야 함.
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,8 +9,9 @@ import 'package:gihagochi/features/chat_media/data/chat_media_repository.dart';
 
 void main() {
   group('chat_media constants', () {
-    test('버킷명은 SPEC과 동일', () {
-      expect(chatMediaBucket, 'chat-media');
+    test('버킷명 — Dashboard와 동일', () {
+      expect(chatPhotoBucket, 'chat-photo');
+      expect(chatVoiceBucket, 'chat-voice');
     });
 
     test('signed URL TTL = 1시간 (3600s)', () {

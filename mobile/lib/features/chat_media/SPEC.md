@@ -4,16 +4,16 @@
 
 채팅방에서 팬·아이돌이 **사진**(F-019) / **음성**(F-020) 메시지를 주고받는다. 1차는 단순 송수신 + 인라인 재생까지 (음성→캐릭터 모션은 §7 1차 제외).
 
-본 슬라이스는 **mobile only + Supabase Storage 직결** (chat_meta 패턴 — backend 0). Storage 버킷 `chat-media` + Storage policy + RLS가 권한을 보장한다.
+본 슬라이스는 **mobile only + Supabase Storage 직결** (chat_meta 패턴 — backend 0). Storage 버킷 `chat-photo / chat-voice` + Storage policy + RLS가 권한을 보장한다.
 
 ---
 
 ## 의존 화면 / 데이터
 
 - **화면 진입 경로**: `chat_message`의 입력창(사진/마이크 버튼) + 메시지 버블(사진/음성 콘텐츠 렌더링)에서 본 슬라이스의 공개 위젯/함수를 호출. 본 슬라이스는 별도 라우트 없음.
-- **읽기**: Supabase Storage `chat-media` 버킷의 signed URL (다운로드)
+- **읽기**: Supabase Storage `chat-photo / chat-voice` 버킷의 signed URL (다운로드)
 - **쓰기**:
-  - Supabase Storage `chat-media/{idol_id}/{message_id}.<ext>` PUT (업로드)
+  - Supabase Storage `chat-photo / chat-voice/{idol_id}/{message_id}.<ext>` PUT (업로드)
   - Supabase Postgres `messages` INSERT (sender 컨텍스트, RLS 보호)
 - **Realtime 구독**: 없음 (`chat_message`가 처리)
 
@@ -34,7 +34,7 @@
 
 본 슬라이스 동작 전제. AGENTS 절대 룰 1로 Dashboard 작업은 사용자 수행.
 
-- **버킷명**: `chat-media`
+- **버킷명**: `chat-photo / chat-voice`
 - **public**: `false` (signed URL로만 접근)
 - **키 컨벤션**: `{idol_id}/{message_id}.{ext}` — `{ext}` ∈ `jpg`, `m4a`
 - **Storage policy** (의미):
@@ -51,7 +51,7 @@
 1. **사진 메시지 (F-019)**
    - 입력: 1장 (갤러리 또는 카메라). 1차는 다중 선택 X.
    - 업로드 전 다운스케일: 장변 2048px, JPEG, 최대 5MB (`flutter_image_compress`).
-   - 송신 시퀀스: (1) 클라가 `message_id` 생성 (`generateUuidV4`) → (2) `chat-media/{idol_id}/{message_id}.jpg` 업로드 → (3) `messages` INSERT (sender 역할에 맞춰 `type` 결정: 팬=`fan_to_idol`, 아이돌=`idol_to_fans`. `media_type='photo'`, `media_url=<storage path>`).
+   - 송신 시퀀스: (1) 클라가 `message_id` 생성 (`generateUuidV4`) → (2) `chat-photo / chat-voice/{idol_id}/{message_id}.jpg` 업로드 → (3) `messages` INSERT (sender 역할에 맞춰 `type` 결정: 팬=`fan_to_idol`, 아이돌=`idol_to_fans`. `media_type='photo'`, `media_url=<storage path>`).
    - Storage 업로드 실패 → ValidationError. messages INSERT 실패 → ValidationError + 업로드 객체 cleanup 시도 (best-effort).
 2. **음성 메시지 (F-020)**
    - 입력: 마이크 버튼 hold-to-record (최대 60초). 떼면 자동 업로드.

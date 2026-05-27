@@ -10,6 +10,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../chat_message/domain/message.dart';
 import '../data/chat_media_repository.dart';
 
 class VoiceMessageBubble extends ConsumerStatefulWidget {
@@ -79,7 +80,10 @@ class _VoiceMessageBubbleState extends ConsumerState<VoiceMessageBubble> {
       try {
         _signedUrl = await ref
             .read(chatMediaRepositoryProvider)
-            .getSignedMediaUrl(widget.storagePath);
+            .getSignedMediaUrl(
+              widget.storagePath,
+              mediaType: MediaType.voice,
+            );
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
