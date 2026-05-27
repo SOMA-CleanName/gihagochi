@@ -1,12 +1,14 @@
-/// 채팅 말풍선 — 본인/상대 구분 + 타임스탬프.
+/// 채팅 말풍선 — 네온 다크 디자인 시스템 (Phase 2).
 ///
-/// 미디어(사진/음성)는 별도 위젯 (`features/chat_media/`)에서 처리.
+/// 본인/상대 구분 + 타임스탬프. 미디어(사진/음성)는 별도 위젯.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../theme/colors.dart';
+import '../theme/radius.dart';
+import '../theme/spacing.dart';
 import '../theme/text_styles.dart';
 
 class MessageBubble extends StatelessWidget {
@@ -23,39 +25,37 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final align = isMine ? Alignment.centerRight : Alignment.centerLeft;
-    final color = isMine ? AppColors.bubbleMine : AppColors.bubbleOther;
+    final bg = isMine ? AppColors.bubbleMine : AppColors.bubbleOther;
+    final fg = isMine ? AppColors.onBubbleMine : AppColors.onBubbleOther;
     final radius = isMine
-        ? const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
-            bottomLeft: Radius.circular(12),
-          )
-        : const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
-            bottomRight: Radius.circular(12),
-          );
+        ? AppBorderRadius.bubbleMine
+        : AppBorderRadius.bubbleOther;
 
     return Align(
-      alignment: align,
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          maxWidth: MediaQuery.of(context).size.width * 0.72,
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.xs,
+            horizontal: AppSpacing.md,
+          ),
           child: Column(
             crossAxisAlignment:
                 isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 12,
+                  vertical: AppSpacing.sm + 2,
+                  horizontal: AppSpacing.md,
                 ),
-                decoration: BoxDecoration(color: color, borderRadius: radius),
-                child: Text(text, style: AppTextStyles.messageBody),
+                decoration: BoxDecoration(color: bg, borderRadius: radius),
+                child: Text(
+                  text,
+                  style: AppTextStyles.messageBody.copyWith(color: fg),
+                ),
               ),
               const SizedBox(height: 2),
               Text(
