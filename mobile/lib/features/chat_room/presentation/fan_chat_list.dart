@@ -7,6 +7,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/colors.dart';
+import '../../../core/theme/spacing.dart';
+import '../../../core/theme/text_styles.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../application/chat_list_controller.dart';
@@ -57,26 +60,23 @@ class _EmptyChatRoomList extends StatelessWidget {
         SizedBox(height: MediaQuery.of(context).size.height * 0.2),
         Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSpacing.xxl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
                   Icons.favorite_outline,
                   size: 56,
-                  color: Color(0xFFBDBDBD),
+                  color: AppColors.onSurfaceMuted,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  '응원 중인 아이돌이 없어요',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.lg),
+                Text('응원 중인 아이돌이 없어요', style: AppTextStyles.titleLg),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   '하단 "탐색" 탭에서 응원할 아이돌을 찾아보세요.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF757575),
-                      ),
+                  style: AppTextStyles.bodyMd.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],

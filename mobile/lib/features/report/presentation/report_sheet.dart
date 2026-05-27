@@ -115,7 +115,7 @@ class _ReportSheetBodyState extends ConsumerState<_ReportSheetBody> {
           Text(
             '부적절한 내용을 신고해 주세요. 관리자가 확인 후 처리합니다.',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF757575),
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 16),

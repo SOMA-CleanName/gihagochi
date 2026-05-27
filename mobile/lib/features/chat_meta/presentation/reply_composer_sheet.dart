@@ -109,7 +109,7 @@ class _ReplyComposerBodyState extends ConsumerState<_ReplyComposerBody> {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF616161),
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
