@@ -46,6 +46,18 @@ class ChatMessagesController extends _$ChatMessagesController {
             value: idolId,
           ),
           callback: (payload) => _onMessageInsert(payload.newRecord, me),
+        )
+        // F-026 — 다른 기기 / 다른 사용자의 수정·삭제 즉시 반영.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'idol_id',
+            value: idolId,
+          ),
+          callback: (payload) => _onMessageUpdate(payload.newRecord),
         );
     _channel!.subscribe();
 
@@ -112,6 +124,23 @@ class ChatMessagesController extends _$ChatMessagesController {
     }
 
     // chat_room 카드 미리보기 갱신 (broadcast hook).
+    ref.invalidate(chatListControllerProvider);
+  }
+
+  /// F-026 — 다른 곳에서 수정·삭제된 메시지를 즉시 반영.
+  /// 동일 message.id 의 ConfirmedItem 을 통째로 교체.
+  void _onMessageUpdate(Map<String, dynamic> raw) {
+    final updated = Message.fromJson(raw);
+    final current = state.value ?? const [];
+    final idx = current.indexWhere(
+      (it) => it is ConfirmedItem && it.message.id == updated.id,
+    );
+    if (idx < 0) return;
+    final old = current[idx] as ConfirmedItem;
+    final next = List<ChatItem>.of(current);
+    next[idx] = ConfirmedItem(message: updated, isMine: old.isMine);
+    state = AsyncValue.data(next);
+    // 카드 미리보기도 갱신 — 마지막 메시지가 수정·삭제됐으면 카드도 영향.
     ref.invalidate(chatListControllerProvider);
   }
 
@@ -248,5 +277,43 @@ class ChatMessagesController extends _$ChatMessagesController {
         .map<ChatItem>((m) => ConfirmedItem(message: m, isMine: m.senderId == me))
         .toList();
     state = AsyncValue.data([...olderItems, ...current]);
+  }
+
+  // ── 수정 / 삭제 (F-026) ─────────────────────
+
+  /// 본인 메시지 본문 수정. RLS 가 sender 검증.
+  /// Realtime UPDATE 이벤트가 자체적으로도 발화하지만 즉시 반영 위해 동기 교체.
+  Future<void> editMessage({
+    required String messageId,
+    required String newContent,
+  }) async {
+    final trimmed = newContent.trim();
+    if (trimmed.isEmpty) return;
+    final updated = await ref.read(messageRepositoryProvider).updateContent(
+          messageId: messageId,
+          newContent: trimmed,
+        );
+    _replaceConfirmed(updated);
+  }
+
+  /// 본인 메시지 soft delete. RLS 가 sender 검증.
+  Future<void> deleteMessage({required String messageId}) async {
+    final updated =
+        await ref.read(messageRepositoryProvider).softDelete(messageId: messageId);
+    _replaceConfirmed(updated);
+  }
+
+  /// 동일 id 의 ConfirmedItem 을 통째로 교체. Realtime UPDATE 와 같은 로직 재사용.
+  void _replaceConfirmed(Message updated) {
+    final current = state.value ?? const [];
+    final idx = current.indexWhere(
+      (it) => it is ConfirmedItem && it.message.id == updated.id,
+    );
+    if (idx < 0) return;
+    final old = current[idx] as ConfirmedItem;
+    final next = List<ChatItem>.of(current);
+    next[idx] = ConfirmedItem(message: updated, isMine: old.isMine);
+    state = AsyncValue.data(next);
+    ref.invalidate(chatListControllerProvider);
   }
 }
