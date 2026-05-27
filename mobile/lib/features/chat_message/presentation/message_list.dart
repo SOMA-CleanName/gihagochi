@@ -13,6 +13,8 @@ import '../../../core/auth/auth_service.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/message_bubble.dart';
+import '../../chat_media/presentation/photo_message_bubble.dart';
+import '../../chat_media/presentation/voice_message_bubble.dart';
 import '../../chat_meta/presentation/reply_composer_sheet.dart';
 import '../application/chat_messages_controller.dart';
 import '../domain/chat_item.dart';
@@ -164,11 +166,6 @@ class _ConfirmedRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final body = switch (message.mediaType) {
-      MediaType.text => message.content ?? '',
-      MediaType.photo => '[사진]',
-      MediaType.voice => '[음성]',
-    };
     if (message.deletedAt != null) {
       return MessageBubble(
         text: '(삭제된 메시지)',
@@ -176,16 +173,44 @@ class _ConfirmedRow extends ConsumerWidget {
         isMine: isMine,
       );
     }
+
+    // F-019/F-020: media_type 별로 chat_media 위젯 사용. media_url 없으면 placeholder.
+    final innerBubble = switch (message.mediaType) {
+      MediaType.text => MessageBubble(
+          text: message.content ?? '',
+          createdAt: message.createdAt,
+          isMine: isMine,
+        ),
+      MediaType.photo => message.mediaUrl != null
+          ? PhotoMessageBubble(
+              storagePath: message.mediaUrl!,
+              isMine: isMine,
+              createdAt: message.createdAt,
+            )
+          : MessageBubble(
+              text: '[사진]',
+              createdAt: message.createdAt,
+              isMine: isMine,
+            ),
+      MediaType.voice => message.mediaUrl != null
+          ? VoiceMessageBubble(
+              storagePath: message.mediaUrl!,
+              isMine: isMine,
+              createdAt: message.createdAt,
+            )
+          : MessageBubble(
+              text: '[음성]',
+              createdAt: message.createdAt,
+              isMine: isMine,
+            ),
+    };
+
     // F-026: 수정된 메시지는 시각 옆에 작은 (수정됨) 라벨.
     final bubbleWithEdited = Column(
       crossAxisAlignment:
           isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        MessageBubble(
-          text: body,
-          createdAt: message.createdAt,
-          isMine: isMine,
-        ),
+        innerBubble,
         if (message.editedAt != null)
           Padding(
             padding: EdgeInsets.only(
