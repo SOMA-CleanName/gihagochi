@@ -15,12 +15,16 @@ part 'chat_room_models.freezed.dart';
 
 /// 채팅방 카드 1장 — repository에서 조립되는 view-model.
 ///
+/// 이름 룰 (정책 2026-05-27):
+/// - 아이돌 검색/탐색 화면 = stage_name (활동명)
+/// - 채팅 리스트 / 채팅방 안 = display_name (닉네임)  ← 본 모델
+///
 /// JSON 직렬화 없음 — Supabase 직결에서 코드로 조립하므로 fromJson 불필요.
 @freezed
 abstract class ChatRoomCard with _$ChatRoomCard {
   const factory ChatRoomCard({
     required String idolId,
-    required String stageName,
+    required String displayName,
     String? thumbnailUrl,
     String? previewText,
     required DateTime previewTime,
@@ -29,11 +33,12 @@ abstract class ChatRoomCard with _$ChatRoomCard {
 }
 
 /// 채팅방 진입 시 AppBar에 표시할 아이돌 요약.
+/// 이름은 닉네임(display_name) 사용.
 @freezed
 abstract class IdolHeader with _$IdolHeader {
   const factory IdolHeader({
     required String idolId,
-    required String stageName,
+    required String displayName,
     String? thumbnailUrl,
     required bool suspended,
   }) = _IdolHeader;

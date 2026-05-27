@@ -34,8 +34,8 @@
 - **화면 진입 경로**: profile의 `/main`에서 chat_room이 슬롯 override → 카드 탭 → `/chat/:idolId`
 - **읽기 (Supabase 직결, RLS 보호)**:
   - `subscriptions` (자기 fan_id, `unsubscribed_at IS NULL`) — 활성 응원 목록
-  - `idol_profiles` (구독 중인 idol_id들) — stage_name, thumbnail_url
-  - `profiles` (해당 idol_id들) — status 확인 (suspended면 차단)
+  - `idol_profiles` (구독 중인 idol_id들) — thumbnail_url (stage_name은 idol_discovery 컨텍스트에서만 사용)
+  - `profiles` (해당 idol_id들) — display_name(= 채팅 표시명, 정책 2026-05-27), status (suspended면 차단)
   - `messages` (idol_id IN ..., 각 idol마다 최신 1개) — 미리보기 content + created_at
 - **쓰기**: 없음 (본 PR scope)
 - **Storage**: `idol-thumbnails` 버킷 — thumbnail_url path → signed URL 변환 (profile_repository와 동일 패턴)
@@ -63,8 +63,8 @@
 
 - 채팅방 카드 = 활성 subscription 1건당 1장. 정렬: 최근 메시지 `created_at DESC` (메시지 없으면 `subscription.subscribed_at` 사용)
 - 카드 표시 데이터:
-  - thumbnail (없으면 stage_name 이니셜 fallback — Avatar 위젯 패턴)
-  - 활동명 (`idol_profiles.stage_name`)
+  - thumbnail (없으면 display_name 이니셜 fallback — Avatar 위젯 패턴)
+  - **닉네임** (`profiles.display_name`) — 채팅 컨텍스트는 display_name (정책 2026-05-27). 활동명(stage_name)은 idol_discovery 화면 전용.
   - 최근 메시지 미리보기 — RLS가 보여주는 메시지의 최신 1개의 `content`. text가 아니면 `[사진]` / `[음성]` placeholder. 1줄 truncate
   - 시간 — relative format: `방금 전` / `n분 전` / `n시간 전` / `n일 전` / 30일 이상은 `YYYY-MM-DD`
   - **안 읽은 카운트는 본 PR 제외** (chat_meta 영역)
