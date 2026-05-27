@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_service.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -24,6 +25,9 @@ class ChatRoomScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeAsync = ref.watch(isActiveSubscriptionProvider(idolId));
     final headerAsync = ref.watch(idolHeaderProvider(idolId));
+    // 본인이 아이돌(=idolId)이면 ⋮ 메뉴 노출 X — 본인 채팅방 나가기는 의미 없음.
+    final me = ref.watch(supabaseProvider).auth.currentUser?.id;
+    final isIdolSelf = me != null && me == idolId;
 
     return Scaffold(
       appBar: AppBar(
@@ -49,11 +53,13 @@ class ChatRoomScreen extends ConsumerWidget {
           ),
         ),
         actions: [
-          IconButton(
-            tooltip: '메뉴',
-            icon: const Icon(Icons.more_vert),
-            onPressed: () => showChatRoomMenu(context: context, idolId: idolId),
-          ),
+          if (!isIdolSelf)
+            IconButton(
+              tooltip: '메뉴',
+              icon: const Icon(Icons.more_vert),
+              onPressed: () =>
+                  showChatRoomMenu(context: context, idolId: idolId),
+            ),
         ],
       ),
       body: activeAsync.when(

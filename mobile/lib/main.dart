@@ -25,10 +25,10 @@ import 'features/chat_message/presentation/message_input.dart';
 import 'features/chat_message/presentation/message_list.dart';
 import 'features/chat_room/application/slot_providers.dart' as chat_slots;
 import 'features/chat_room/presentation/fan_chat_list.dart';
-import 'features/gift/integration/gift_menu_action.dart';
 import 'features/notification/presentation/notification_settings_entry.dart';
 import 'features/notification/presentation/push_initializer.dart';
 import 'features/profile/application/slot_providers.dart';
+import 'features/subscription/integration/unsubscribe_menu_action.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,9 +70,10 @@ Future<void> main() async {
           notificationSettingsSlotProvider.overrideWith(
             (ref) => const NotificationSettingsEntry(),
           ),
-          // gift 가 chat_room 채팅방 메뉴에 "선물하기" 액션 추가.
+          // 채팅방 ⋮ 메뉴 — 본인이 fan일 때 호출되는 액션들.
+          // 정책 2026-05-27: 선물은 입력창 좌측으로 이동 (메뉴에서 제거).
           chat_slots.chatRoomMenuActionsProvider.overrideWith(
-            (ref) => [giftMenuAction()],
+            (ref) => [unsubscribeMenuAction(ref)],
           ),
           // chat_message 가 chat_room 의 메시지/입력창 슬롯을 채움.
           chat_slots.chatMessageListSlotProvider

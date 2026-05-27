@@ -11,6 +11,7 @@ import '../../../core/auth/auth_service.dart';
 import '../../../core/error/app_error.dart';
 import '../../chat_media/presentation/photo_picker_sheet.dart';
 import '../../chat_media/presentation/voice_recorder_button.dart';
+import '../../gift/presentation/gift_coming_soon_sheet.dart';
 import '../application/chat_messages_controller.dart';
 
 class MessageInput extends ConsumerStatefulWidget {
@@ -84,6 +85,16 @@ class _MessageInputState extends ConsumerState<MessageInput> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // F-027 선물 — 팬만. 정책 2026-05-27: ⋮ 메뉴에서 입력창 좌측으로 이동.
+            if (!isIdolSelf)
+              IconButton(
+                tooltip: '선물',
+                icon: const Icon(Icons.card_giftcard_outlined),
+                onPressed: () => showGiftComingSoonSheet(
+                  context,
+                  idolId: widget.idolId,
+                ),
+              ),
             // F-019 사진 — 아이돌만.
             if (isIdolSelf)
               IconButton(
