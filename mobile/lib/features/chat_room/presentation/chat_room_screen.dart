@@ -34,13 +34,13 @@ class ChatRoomScreen extends ConsumerWidget {
             children: [
               Avatar(
                 imageUrl: h?.thumbnailUrl,
-                fallbackText: h?.stageName ?? '?',
+                fallbackText: h?.displayName ?? '?',
                 size: 36,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  h?.stageName ?? '',
+                  h?.displayName ?? '',
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),

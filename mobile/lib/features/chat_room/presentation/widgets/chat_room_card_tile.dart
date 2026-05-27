@@ -25,7 +25,7 @@ class ChatRoomCardTile extends StatelessWidget {
         opacity: dim ? 0.4 : 1.0,
         child: Avatar(
           imageUrl: card.thumbnailUrl,
-          fallbackText: card.stageName,
+          fallbackText: card.displayName,
           size: 56,
         ),
       ),
@@ -33,7 +33,7 @@ class ChatRoomCardTile extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              card.stageName,
+              card.displayName,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: dim ? Theme.of(context).disabledColor : null,

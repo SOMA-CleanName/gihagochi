@@ -62,16 +62,17 @@ class ChatRoomRepository {
     required String idolId,
     required DateTime subscribedAt,
   }) async {
-    // 병렬 fetch — idol_profiles / profiles.status / 최근 메시지.
+    // 병렬 fetch — idol_profiles(thumbnail) / profiles(display_name+status) / 최근 메시지.
+    // 채팅 컨텍스트는 이름 = display_name (정책 2026-05-27).
     final results = await Future.wait([
       supabase
           .from('idol_profiles')
-          .select('stage_name, thumbnail_url')
+          .select('thumbnail_url')
           .eq('id', idolId)
           .maybeSingle(),
       supabase
           .from('profiles')
-          .select('status')
+          .select('display_name, status')
           .eq('id', idolId)
           .maybeSingle(),
       supabase
@@ -87,7 +88,7 @@ class ChatRoomRepository {
     final profile = results[1];
     final latestMsg = results[2];
 
-    final stageName = (idolProfile?['stage_name'] as String?) ?? '알 수 없는 아이돌';
+    final displayName = (profile?['display_name'] as String?) ?? '알 수 없는 아이돌';
     final thumbnailUrl = await _resolveThumbnailUrl(
       idolProfile?['thumbnail_url'] as String?,
     );
@@ -105,7 +106,7 @@ class ChatRoomRepository {
 
     return ChatRoomCard(
       idolId: idolId,
-      stageName: stageName,
+      displayName: displayName,
       thumbnailUrl: thumbnailUrl,
       previewText: previewText,
       previewTime: previewTime,
@@ -140,33 +141,33 @@ class ChatRoomRepository {
     return row != null;
   }
 
-  /// AppBar용 아이돌 요약.
+  /// AppBar용 아이돌 요약. 이름 = display_name (채팅 컨텍스트 정책).
   Future<IdolHeader?> fetchIdolHeader(String idolId) async {
     final results = await Future.wait([
       supabase
           .from('idol_profiles')
-          .select('stage_name, thumbnail_url')
+          .select('thumbnail_url')
           .eq('id', idolId)
           .maybeSingle(),
       supabase
           .from('profiles')
-          .select('status')
+          .select('display_name, status')
           .eq('id', idolId)
           .maybeSingle(),
     ]);
 
     final idolProfile = results[0];
     final profile = results[1];
-    if (idolProfile == null) return null;
+    if (profile == null) return null;
 
     final thumbnailUrl = await _resolveThumbnailUrl(
-      idolProfile['thumbnail_url'] as String?,
+      idolProfile?['thumbnail_url'] as String?,
     );
     return IdolHeader(
       idolId: idolId,
-      stageName: idolProfile['stage_name'] as String,
+      displayName: profile['display_name'] as String,
       thumbnailUrl: thumbnailUrl,
-      suspended: (profile?['status'] as String?) == 'suspended',
+      suspended: (profile['status'] as String?) == 'suspended',
     );
   }
 
