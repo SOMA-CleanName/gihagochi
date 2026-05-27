@@ -1,6 +1,3 @@
-import Link from "next/link";
-
-import { NotifyForm } from "./_components/notify-form";
 import { SiteFooter } from "./_components/site-footer";
 import { SiteHeader } from "./_components/site-header";
 
@@ -66,21 +63,6 @@ function Hero() {
           <br />
           작은 응원이 한 명의 아이돌을 무대로 데려갑니다.
         </p>
-
-        <div className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <a
-            href="#finale"
-            className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-7 text-sm font-semibold text-primary-on transition hover:bg-primary-hover"
-          >
-            출시 알림 받기
-          </a>
-          <Link
-            href="/apply"
-            className="inline-flex h-12 items-center justify-center rounded-full border border-outline px-6 text-sm font-medium text-fg transition hover:border-primary hover:text-primary"
-          >
-            아이돌로 활동하기
-          </Link>
-        </div>
       </div>
 
       {/* 다운 화살표 — 인터랙션 유도 */}
@@ -463,19 +445,7 @@ function Finale() {
             앙코르를 외쳐요.
           </h2>
           <p className="mt-6 text-pretty text-lg leading-relaxed text-fg-muted">
-            출시 소식을 가장 먼저 받아보세요. 팬과 아이돌 모두 환영합니다.
-          </p>
-
-          <NotifyForm />
-
-          <p className="mt-6 text-xs text-fg-faint">
-            아이돌로 활동하고 싶으신가요?{" "}
-            <Link
-              href="/apply"
-              className="text-fg-muted underline decoration-fg-faint underline-offset-4 transition hover:text-primary hover:decoration-primary"
-            >
-              신청하러 가기
-            </Link>
+            팬과 아이돌이 함께 만드는 시간을 곧 시작합니다.
           </p>
         </div>
       </div>

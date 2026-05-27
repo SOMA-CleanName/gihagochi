@@ -24,12 +24,6 @@ export function SiteHeader() {
             구조
           </Link>
         </nav>
-        <Link
-          href="/apply"
-          className="rounded-full border border-outline px-3.5 py-1.5 text-sm font-medium text-fg transition hover:border-primary hover:text-primary"
-        >
-          아이돌로 활동하기
-        </Link>
       </div>
     </header>
   );
