@@ -10,6 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
+import '../../auth/domain/auth_models.dart' show UserRole;
+import '../../profile/application/my_profile_controller.dart';
 import '../../subscription/application/subscription_controller.dart';
 import '../application/idol_detail_controller.dart';
 
@@ -23,6 +25,12 @@ class IdolDetailScreen extends ConsumerWidget {
     final state = ref.watch(idolDetailControllerProvider(idolId));
     final subscriptionState = ref.watch(subscriptionControllerProvider);
     final theme = Theme.of(context);
+    // 본인이 아이돌이면 응원 자체 불가 (정책 2026-05-27).
+    final myProfileAsync = ref.watch(myProfileControllerProvider);
+    final isViewerIdol = myProfileAsync.maybeWhen(
+      data: (p) => p.role == UserRole.idol,
+      orElse: () => false,
+    );
 
     Future<void> handleToggle(bool currentlySubscribed) async {
       final notifier = ref.read(subscriptionControllerProvider.notifier);
@@ -88,19 +96,44 @@ class IdolDetailScreen extends ConsumerWidget {
                 Text(idol.bio!, style: theme.textTheme.bodyMedium),
                 const SizedBox(height: 24),
               ],
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: isProcessing
-                      ? null
-                      : () => handleToggle(idol.isSubscribed),
-                  child: Text(
-                    isProcessing
-                        ? '처리 중…'
-                        : (idol.isSubscribed ? '응원 중' : '응원하기'),
+              if (isViewerIdol)
+                // 아이돌은 다른 아이돌을 응원할 수 없음.
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: theme.colorScheme.outline, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '아이돌 계정은 다른 아이돌을 응원할 수 없습니다.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: isProcessing
+                        ? null
+                        : () => handleToggle(idol.isSubscribed),
+                    child: Text(
+                      isProcessing
+                          ? '처리 중…'
+                          : (idol.isSubscribed ? '응원 중' : '응원하기'),
+                    ),
                   ),
                 ),
-              ),
             ],
           );
         },
