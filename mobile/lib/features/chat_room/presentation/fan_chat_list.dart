@@ -19,7 +19,7 @@ class FanChatList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(chatListControllerProvider);
 
-    return RefreshIndicator(
+    final list = RefreshIndicator(
       onRefresh: () => ref.read(chatListControllerProvider.notifier).refresh(),
       child: async.when(
         loading: () => const LoadingView(),
@@ -32,12 +32,40 @@ class FanChatList extends ConsumerWidget {
           if (cards.isEmpty) return const _EmptyChatRoomList();
           return ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
+            // 마지막 카드 아래 FAB과 겹치지 않게 여유.
+            padding: const EdgeInsets.only(bottom: 96),
             itemCount: cards.length,
             separatorBuilder: (_, __) => const Divider(height: 1, indent: 88),
             itemBuilder: (_, i) => ChatRoomCardTile(card: cards[i]),
           );
         },
       ),
+    );
+
+    return Stack(
+      children: [
+        Positioned.fill(child: list),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton.extended(
+            heroTag: 'fan_discover_fab',
+            onPressed: () => _goDiscover(context),
+            icon: const Icon(Icons.search),
+            label: const Text('아이돌 찾기'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+void _goDiscover(BuildContext context) {
+  try {
+    context.push('/discover');
+  } catch (_) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('아이돌 탐색을 열 수 없습니다.')),
     );
   }
 }
@@ -89,13 +117,4 @@ class _EmptyChatRoomList extends StatelessWidget {
     );
   }
 
-  void _goDiscover(BuildContext context) {
-    try {
-      context.push('/discover');
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('아이돌 탐색은 준비 중입니다.')),
-      );
-    }
-  }
 }
