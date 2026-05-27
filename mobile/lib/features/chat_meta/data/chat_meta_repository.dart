@@ -12,6 +12,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/error/app_error.dart';
 import '../../chat_message/domain/message.dart';
+import '../domain/fan_reply.dart';
 
 part 'chat_meta_repository.g.dart';
 
@@ -65,6 +66,32 @@ class ChatMetaRepository {
       if (e.code == '23505') return;
       if (kDebugMode) debugPrint('[chat_meta] markBroadcastAsRead 실패: $e');
     }
+  }
+
+  // ── 아이돌 답장 보기 ─────────────────────
+
+  /// 아이돌 본인의 broadcast 사이 구간에 들어온 fan_to_idol 메시지 조회.
+  /// `fromCreatedAt`(exclusive) ~ `toCreatedAt`(exclusive, null이면 NOW).
+  /// sender profile (display_name)을 JOIN해서 함께 반환 — 답장 보기 화면이 닉네임 표시.
+  Future<List<FanReply>> fetchFanRepliesBetween({
+    required String idolId,
+    required DateTime fromCreatedAt,
+    DateTime? toCreatedAt,
+  }) async {
+    var query = supabase
+        .from('messages')
+        .select('*, sender:sender_id(id, display_name)')
+        .eq('idol_id', idolId)
+        .eq('type', 'fan_to_idol')
+        .gt('created_at', fromCreatedAt.toUtc().toIso8601String());
+    if (toCreatedAt != null) {
+      query = query.lt('created_at', toCreatedAt.toUtc().toIso8601String());
+    }
+    final rows = await query.order('created_at', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(FanReply.fromJson)
+        .toList(growable: false);
   }
 
   // ── F-023 답장 ───────────────────────────
