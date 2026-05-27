@@ -15,6 +15,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/message_bubble.dart';
 import '../../chat_media/presentation/photo_message_bubble.dart';
 import '../../chat_media/presentation/voice_message_bubble.dart';
+import '../../chat_meta/presentation/reply_badge.dart';
 import '../../chat_meta/presentation/reply_composer_sheet.dart';
 import '../application/chat_messages_controller.dart';
 import '../domain/chat_item.dart';
@@ -101,20 +102,109 @@ class _MessageListState extends ConsumerState<MessageList> {
 
         if (items.isEmpty) return const _EmptyMessages();
 
+        // 아이돌 본인 모드: fan_to_idol 메시지는 list에서 직접 노출 X,
+        // 각 broadcast 다음에 그 사이 답장 카운트로 ReplyBadge 삽입.
+        final me = ref.watch(supabaseProvider).auth.currentUser?.id;
+        final isIdolSelf = me != null && me == widget.idolId;
+        final rows = isIdolSelf
+            ? _buildIdolRows(items, widget.idolId)
+            : items.map<_Row>(_MessageRow.new).toList(growable: false);
+
         return ListView.builder(
           controller: _scroll,
           padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: items.length,
-          itemBuilder: (_, i) => _ItemRow(
-            item: items[i],
-            onRetry: (cid) => ref
-                .read(chatMessagesControllerProvider(widget.idolId).notifier)
-                .retry(cid),
-          ),
+          itemCount: rows.length,
+          itemBuilder: (_, i) {
+            final row = rows[i];
+            return switch (row) {
+              _MessageRow(item: final it) => _ItemRow(
+                  item: it,
+                  onRetry: (cid) => ref
+                      .read(chatMessagesControllerProvider(widget.idolId)
+                          .notifier)
+                      .retry(cid),
+                ),
+              _BadgeRow(parentMessageId: final pid, count: final c) =>
+                ReplyBadge(
+                  idolId: widget.idolId,
+                  parentMessageId: pid,
+                  count: c,
+                ),
+            };
+          },
         );
       },
     );
   }
+}
+
+// ── 아이돌 본인 모드 row 빌더 ────────────────
+
+sealed class _Row {}
+
+class _MessageRow extends _Row {
+  _MessageRow(this.item);
+  final ChatItem item;
+}
+
+class _BadgeRow extends _Row {
+  _BadgeRow({required this.parentMessageId, required this.count});
+  final String parentMessageId;
+  final int count;
+}
+
+/// 아이돌 본인 채팅방 그룹화:
+/// - 본인의 idol_to_fans / idol_reply (broadcast) 행은 그대로 노출
+/// - 그 사이의 fan_to_idol 메시지는 카운트만 → ReplyBadge 한 줄로 흡수
+/// - pending (본인 텍스트 송신 중) 행은 그대로 노출
+List<_Row> _buildIdolRows(List<ChatItem> items, String idolId) {
+  final out = <_Row>[];
+  String? currentParentId;
+  int pendingCount = 0;
+
+  void flushBadge() {
+    if (currentParentId != null && pendingCount > 0) {
+      out.add(_BadgeRow(
+        parentMessageId: currentParentId!,
+        count: pendingCount,
+      ));
+    }
+    currentParentId = null;
+    pendingCount = 0;
+  }
+
+  for (final item in items) {
+    if (item is ConfirmedItem) {
+      final m = item.message;
+      final isBroadcastByMe = (m.type == MessageType.idolToFans ||
+              m.type == MessageType.idolReply) &&
+          m.senderId == idolId;
+      final isFanToIdol = m.type == MessageType.fanToIdol;
+
+      if (isBroadcastByMe) {
+        flushBadge();
+        out.add(_MessageRow(item));
+        currentParentId = m.id;
+        pendingCount = 0;
+        continue;
+      }
+      if (isFanToIdol) {
+        if (currentParentId != null) {
+          pendingCount += 1;
+        }
+        // currentParentId == null (첫 broadcast 전 답장)이면 무시 — 본인이 보낸 게
+        // 없는 채팅방에 도착한 답장은 일반적이지 않음.
+        continue;
+      }
+      // 그 외(드물게 RLS 우회) — 안전하게 그대로 노출.
+      out.add(_MessageRow(item));
+    } else {
+      // pending — 본인 텍스트 송신 중. 그대로 노출.
+      out.add(_MessageRow(item));
+    }
+  }
+  flushBadge();
+  return out;
 }
 
 class _EmptyMessages extends StatelessWidget {
