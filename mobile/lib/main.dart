@@ -96,8 +96,10 @@ class _GihagochiApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
       title: 'gihagochi',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.theme,
+      // 정책 2026-05-27: 네온 다크 단일 테마 — themeMode 강제 dark.
+      darkTheme: AppTheme.theme,
+      themeMode: ThemeMode.dark,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       // DevOverlay: kDebugMode + Env.isDev + .env DEV_QUICK_LOGIN 설정 시
