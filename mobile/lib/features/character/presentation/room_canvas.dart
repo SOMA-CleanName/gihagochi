@@ -20,7 +20,9 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/radius.dart';
 import '../../chat_message/presentation/message_input.dart';
 import '../../chat_message/presentation/message_list.dart';
+import '../application/character_moment_controller.dart';
 import 'widgets/character_placeholder.dart';
+import 'widgets/moment_card.dart';
 import 'widgets/room_background.dart';
 
 // ── 드래그 범위 상수 (조정 가능) ──────────────────
@@ -123,6 +125,8 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
 
   @override
   Widget build(BuildContext context) {
+    final moment =
+        ref.watch(characterMomentControllerProvider(widget.idolId));
     return AnimatedBuilder(
       animation: _expand,
       builder: (context, _) {
@@ -133,9 +137,17 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
           children: [
             // Layer 1: 방 배경 — 풀스크린, 자르지 않음, 어떤 상태에서도 검정 X.
             const RoomBackground(),
-            // Layer 2: 정적 캐릭터 — 풀스크린 영역 내 center. 채팅창에 일부 가려져도 OK.
-            Positioned.fill(
-              child: SafeArea(child: CharacterPlaceholder(idolId: widget.idolId)),
+            // Layer 2: 정적 캐릭터 — 채팅 카드 위 영역만 점유.
+            // Column.end로 카드 상단 바로 위에 정렬 → 채팅창에 가려지지 않음.
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: screenH - chatTop,
+              child: SafeArea(
+                bottom: false,
+                child: CharacterPlaceholder(idolId: widget.idolId),
+              ),
             ),
             // Layer 3: 채팅창 — top만 동적, bottom=0. 반투명 + blur.
             Positioned(
@@ -152,12 +164,26 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
                 onHandleTap: _onHandleTap,
               ),
             ),
+            // Layer 4 (F-044): 모먼트 카드 — 채팅창 top 위에 floating, IgnorePointer.
+            // chatTop이 변하면 함께 움직임. moment=null이면 SizedBox.shrink로 영향 0.
+            Positioned(
+              left: 0,
+              right: 0,
+              top: chatTop - _momentCardLift,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: MomentCard(moment: moment),
+              ),
+            ),
           ],
         );
       },
     );
   }
 }
+
+/// 채팅 카드 top 위로 카드 본체가 띄워질 거리.
+const double _momentCardLift = 56;
 
 class _ChatCard extends StatelessWidget {
   const _ChatCard({

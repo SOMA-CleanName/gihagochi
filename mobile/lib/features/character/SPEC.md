@@ -1,7 +1,8 @@
-# F-039 / F-040 character — 캐릭터 방 + 정적 캐릭터 + 채팅 오버레이 (PR-1)
+# F-039 / F-040 / F-044 character — 방 + 캐릭터 + 채팅 + 모먼트 카드
 
-> 작업 단위 #13 character의 **PR-1만**.
-> 후속: PR-2 (F-042+043 상태 DB), PR-3 (F-041 애니), PR-4 (F-044 선물 반응).
+> 작업 단위 #13 character의 **PR-1 ~ PR-4**.
+> 현재 적용: PR-1 (F-039 방 배경, F-040 정적 캐릭터 + 채팅 오버레이), PR-4 (F-044 캐릭터 모먼트 카드 + 탭 반응).
+> 후속: PR-2 (F-042+043 상태 DB, 분리 트리거 필요), PR-3 (F-041 애니, 렌더링 기술 결정 필요).
 > v2 분리: F-045/046/047/048.
 
 ## 개요
@@ -86,9 +87,67 @@ class RoomCanvas extends ConsumerWidget {
 // chat_room의 chatRoomCharacterSlotProvider가 본 위젯으로 override.
 // chat_room_screen에선 body 전체를 char slot에 위임.
 
+// integration/character_moment_trigger.dart — PR-4 공개 IF
+/// 다른 피처(gift, chat_message 등)가 캐릭터 모먼트를 트리거할 때 호출.
+/// 예: gift sheet close 후 chat_message에서 호출 → 캐릭터 위 카드 5s 표시.
+void triggerCharacterMoment(WidgetRef ref, {
+  required String idolId,
+  required CharacterMomentKind kind, // gift | tap | feed | praise
+  String? message,
+});
+
+// domain/character_moment.dart
+enum CharacterMomentKind { gift, tap, feed, praise }
+
 // routes.dart
 List<RouteBase> get characterRoutes; // 빈 리스트 (오버레이 패턴, 라우트 없음)
 ```
+
+---
+
+## PR-4 추가 (F-044) — 캐릭터 모먼트 카드 + 탭 반응
+
+### 범위
+
+DB·의존성·마이그레이션 0. character 슬라이스 단독 변경.
+
+1. **MomentCard** — 캐릭터 위쪽(채팅 카드 top 바로 위)에 떠있는 작은 glass 카드.
+   - slide-in 200ms → 5s 표시 → fade-out 250ms → dispose
+   - kind별 아이콘/색: gift=🎁 tertiary, tap=✨ secondary, feed=🍙 primary, praise=💜 primary
+   - 메시지 옵션: "고마워!", "함께해서 행복해" 등 (kind별 기본값 + override 가능)
+
+2. **캐릭터 탭 반응** — `CharacterPlaceholder` 탭 시:
+   - 즉시 sparkle scale 애니메이션 (자기 위)
+   - moment controller에 `CharacterMomentKind.tap` dispatch → MomentCard 표시
+   - haptic feedback (HapticFeedback.lightImpact)
+
+3. **공개 인터페이스** — `triggerCharacterMoment(...)` export.
+   - gift 슬라이스 직접 호출 X (gift는 character 모름). chat_message 또는 후속 PR에서 호출.
+   - 본 PR은 인터페이스만 export. 외부 호출자 변경 0.
+
+### 비즈니스 룰
+
+- 동일 idolId 재트리거 시 기존 moment 즉시 dispose + 새 moment 시작 (queue 안 함).
+- moment 표시 중에도 채팅 입력/스크롤 정상 (pointer events 통과 영역).
+- 캐릭터 탭 디바운스 500ms (sparkle 중 재탭 무시).
+
+### 엣지 케이스
+
+- 채팅창 풀로 올림(value=1) → MomentCard 가려질 수 있음. card는 채팅 카드 top 기준으로 위치하니 따라 올라감 (Stack 안 Positioned with chatTop offset).
+- 위젯 dispose 중 timer fire → safe (mounted 체크).
+- 같은 kind 연속 → 카드 reset 후 재시작 (시각적으로 깜빡임 OK).
+
+### 수동 테스트 시나리오
+
+1. 채팅방 진입 → 캐릭터 탭 → sparkle + MomentCard ("반가워" tap kind) 5s 표시
+2. 5s 내 다시 탭 → 카드 즉시 reset + 재시작
+3. 채팅창 위로 드래그 → 카드도 따라 위로
+4. 카드 표시 중 메시지 입력 → 정상 동작 (카드 위 텍스트 펜딩 X)
+5. 디바이스 회전 (있다면) → 카드 위치 자연스럽게 재계산
+
+### 메인 빌더 영역 변경 (PR-4)
+
+- 없음. character 슬라이스 단독.
 
 ---
 
