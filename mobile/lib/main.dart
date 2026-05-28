@@ -20,7 +20,9 @@ import 'core/config/env.dart';
 import 'core/dev/dev_overlay.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/app_background.dart';
 // 피처 슬롯 override — 새 피처가 다른 피처의 슬롯을 채울 때 여기에 1줄씩 추가.
+import 'features/character/presentation/room_canvas.dart';
 import 'features/chat_message/presentation/message_input.dart';
 import 'features/chat_message/presentation/message_list.dart';
 import 'features/chat_room/application/slot_providers.dart' as chat_slots;
@@ -76,10 +78,16 @@ Future<void> main() async {
             (ref) => [unsubscribeMenuAction(ref)],
           ),
           // chat_message 가 chat_room 의 메시지/입력창 슬롯을 채움.
+          // (character.RoomCanvas가 직접 import해서 채팅 카드 안에 끼우므로
+          //  chat_room의 slot은 사용 안 되지만 호환성 위해 유지.)
           chat_slots.chatMessageListSlotProvider
               .overrideWith((ref, idolId) => MessageList(idolId: idolId)),
           chat_slots.chatMessageInputSlotProvider
               .overrideWith((ref, idolId) => MessageInput(idolId: idolId)),
+          // character 가 chat_room 의 캐릭터 슬롯에 풀스크린 RoomCanvas 위임.
+          // RoomCanvas가 방+캐릭터+하단 반투명 채팅 카드까지 자체 렌더.
+          chat_slots.chatRoomCharacterSlotProvider
+              .overrideWith((ref, idolId) => RoomCanvas(idolId: idolId)),
         ],
         // PushInitializer: ProviderScope 내부에서 FCM 토큰 발급 + 백엔드 등록.
         child: const PushInitializer(child: _GihagochiApp()),
@@ -104,8 +112,9 @@ class _GihagochiApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       // DevOverlay: kDebugMode + Env.isDev + .env DEV_QUICK_LOGIN 설정 시
       // 우측 하단에 floating debug FAB 노출. release 빌드 tree-shaken.
-      builder: (context, child) =>
-          DevOverlay(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => AppBackground(
+        child: DevOverlay(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }
