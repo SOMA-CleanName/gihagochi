@@ -137,13 +137,14 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
           children: [
             // Layer 1: 방 배경 — 풀스크린, 자르지 않음, 어떤 상태에서도 검정 X.
             const RoomBackground(),
-            // Layer 2: 정적 캐릭터 — 채팅 카드 위 영역만 점유.
-            // Column.end로 카드 상단 바로 위에 정렬 → 채팅창에 가려지지 않음.
+            // Layer 2: 정적 캐릭터 — 위치/크기 고정 (채팅창 드래그와 무관).
+            // 캐릭터 발은 항상 chatTopMaxRatio 라인(화면 60%) 바로 위.
+            // 채팅창이 그보다 위로 올라오면 캐릭터를 위쪽부터 가림 — 의도된 동작.
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              bottom: screenH - chatTop,
+              bottom: screenH * (1 - chatTopMaxRatio),
               child: SafeArea(
                 bottom: false,
                 child: CharacterPlaceholder(idolId: widget.idolId),
@@ -210,11 +211,11 @@ class _ChatCard extends StatelessWidget {
         topRight: Radius.circular(AppRadius.xl),
       ),
       child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            // 반투명 — 뒤 방 배경이 은은하게 비치도록.
-            color: AppColors.surface.withValues(alpha: 0.55),
+            // 매우 투명 — 채팅 뒤로 캐릭터가 보일 정도.
+            color: AppColors.surface.withValues(alpha: 0.10),
             border: Border(
               top: BorderSide(
                 color: AppColors.primary.withValues(alpha: 0.3),

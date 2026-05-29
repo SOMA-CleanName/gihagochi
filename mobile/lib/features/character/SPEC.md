@@ -59,11 +59,14 @@ chat_room_screen은 character 슬롯에 풀스크린 위임 + 자체 Column[char
 
 ## 비즈니스 룰
 
-1. **F-039 방 배경**: 에셋 있으면 PNG 표시, 없으면 폴백:
-   - 다크 퍼플 그라데이션 + 미세 grid 도트 (도트 픽셀 톤 흉내)
-2. **F-040 정적 캐릭터**: 에셋 있으면 캐릭터 PNG center bottom, 없으면 폴백:
-   - 라운드 실루엣 + "캐릭터 준비 중" 라벨
-3. **채팅 카드**: 하단 ~55% 영역 반투명 (alpha 0.85) + blur. 카드 안에 message_list + input 그대로.
+1. **F-039 방 배경**: `assets/character/room_background.png` (862×1825, 9:19) BoxFit.cover + FilterQuality.none.
+2. **F-040 정적 캐릭터**: `assets/character/character_*.png` 6종 (852×1846 공통, sad만 941×1672).
+   - 표시 폭 = 화면 폭의 50% (`characterWidthRatio`), 높이 = `width × 1846/852` (`_characterCanvasAspect`).
+   - sad는 BoxFit.contain으로 SizedBox 안에서 자동 비율 유지 — 약간 작게 보이는 게 정상.
+   - `filterQuality: FilterQuality.none` (픽셀 아트 nearest neighbor).
+   - 6종: idle / happy / sad / sing / eat / sleep — `CharacterActionType` enum과 매핑 (PR-2 백엔드 enum과 동일 이름).
+   - 데모 토글: 캐릭터 탭 시 6종 순환 (PR-2에서 백엔드 상태 도입 시 제거 예정).
+3. **채팅 카드**: 하단 ~55% 영역 반투명 (alpha 0.55) + blur 28. 카드 안에 message_list + input 그대로.
 4. **본인 = idolId (아이돌 자기 채팅방)** : 동일 레이아웃. F-043 트리거 버튼은 PR-2에서.
 
 ---

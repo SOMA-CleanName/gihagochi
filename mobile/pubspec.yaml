@@ -84,6 +84,7 @@ flutter:
 
   assets:
     - .env
+    - assets/character/
 
   # Pretendard — 한국어 표준 폰트. OFL license. orioncactus/pretendard v1.3.9.
   # 5개 weight (Regular/Medium/SemiBold/Bold/ExtraBold) ~7.5MB.
