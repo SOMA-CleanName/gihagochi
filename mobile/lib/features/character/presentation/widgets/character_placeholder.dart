@@ -1,7 +1,12 @@
-/// F-040 정적 캐릭터 — 백엔드 state 기반 6종 표시 + 탭 액션 트리거.
+/// F-040 정적 캐릭터 + F-041 호흡 애니메이션 — 백엔드 state 기반.
 ///
 /// state 출처: characterStateControllerProvider(idolId)
 ///   - 백엔드 GET /character/{idol_id}/state (row 없으면 default idle)
+///
+/// 애니메이션 (F-041, Flutter implicit only — Rive/flame 미사용):
+///   - 호흡 scale (±1.8%, easeInOut, 2.8s 왕복). 액션별 duration:
+///       sleep 4.2s / eat 3.4s / sing 2.2s / 그 외 2.8s
+///   - 액션 변경 시 PNG 페이드 전환 280ms (AnimatedSwitcher)
 ///
 /// 탭 시:
 ///   - sparkle scale 애니메이션 + haptic
@@ -34,10 +39,14 @@ class CharacterPlaceholder extends ConsumerStatefulWidget {
 }
 
 class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _sparkle;
+  late final AnimationController _breathe;
   DateTime _lastTapAt = DateTime.fromMillisecondsSinceEpoch(0);
   static const Duration _tapDebounce = Duration(milliseconds: 500);
+
+  /// 호흡 scale 범위 (±). 너무 크면 부자연스러움.
+  static const double _breatheAmplitude = 0.018;
 
   @override
   void initState() {
@@ -46,12 +55,31 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
       vsync: this,
       duration: const Duration(milliseconds: 420),
     );
+    _breathe = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _sparkle.dispose();
+    _breathe.dispose();
     super.dispose();
+  }
+
+  /// 액션별 호흡 duration — 자거나 먹을 땐 더 느리게.
+  Duration _breatheDurationFor(CharacterActionType action) {
+    switch (action) {
+      case CharacterActionType.sleep:
+        return const Duration(milliseconds: 4200);
+      case CharacterActionType.eat:
+        return const Duration(milliseconds: 3400);
+      case CharacterActionType.sing:
+        return const Duration(milliseconds: 2200);
+      default:
+        return const Duration(milliseconds: 2800);
+    }
   }
 
   Future<void> _onTap(CharacterActionType current) async {
@@ -87,24 +115,33 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
       orElse: () => CharacterActionType.idle, // loading/error → default 표시
     );
 
+    // 액션 바뀔 때 호흡 속도 조정 (자기/먹기 천천히, 노래 빠르게).
+    final breatheDuration = _breatheDurationFor(action);
+    if (_breathe.duration != breatheDuration) {
+      _breathe.duration = breatheDuration;
+    }
+
     return GestureDetector(
       onTap: () => _onTap(action),
       behavior: HitTestBehavior.opaque,
       child: Align(
         alignment: Alignment.bottomCenter,
         child: AnimatedBuilder(
-          animation: _sparkle,
+          animation: Listenable.merge([_sparkle, _breathe]),
           builder: (context, child) {
-            final t = _sparkle.value;
-            final scale = 1.0 + 0.06 * (t < 0.5 ? t * 2 : (1 - t) * 2);
+            final tap = _sparkle.value;
+            final tapScale = 1.0 + 0.06 * (tap < 0.5 ? tap * 2 : (1 - tap) * 2);
+            // _breathe.value는 [0,1] 왕복. ease 적용해 부드러운 sin-like 곡선.
+            final breatheCurve = Curves.easeInOut.transform(_breathe.value);
+            final breatheScale = 1.0 + _breatheAmplitude * breatheCurve;
             return Transform.scale(
-              scale: scale,
+              scale: tapScale * breatheScale,
               child: Stack(
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
                 children: [
                   child!,
-                  if (t > 0) _SparkleOverlay(t: t),
+                  if (tap > 0) _SparkleOverlay(t: tap),
                 ],
               ),
             );
@@ -112,11 +149,19 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
           child: SizedBox(
             width: width,
             height: height,
-            child: Image.asset(
-              action.assetPath,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.none,
-              gaplessPlayback: true,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: Image.asset(
+                action.assetPath,
+                key: ValueKey(action),
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.none,
+                gaplessPlayback: true,
+              ),
             ),
           ),
         ),
