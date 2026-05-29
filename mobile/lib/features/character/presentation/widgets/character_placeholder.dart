@@ -121,17 +121,18 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
       _breathe.duration = breatheDuration;
     }
 
-    return GestureDetector(
-      onTap: () => _onTap(action),
-      behavior: HitTestBehavior.opaque,
-      child: Align(
-        alignment: Alignment.bottomCenter,
+    return Align(
+      alignment: Alignment.bottomCenter,
+      // GestureDetector를 SizedBox 안쪽으로 — 캐릭터 영역만 hit, 방 배경 탭은 통과.
+      child: SizedBox(
+        width: width,
+        height: height,
         child: AnimatedBuilder(
+          // child 매개변수 안 씀 — action 변화 시 매 frame rebuild되어 AnimatedSwitcher가 key 변화 감지.
           animation: Listenable.merge([_sparkle, _breathe]),
-          builder: (context, child) {
+          builder: (context, _) {
             final tap = _sparkle.value;
             final tapScale = 1.0 + 0.06 * (tap < 0.5 ? tap * 2 : (1 - tap) * 2);
-            // _breathe.value는 [0,1] 왕복. ease 적용해 부드러운 sin-like 곡선.
             final breatheCurve = Curves.easeInOut.transform(_breathe.value);
             final breatheScale = 1.0 + _breatheAmplitude * breatheCurve;
             return Transform.scale(
@@ -140,30 +141,29 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
                 children: [
-                  child!,
+                  GestureDetector(
+                    onTap: () => _onTap(action),
+                    behavior: HitTestBehavior.opaque,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 280),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      transitionBuilder: (child, anim) =>
+                          FadeTransition(opacity: anim, child: child),
+                      child: Image.asset(
+                        action.assetPath,
+                        key: ValueKey(action),
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.none,
+                        gaplessPlayback: true,
+                      ),
+                    ),
+                  ),
                   if (tap > 0) _SparkleOverlay(t: tap),
                 ],
               ),
             );
           },
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 280),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              transitionBuilder: (child, anim) =>
-                  FadeTransition(opacity: anim, child: child),
-              child: Image.asset(
-                action.assetPath,
-                key: ValueKey(action),
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.none,
-                gaplessPlayback: true,
-              ),
-            ),
-          ),
         ),
       ),
     );
