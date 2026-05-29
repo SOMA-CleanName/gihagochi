@@ -34,10 +34,14 @@ class AuthRepository {
   /// 라우터의 refresh 리스너가 redirect 결정.
   ///
   /// redirectTo 없으면 Supabase가 콜백 후 갈 곳을 몰라 브라우저에 "사이트에 접근할 수 없음"으로 죽음.
+  ///
+  /// `queryParams: {'prompt': 'select_account'}` — 매번 Google 계정 선택 화면 강제.
+  /// 이전에 동의한 계정이 자동 SSO로 잡혀버리는 문제 방지.
   Future<void> signInWithGoogle() async {
     await supabase.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: oauthRedirectUrl,
+      queryParams: const {'prompt': 'select_account'},
     );
   }
 

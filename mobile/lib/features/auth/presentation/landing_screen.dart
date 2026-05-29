@@ -32,8 +32,14 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     try {
       await ref.read(authRepositoryProvider).signInWithGoogle();
       // OAuth 콜백 후 onAuthStateChange → 라우터가 다음 화면 결정.
-    } catch (e) {
-      if (mounted) setState(() => _error = '로그인 실패: $e');
+    } catch (e, st) {
+      // raw exception을 사용자에 노출하지 말 것 — Sentry/log에만 보내고 친화 메시지로.
+      debugPrint('[auth.google] signInWithOAuth 실패: $e\n$st');
+      if (mounted) {
+        setState(
+          () => _error = '구글 로그인을 시작할 수 없어요. 잠시 후 다시 시도해주세요.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
