@@ -23,6 +23,7 @@ import 'core/theme/app_theme.dart';
 import 'core/widgets/app_background.dart';
 // 피처 슬롯 override — 새 피처가 다른 피처의 슬롯을 채울 때 여기에 1줄씩 추가.
 import 'features/auth/presentation/reagree_gate.dart';
+import 'features/character/integration/action_debug_menu.dart';
 import 'features/character/presentation/room_canvas.dart';
 import 'features/chat_message/presentation/message_input.dart';
 import 'features/chat_message/presentation/message_list.dart';
@@ -76,7 +77,10 @@ Future<void> main() async {
           // 채팅방 ⋮ 메뉴 — 본인이 fan일 때 호출되는 액션들.
           // 정책 2026-05-27: 선물은 입력창 좌측으로 이동 (메뉴에서 제거).
           chat_slots.chatRoomMenuActionsProvider.overrideWith(
-            (ref) => [unsubscribeMenuAction(ref)],
+            (ref) => [
+              characterActionMenuAction(ref), // 임시 — F-047 도입 시 제거
+              unsubscribeMenuAction(ref),
+            ],
           ),
           // chat_message 가 chat_room 의 메시지/입력창 슬롯을 채움.
           // (character.RoomCanvas가 직접 import해서 채팅 카드 안에 끼우므로
