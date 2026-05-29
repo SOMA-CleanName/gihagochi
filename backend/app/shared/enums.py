@@ -67,3 +67,14 @@ class AgreementType(StrEnum):
 class DevicePlatform(StrEnum):
     IOS = "ios"
     ANDROID = "android"
+
+
+class CharacterActionType(StrEnum):
+    """F-042 캐릭터 상태/행동. mobile features/character/domain의 enum과 동일 이름."""
+
+    IDLE = "idle"
+    HAPPY = "happy"
+    SAD = "sad"
+    SING = "sing"
+    EAT = "eat"
+    SLEEP = "sleep"
