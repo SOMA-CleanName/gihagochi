@@ -79,6 +79,11 @@ class AuthRepository {
     return TermsCurrent.fromJson(res.data as Map<String, dynamic>);
   }
 
+  /// POST /auth/terms/reagree — 약관 재동의. 204 No Content.
+  Future<void> reagree(ReagreeRequest req) async {
+    await dio.post('/auth/terms/reagree', data: req.toJson());
+  }
+
   // ── Supabase signOut + 백엔드 로그아웃 묶음 ────────────────
 
   /// 로그아웃. 백엔드 호출 실패해도 로컬 세션은 강제 클리어.

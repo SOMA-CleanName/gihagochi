@@ -22,6 +22,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_background.dart';
 // 피처 슬롯 override — 새 피처가 다른 피처의 슬롯을 채울 때 여기에 1줄씩 추가.
+import 'features/auth/presentation/reagree_gate.dart';
 import 'features/character/presentation/room_canvas.dart';
 import 'features/chat_message/presentation/message_input.dart';
 import 'features/chat_message/presentation/message_list.dart';
@@ -113,7 +114,9 @@ class _GihagochiApp extends ConsumerWidget {
       // DevOverlay: kDebugMode + Env.isDev + .env DEV_QUICK_LOGIN 설정 시
       // 우측 하단에 floating debug FAB 노출. release 빌드 tree-shaken.
       builder: (context, child) => AppBackground(
-        child: DevOverlay(child: child ?? const SizedBox.shrink()),
+        child: ReagreeGate(
+          child: DevOverlay(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     );
   }
