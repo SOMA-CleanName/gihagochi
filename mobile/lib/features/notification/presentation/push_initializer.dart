@@ -31,15 +31,12 @@ class _PushInitializerState extends ConsumerState<PushInitializer> {
   Future<void> _initPush() async {
     try {
       final repo = ref.read(notificationRepositoryProvider);
+      // 람다 안에서 catch 안 함 — core/push_service의 try/catch가
+      // 단일 진실 (실패 시 "[Push] 백엔드 등록 실패 (silent)" 로그).
+      // 람다에서 swallow하면 push_service는 성공으로 인식해 "등록 완료" 모순 출력.
       await PushService.init(
-        registrar: (token, platform) async {
-          try {
-            await repo.registerDeviceToken(token, platform);
-          } catch (e) {
-            // 등록 실패는 silent — 앱 동작 차단 X.
-            if (kDebugMode) debugPrint('[push] 토큰 등록 실패: $e');
-          }
-        },
+        registrar: (token, platform) =>
+            repo.registerDeviceToken(token, platform),
       );
     } catch (e) {
       // 시뮬레이터/Push entitlement 미설정 환경에선 APNS 부재로 throw — graceful degrade.
