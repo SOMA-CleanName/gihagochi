@@ -37,8 +37,13 @@ class _SignupTermsScreenState extends ConsumerState<SignupTermsScreen> {
       // OAuth 먼저 — 끝나면 onAuthStateChange가 redirect를 트리거하고
       // 라우터가 /auth/signup/profile로 보냄(프로필 미존재).
       await ref.read(authRepositoryProvider).signInWithGoogle();
-    } catch (e) {
-      if (mounted) setState(() => _error = '로그인 실패: $e');
+    } catch (e, st) {
+      debugPrint('[auth.google] signup_terms: signInWithOAuth 실패: $e\n$st');
+      if (mounted) {
+        setState(
+          () => _error = '구글 로그인을 시작할 수 없어요. 잠시 후 다시 시도해주세요.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
