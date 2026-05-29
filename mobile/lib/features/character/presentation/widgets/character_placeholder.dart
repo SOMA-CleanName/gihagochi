@@ -1,14 +1,15 @@
-/// F-040 정적 캐릭터 — 에셋 폴백 + F-044 탭 반응.
+/// F-040 정적 캐릭터 — 실제 PNG 에셋 6종 + 탭 순환 데모.
 ///
-/// 실제 캐릭터 PNG가 들어오면 본 위젯을 교체.
-/// 1차 폴백: 라운드 실루엣 + "캐릭터 준비 중" 라벨.
-/// 캐릭터는 채팅 카드 위쪽 영역에 center-bottom 정렬.
+/// PR-1 후속: placeholder 실루엣 → 6종 캐릭터 PNG 교체.
+/// 6종 PNG는 모두 480×800 캔버스, 같은 좌표에 띄우면 같은 위치에서 표정만 바뀜.
 ///
 /// 탭 시:
 ///   - sparkle scale 애니메이션
 ///   - haptic feedback (lightImpact)
+///   - 데모 토글: 6종 순환 (idle → happy → sad → sing → eat → sleep → idle)
+///     → PR-2에서 백엔드 상태 도입 시 토글 제거 예정
 ///   - characterMomentControllerProvider에 tap moment dispatch
-///   - 디바운스 500ms (sparkle 중 재탭 무시)
+///   - 디바운스 500ms
 library;
 
 import 'package:flutter/material.dart';
@@ -16,10 +17,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/colors.dart';
-import '../../../../core/theme/spacing.dart';
-import '../../../../core/theme/text_styles.dart';
 import '../../application/character_moment_controller.dart';
+import '../../domain/character_action.dart';
 import '../../domain/character_moment.dart';
+
+/// 캐릭터 표시 크기 = 화면 폭의 이 비율.
+const double characterWidthRatio = 0.5;
+
+/// 캐릭터 PNG 캔버스 비율 (852×1846 ≈ 1:2.166).
+/// sad만 다른 비율(941×1672)이지만 BoxFit.contain으로 SizedBox 안에서 자동 비율 유지.
+const double _characterCanvasAspect = 1846 / 852;
 
 class CharacterPlaceholder extends ConsumerStatefulWidget {
   const CharacterPlaceholder({super.key, required this.idolId});
@@ -36,6 +43,8 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
   late final AnimationController _sparkle;
   DateTime _lastTapAt = DateTime.fromMillisecondsSinceEpoch(0);
   static const Duration _tapDebounce = Duration(milliseconds: 500);
+
+  CharacterActionType _action = CharacterActionType.idle;
 
   @override
   void initState() {
@@ -59,6 +68,7 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
 
     HapticFeedback.lightImpact();
     _sparkle.forward(from: 0);
+    setState(() => _action = _action.next);
     ref
         .read(characterMomentControllerProvider(widget.idolId).notifier)
         .show(CharacterMomentKind.tap);
@@ -66,79 +76,42 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          GestureDetector(
-            onTap: _onTap,
-            behavior: HitTestBehavior.opaque,
-            child: AnimatedBuilder(
-              animation: _sparkle,
-              builder: (context, child) {
-                final t = _sparkle.value;
-                final scale = 1.0 + 0.08 * (t < 0.5 ? t * 2 : (1 - t) * 2);
-                return Transform.scale(
-                  scale: scale,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    clipBehavior: Clip.none,
-                    children: [
-                      child!,
-                      if (t > 0) _SparkleOverlay(t: t),
-                    ],
-                  ),
-                );
-              },
-              child: _CharacterSilhouette(),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            '캐릭터 준비 중',
-            style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.onSurfaceMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+    final screenW = MediaQuery.of(context).size.width;
+    final width = screenW * characterWidthRatio;
+    final height = width * _characterCanvasAspect;
 
-class _CharacterSilhouette extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 140,
-      height: 180,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(70),
-          bottom: Radius.circular(20),
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.primary.withValues(alpha: 0.25),
-            AppColors.tertiary.withValues(alpha: 0.18),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 40,
-            spreadRadius: -5,
+    return GestureDetector(
+      onTap: _onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: AnimatedBuilder(
+          animation: _sparkle,
+          builder: (context, child) {
+            final t = _sparkle.value;
+            final scale = 1.0 + 0.06 * (t < 0.5 ? t * 2 : (1 - t) * 2);
+            return Transform.scale(
+              scale: scale,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  child!,
+                  if (t > 0) _SparkleOverlay(t: t),
+                ],
+              ),
+            );
+          },
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: Image.asset(
+              _action.assetPath,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.none, // 픽셀 아트
+              gaplessPlayback: true, // 토글 시 깜빡임 방지
+            ),
           ),
-        ],
-      ),
-      child: Center(
-        child: Icon(
-          Icons.person_outline,
-          size: 64,
-          color: AppColors.primary.withValues(alpha: 0.5),
         ),
       ),
     );
