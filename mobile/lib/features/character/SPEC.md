@@ -1,9 +1,19 @@
-# F-039 / F-040 / F-044 character — 방 + 캐릭터 + 채팅 + 모먼트 카드
+# F-039 / F-040 / F-042 / F-043 / F-044 character — 방 + 캐릭터 + 상태 + 행동 + 모먼트
 
-> 작업 단위 #13 character의 **PR-1 ~ PR-4**.
-> 현재 적용: PR-1 (F-039 방 배경, F-040 정적 캐릭터 + 채팅 오버레이), PR-4 (F-044 캐릭터 모먼트 카드 + 탭 반응).
-> 후속: PR-2 (F-042+043 상태 DB, 분리 트리거 필요), PR-3 (F-041 애니, 렌더링 기술 결정 필요).
+> 작업 단위 #13 character.
+> 현재 적용: PR-1 (F-039 방 배경, F-040 정적 캐릭터),
+>           PR-4 (F-044 모먼트 카드 + 탭 반응),
+>           PR-2 (F-042 상태 DB + F-043 행동 IF — backend 연동 완료, 탭 → POST /character/{idol}/actions).
+> 후속: PR-3 (F-041 애니, Flutter implicit 기반).
 > v2 분리: F-045/046/047/048.
+
+## 백엔드 연동 (PR-2)
+
+- `data/character_repository.dart`: `fetchState(idolId)`, `triggerAction(idolId, action)` — 백엔드 GET/POST 호출.
+- `application/character_state_controller.dart`: `characterStateControllerProvider(idolId)` — Riverpod AsyncNotifier family.
+  - `build`: `fetchState` (row 없으면 default idle 응답)
+  - `trigger(action)`: `triggerAction` 호출 후 `state = AsyncData(next)` 즉시 갱신
+- `presentation/widgets/character_placeholder.dart`: state.currentAction 기반 PNG 표시 + 탭 시 다음 순환 액션 백엔드 POST.
 
 ## 개요
 
