@@ -15,6 +15,19 @@
   - `trigger(action)`: `triggerAction` 호출 후 `state = AsyncData(next)` 즉시 갱신
 - `presentation/widgets/character_placeholder.dart`: state.currentAction 기반 PNG 표시 + 탭 시 다음 순환 액션 백엔드 POST.
 
+## 호흡 애니메이션 (PR-3, F-041)
+
+Flutter implicit animation 만 사용 (Rive/flame 의존성 없음).
+
+- **호흡 scale**: ±1.8% (`_breatheAmplitude`), `Curves.easeInOut`, 무한 왕복.
+- **액션별 duration** — `_breatheDurationFor(action)`:
+  - sleep: 4.2s (천천히)
+  - eat: 3.4s
+  - sing: 2.2s (빠르게)
+  - 그 외: 2.8s
+- **액션 전환 fade**: `AnimatedSwitcher` 280ms (`switchInCurve: easeOut`, `switchOutCurve: easeIn`).
+- 탭 sparkle scale (±6%, 420ms one-shot)과 곱셈 합성 — 호흡 중에도 탭 부풀림 자연스럽게.
+
 ## 개요
 
 채팅방 진입 시 풀스크린 "아이돌의 방" 배경 + 그 안에 정적 캐릭터 PNG가 서있고,
