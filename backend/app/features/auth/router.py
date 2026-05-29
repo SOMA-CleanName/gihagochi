@@ -13,6 +13,7 @@ from app.core.db import get_session
 from app.features.auth import service
 from app.features.auth.schemas import (
     MeResponse,
+    ReagreeRequest,
     SignupRequest,
     SignupResponse,
     TermsCurrentResponse,
@@ -58,3 +59,17 @@ async def logout(user: AuthedUser) -> None:
 async def terms_current() -> TermsCurrentResponse:
     """현재 활성 약관 version 목록. 가입 화면이 호출. 비인증."""
     return service.get_current_terms()
+
+
+@router.post("/terms/reagree", status_code=204)
+async def terms_reagree(
+    req: ReagreeRequest,
+    user: AuthedUser,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> None:
+    """약관 재동의. /auth/me의 needs_reagree가 비어있지 않을 때 모달에서 호출.
+
+    성공 시 204 No Content. version mismatch면 422.
+    """
+    await service.reagree(session, user.id, req)
+    return None

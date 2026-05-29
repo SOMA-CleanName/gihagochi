@@ -33,6 +33,15 @@ class AgreementsInput(BaseModel):
     marketing: AgreementInput | None = None
 
 
+class ReagreeRequest(BaseModel):
+    """POST /auth/terms/reagree 요청 본문.
+
+    가입 흐름과 동일한 `AgreementsInput` 재사용 — 모달이 보여준 약관 묶음 그대로.
+    """
+
+    agreements: AgreementsInput
+
+
 class SignupRequest(BaseModel):
     """POST /auth/signup 요청 본문 (옵션 C — 팬/아이돌 선택)."""
 

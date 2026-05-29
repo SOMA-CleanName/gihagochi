@@ -18,6 +18,7 @@ from app.features.auth.schemas import (
     IdolApplicationSummary,
     MeResponse,
     ProfileSummary,
+    ReagreeRequest,
     SignupRequest,
     SignupResponse,
     TermsCurrentResponse,
@@ -195,6 +196,46 @@ async def _get_stale_agreement_types(
     if marketing_latest is not None and marketing_latest != _CURRENT_TERMS_VERSIONS[AgreementType.MARKETING]:
         stale.append(AgreementType.MARKETING)
     return stale
+
+
+# ============================================================
+# /auth/terms/reagree — 약관 재동의
+# ============================================================
+
+
+async def reagree(
+    session: AsyncSession,
+    user_id: UUID,
+    req: ReagreeRequest,
+) -> None:
+    """약관 재동의 row INSERT.
+
+    - tos/privacy: agreed=True 강제, version mismatch면 422
+    - marketing: agreed=True일 때만 새 row 추가 (agreed=False면 row 없음)
+    - 기존 row는 history로 보존 (UNIQUE (user_id, type, version) 보장으로 같은 version 중복 INSERT는 사전 차단)
+    """
+    _validate_agreements(req.agreements)
+
+    for agreement_type, agreement_input in (
+        (AgreementType.TOS, req.agreements.tos),
+        (AgreementType.PRIVACY, req.agreements.privacy),
+    ):
+        session.add(
+            TermsAgreement(
+                user_id=user_id,
+                type=agreement_type,
+                version=agreement_input.version,
+            )
+        )
+    if req.agreements.marketing is not None and req.agreements.marketing.agreed:
+        session.add(
+            TermsAgreement(
+                user_id=user_id,
+                type=AgreementType.MARKETING,
+                version=req.agreements.marketing.version,
+            )
+        )
+    await session.flush()
 
 
 async def _get_latest_idol_application(

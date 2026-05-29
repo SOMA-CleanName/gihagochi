@@ -17,6 +17,7 @@ from app.features.auth import service
 from app.features.auth.schemas import (
     AgreementInput,
     AgreementsInput,
+    ReagreeRequest,
     SignupRequest,
 )
 from app.shared.enums import (
@@ -349,3 +350,86 @@ async def test_get_me_needs_reagree_when_required_versions_stale(
     assert AgreementType.PRIVACY in result.needs_reagree
     # marketing은 _valid_agreements에서 agreed=False라 row 자체 없음 → stale 아님.
     assert AgreementType.MARKETING not in result.needs_reagree
+
+
+# ============================================================
+# reagree — 약관 재동의
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_terms_reagree_requires_auth(client: AsyncClient) -> None:
+    """/auth/terms/reagree는 AuthedUser 필요 — 헤더 없으면 401."""
+    response = await client.post("/auth/terms/reagree", json={})
+    assert response.status_code == 401
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_reagree_inserts_new_rows_and_clears_stale(
+    session: AsyncSession, make_fresh_user
+) -> None:
+    """구버전 사용자가 reagree 호출 → 새 row INSERT → needs_reagree 비워짐."""
+    user_id = make_fresh_user()
+    await service.create_signup(
+        session,
+        user_id,
+        SignupRequest(
+            as_="fan",  # type: ignore[call-arg]
+            display_name="재동의대상",
+            agreements=_valid_agreements(),
+        ),
+    )
+    # 기존 동의를 구버전으로 강제 → stale 상태 만듦.
+    await session.execute(
+        update(TermsAgreement)
+        .where(TermsAgreement.user_id == user_id)
+        .values(version="v0-stale")
+    )
+    await session.flush()
+    before = await service.get_me(session, user_id)
+    assert AgreementType.TOS in before.needs_reagree
+
+    # 재동의 — 현재 활성 버전으로.
+    await service.reagree(
+        session, user_id, ReagreeRequest(agreements=_valid_agreements())
+    )
+    await session.flush()
+
+    after = await service.get_me(session, user_id)
+    assert after.needs_reagree == []
+    # 기존 row 보존 + 새 row 추가 → tos/privacy 각 2 row.
+    rows = (
+        await session.scalars(
+            select(TermsAgreement).where(TermsAgreement.user_id == user_id)
+        )
+    ).all()
+    tos_rows = [r for r in rows if r.type == AgreementType.TOS]
+    assert len(tos_rows) == 2
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_reagree_version_mismatch_raises(
+    session: AsyncSession, make_fresh_user
+) -> None:
+    """잘못된 version으로 재동의 → ValidationError."""
+    user_id = make_fresh_user()
+    await service.create_signup(
+        session,
+        user_id,
+        SignupRequest(
+            as_="fan",  # type: ignore[call-arg]
+            display_name="버전틀림",
+            agreements=_valid_agreements(),
+        ),
+    )
+
+    bad = ReagreeRequest(
+        agreements=AgreementsInput(
+            tos=AgreementInput(version="v999"),
+            privacy=AgreementInput(version="v999"),
+        )
+    )
+    with pytest.raises(ValidationError):
+        await service.reagree(session, user_id, bad)
