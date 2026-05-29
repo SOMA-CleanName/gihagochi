@@ -4,11 +4,13 @@
 library;
 
 import 'package:dio/dio.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/api/dio_client.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/config/env.dart';
 import '../domain/auth_models.dart';
 
 part 'auth_repository.g.dart';
@@ -29,23 +31,35 @@ class AuthRepository {
 
   // ── Supabase OAuth ─────────────────────────
 
-  /// Google 소셜 OAuth 시작. Supabase가 in-app 브라우저로 Google 로그인 → 동의 →
-  /// `oauthRedirectUrl`(deep link)로 앱 복귀 → onAuthStateChange가 SIGNED_IN 발화 →
-  /// 라우터의 refresh 리스너가 redirect 결정.
+  /// Google 로그인 — native dialog → supabase.signInWithIdToken.
   ///
-  /// `authScreenLaunchMode: inAppBrowserView` — iOS는 ASWebAuthenticationSession,
-  /// Android는 Custom Tabs. OAuth 완료 시 자동 닫히고 앱으로 복귀.
-  /// (platformDefault = 외부 Safari/Chrome → 사용자가 수동으로 "완료" 탭해야 닫힘 = 무한 로딩 처럼 보임.)
+  /// iOS: GoogleService-Info.plist 자동 detect (REVERSED_CLIENT_ID URL scheme 필요)
+  /// Android: google-services.json 자동 detect (SHA-1 Firebase 등록 필요)
+  /// serverClientId(웹 Client ID): Android에선 필수, iOS에선 권장 (id token audience 매칭)
   ///
-  /// redirectTo 없으면 Supabase가 콜백 후 갈 곳을 몰라 "사이트에 접근할 수 없음"으로 죽음.
+  /// 기존 OAuth 흐름(외부 브라우저)은 사용자가 수동 닫기 필요 + deep link 문제로
+  /// 디바이스/계정마다 동작이 불안정. native는 즉시 SIGNED_IN 발화 → router 자동 전환.
   ///
-  /// `queryParams: {'prompt': 'select_account'}` — 매번 Google 계정 선택 화면 강제.
+  /// 취소(사용자가 dialog 닫기) 시: GoogleSignIn.signIn()이 null 반환 → silent return
+  /// (호출자에서 별도 처리 없음).
   Future<void> signInWithGoogle() async {
-    await supabase.auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: oauthRedirectUrl,
-      authScreenLaunchMode: LaunchMode.inAppBrowserView,
-      queryParams: const {'prompt': 'select_account'},
+    final googleSignIn = GoogleSignIn(
+      clientId: Env.googleIosClientId,
+      serverClientId: Env.googleWebClientId,
+    );
+    // 매번 계정 선택 강제 — 이전 세션 잔재 제거.
+    await googleSignIn.signOut();
+    final googleUser = await googleSignIn.signIn();
+    if (googleUser == null) return; // 사용자 취소
+    final googleAuth = await googleUser.authentication;
+    final idToken = googleAuth.idToken;
+    if (idToken == null) {
+      throw const AuthException('Google idToken 발급 실패 — Client ID 설정 확인');
+    }
+    await supabase.auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: idToken,
+      accessToken: googleAuth.accessToken,
     );
   }
 

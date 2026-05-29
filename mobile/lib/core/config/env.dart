@@ -50,6 +50,25 @@ class Env {
         : (dotenv.maybeGet('API_BASE_URL') ?? 'http://localhost:8000');
   }
 
+  // ── Google OAuth (native google_sign_in + signInWithIdToken) ──
+  // iOS: Google Cloud Console에서 iOS OAuth Client ID 발급 후 등록.
+  //      GoogleService-Info.plist의 REVERSED_CLIENT_ID URL scheme도 Info.plist에 추가.
+  // Android: Web OAuth Client ID를 serverClientId로 사용 (네이티브 dialog는 SHA-1로 자동 매칭).
+  // 둘 다 빈 값이면 google_sign_in이 자동 detect (iOS는 plist, Android는 google-services.json).
+  static String? get googleIosClientId {
+    const fromDefine = String.fromEnvironment('GOOGLE_IOS_CLIENT_ID');
+    if (fromDefine.isNotEmpty) return fromDefine;
+    final v = dotenv.maybeGet('GOOGLE_IOS_CLIENT_ID');
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
+  static String? get googleWebClientId {
+    const fromDefine = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+    if (fromDefine.isNotEmpty) return fromDefine;
+    final v = dotenv.maybeGet('GOOGLE_WEB_CLIENT_ID');
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
   // ── Sentry ──
   static String get sentryDsn {
     const fromDefine = String.fromEnvironment('SENTRY_DSN');
