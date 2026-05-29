@@ -29,6 +29,11 @@ dependencies:
   # ── Supabase (DB / Auth / Realtime / Storage) ─
   supabase_flutter: ^2.8.0
 
+  # ── Google 네이티브 SDK (OAuth + supabase.signInWithIdToken) ─
+  # 외부 브라우저 OAuth 대신 native dialog 사용 → 자동 닫힘 + 즉시 SIGNED_IN.
+  # 6.2.x 안정 버전. 7.x는 API 변경 큼.
+  google_sign_in: ^6.2.0
+
   # ── 푸시 알림 (FCM) ───────────────────────────
   firebase_core: ^3.8.0
   firebase_messaging: ^15.1.5

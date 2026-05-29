@@ -9,7 +9,7 @@
 
 ## 개요
 
-옵션 C: 가입 화면에서 "팬으로 가입" vs "아이돌로 가입" 선택. 약관 체크박스 통과 후 **Google로 시작** 버튼 1개. Supabase native OAuth → `supabase.auth.signInWithOAuth({ provider: 'google' })` 호출로 처리 (mobile native SDK 추가 X). OAuth 콜백 후 backend `POST /auth/signup` 호출로 프로필 + (선택)아이돌 신청 + 약관 동의를 트랜잭션 생성. 로그인은 Google 계정 재선택 → `GET /auth/me`로 프로필 조회 후 사용자 타입에 따라 진입 화면 분기.
+옵션 C: 가입 화면에서 "팬으로 가입" vs "아이돌로 가입" 선택. 약관 체크박스 통과 후 **Google로 시작** 버튼 1개. **Native `google_sign_in` SDK + `supabase.auth.signInWithIdToken`** — 외부 브라우저 없이 native dialog로 즉시 SIGNED_IN (외부 브라우저 OAuth는 deep link 자동 닫힘 문제로 폐기). 가입 흐름은 SIGNED_IN 후 backend `POST /auth/signup`으로 프로필 + (선택)아이돌 신청 + 약관 동의를 트랜잭션 생성. 로그인은 Google 계정 재선택 → `GET /auth/me`로 프로필 조회 후 사용자 타입에 따라 진입 화면 분기.
 
 > Apple/Kakao/Naver는 1차 출시 제외. 차후 Kakao 등 추가 시 Apple Sign in with Apple 동시 추가 필요 (App Store 가이드라인 4.8).
 
