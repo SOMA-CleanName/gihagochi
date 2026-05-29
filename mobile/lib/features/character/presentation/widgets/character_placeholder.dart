@@ -1,15 +1,13 @@
-/// F-040 정적 캐릭터 — 실제 PNG 에셋 6종 + 탭 순환 데모.
+/// F-040 정적 캐릭터 — 백엔드 state 기반 6종 표시 + 탭 액션 트리거.
 ///
-/// PR-1 후속: placeholder 실루엣 → 6종 캐릭터 PNG 교체.
-/// 6종 PNG는 모두 480×800 캔버스, 같은 좌표에 띄우면 같은 위치에서 표정만 바뀜.
+/// state 출처: characterStateControllerProvider(idolId)
+///   - 백엔드 GET /character/{idol_id}/state (row 없으면 default idle)
 ///
 /// 탭 시:
-///   - sparkle scale 애니메이션
-///   - haptic feedback (lightImpact)
-///   - 데모 토글: 6종 순환 (idle → happy → sad → sing → eat → sleep → idle)
-///     → PR-2에서 백엔드 상태 도입 시 토글 제거 예정
+///   - sparkle scale 애니메이션 + haptic
+///   - 다음 순환 action을 백엔드 POST → 응답으로 state 즉시 갱신
 ///   - characterMomentControllerProvider에 tap moment dispatch
-///   - 디바운스 500ms
+///   - 디바운스 500ms (sparkle 중 재탭 무시)
 library;
 
 import 'package:flutter/material.dart';
@@ -18,14 +16,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/colors.dart';
 import '../../application/character_moment_controller.dart';
+import '../../application/character_state_controller.dart';
 import '../../domain/character_action.dart';
 import '../../domain/character_moment.dart';
 
-/// 캐릭터 표시 크기 = 화면 폭의 이 비율.
 const double characterWidthRatio = 0.5;
-
-/// 캐릭터 PNG 캔버스 비율 (852×1846 ≈ 1:2.166).
-/// sad만 다른 비율(941×1672)이지만 BoxFit.contain으로 SizedBox 안에서 자동 비율 유지.
 const double _characterCanvasAspect = 1846 / 852;
 
 class CharacterPlaceholder extends ConsumerStatefulWidget {
@@ -44,8 +39,6 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
   DateTime _lastTapAt = DateTime.fromMillisecondsSinceEpoch(0);
   static const Duration _tapDebounce = Duration(milliseconds: 500);
 
-  CharacterActionType _action = CharacterActionType.idle;
-
   @override
   void initState() {
     super.initState();
@@ -61,17 +54,25 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
     super.dispose();
   }
 
-  void _onTap() {
+  Future<void> _onTap(CharacterActionType current) async {
     final now = DateTime.now();
     if (now.difference(_lastTapAt) < _tapDebounce) return;
     _lastTapAt = now;
 
     HapticFeedback.lightImpact();
     _sparkle.forward(from: 0);
-    setState(() => _action = _action.next);
     ref
         .read(characterMomentControllerProvider(widget.idolId).notifier)
         .show(CharacterMomentKind.tap);
+
+    // 탭은 순환 액션 트리거 — PR-2 데모 동작 유지 (실 비즈니스 룰은 후속 PR).
+    try {
+      await ref
+          .read(characterStateControllerProvider(widget.idolId).notifier)
+          .trigger(current.next);
+    } catch (_) {
+      // 백엔드 실패해도 sparkle/모먼트는 이미 진행. silent.
+    }
   }
 
   @override
@@ -80,8 +81,14 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
     final width = screenW * characterWidthRatio;
     final height = width * _characterCanvasAspect;
 
+    final stateAsync = ref.watch(characterStateControllerProvider(widget.idolId));
+    final action = stateAsync.maybeWhen(
+      data: (s) => s.currentAction,
+      orElse: () => CharacterActionType.idle, // loading/error → default 표시
+    );
+
     return GestureDetector(
-      onTap: _onTap,
+      onTap: () => _onTap(action),
       behavior: HitTestBehavior.opaque,
       child: Align(
         alignment: Alignment.bottomCenter,
@@ -106,10 +113,10 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
             width: width,
             height: height,
             child: Image.asset(
-              _action.assetPath,
+              action.assetPath,
               fit: BoxFit.contain,
-              filterQuality: FilterQuality.none, // 픽셀 아트
-              gaplessPlayback: true, // 토글 시 깜빡임 방지
+              filterQuality: FilterQuality.none,
+              gaplessPlayback: true,
             ),
           ),
         ),
@@ -121,7 +128,6 @@ class _CharacterPlaceholderState extends ConsumerState<CharacterPlaceholder>
 class _SparkleOverlay extends StatelessWidget {
   const _SparkleOverlay({required this.t});
 
-  /// 0.0 ~ 1.0 진행도.
   final double t;
 
   @override

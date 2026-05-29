@@ -3,10 +3,25 @@
 /// 6종: idle / happy / sad / sing / eat / sleep.
 /// 같은 캔버스(480×800)에 그려진 PNG 6장. 같은 좌표에 띄우면 같은 자리에서 자연스럽게 표정만 바뀜.
 ///
-/// 이름은 PR-2의 백엔드 `character_action_type` enum과 매칭 예정 — **이름 변경 X**.
+/// 이름은 백엔드 `character_action_type` enum과 1:1 동기 — **이름 변경 X**.
 library;
 
-enum CharacterActionType { idle, happy, sad, sing, eat, sleep }
+import 'package:json_annotation/json_annotation.dart';
+
+enum CharacterActionType {
+  @JsonValue('idle')
+  idle,
+  @JsonValue('happy')
+  happy,
+  @JsonValue('sad')
+  sad,
+  @JsonValue('sing')
+  sing,
+  @JsonValue('eat')
+  eat,
+  @JsonValue('sleep')
+  sleep,
+}
 
 extension CharacterActionAsset on CharacterActionType {
   String get assetPath {
