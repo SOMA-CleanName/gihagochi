@@ -33,6 +33,16 @@ enum UserStatus {
   suspended,
 }
 
+/// 약관 타입. 백엔드 agreement_type ENUM과 1:1.
+enum AgreementType {
+  @JsonValue('tos')
+  tos,
+  @JsonValue('privacy')
+  privacy,
+  @JsonValue('marketing')
+  marketing,
+}
+
 /// 아이돌 신청 상태. signup_application_status ENUM과 1:1.
 enum SignupApplicationStatus {
   @JsonValue('pending')
@@ -81,6 +91,9 @@ abstract class MeResponse with _$MeResponse {
     required ProfileSummary profile,
     @JsonKey(name: 'latest_idol_application')
     IdolApplicationSummary? latestIdolApplication,
+    /// 사용자의 최근 동의 버전이 현재 활성 버전과 다른 약관 타입 목록.
+    /// 비어있지 않으면 강제 재동의 모달.
+    @JsonKey(name: 'needs_reagree') @Default([]) List<AgreementType> needsReagree,
   }) = _MeResponse;
 
   factory MeResponse.fromJson(Map<String, dynamic> json) =>
@@ -134,6 +147,17 @@ abstract class AgreementsInput with _$AgreementsInput {
 
   factory AgreementsInput.fromJson(Map<String, dynamic> json) =>
       _$AgreementsInputFromJson(json);
+}
+
+/// POST /auth/terms/reagree 요청. 가입과 동일한 AgreementsInput 재사용.
+@freezed
+abstract class ReagreeRequest with _$ReagreeRequest {
+  const factory ReagreeRequest({
+    required AgreementsInput agreements,
+  }) = _ReagreeRequest;
+
+  factory ReagreeRequest.fromJson(Map<String, dynamic> json) =>
+      _$ReagreeRequestFromJson(json);
 }
 
 /// 가입 타입 — 옵션 C. JSON 키 "as".

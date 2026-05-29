@@ -26,6 +26,7 @@
 | `/auth/signup/terms` | 약관 동의 체크박스 (tos/privacy 필수, marketing 선택) | 가입 타입 선택 후 |
 | `/auth/signup/profile` | display_name 입력 (+ 아이돌이면 stage_name, bio) | 약관 동의 + OAuth 콜백 후 |
 | `/auth/idol-pending` | 아이돌 승인 대기 화면 (신청일 + 거절 시 사유 + 재신청 버튼) | role=fan + idol_signup_applications.status=pending\|rejected |
+| (라우트 X — 오버레이) | `ReagreeDialog` 강제 재동의 fullscreen modal | `me.needs_reagree`가 비어있지 않을 때 `ReagreeGate`가 자동 push |
 
 로그인 진입 시:
 - 프로필 없음 → `/auth/signup/profile` (가입 미완료 복구)
@@ -38,8 +39,8 @@
 ## 의존 화면 / 데이터
 
 - **화면 진입 경로**: 앱 cold start 시 `auth_service`가 Supabase 세션 확인 → 없으면 `/auth/landing`, 있으면 `GET /auth/me`로 분기
-- **읽기**: 백엔드 API — `GET /auth/me`, `GET /auth/terms/current`
-- **쓰기**: 백엔드 API — `POST /auth/signup`, `POST /auth/logout`
+- **읽기**: 백엔드 API — `GET /auth/me` (응답에 `needs_reagree` 포함), `GET /auth/terms/current`
+- **쓰기**: 백엔드 API — `POST /auth/signup`, `POST /auth/logout`, `POST /auth/terms/reagree`
 - **Realtime 구독**: 없음
 - **Supabase 직결**:
   - `supabase.auth.signInWithOAuth(OAuthProvider.google, redirectTo: oauthRedirectUrl)` — redirectTo 없으면 콜백 못 돌아옴
