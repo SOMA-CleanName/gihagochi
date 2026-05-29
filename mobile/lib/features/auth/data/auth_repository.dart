@@ -29,18 +29,22 @@ class AuthRepository {
 
   // ── Supabase OAuth ─────────────────────────
 
-  /// Google 소셜 OAuth 시작. Supabase가 시스템 브라우저로 Google 로그인 → 동의 →
+  /// Google 소셜 OAuth 시작. Supabase가 in-app 브라우저로 Google 로그인 → 동의 →
   /// `oauthRedirectUrl`(deep link)로 앱 복귀 → onAuthStateChange가 SIGNED_IN 발화 →
   /// 라우터의 refresh 리스너가 redirect 결정.
   ///
-  /// redirectTo 없으면 Supabase가 콜백 후 갈 곳을 몰라 브라우저에 "사이트에 접근할 수 없음"으로 죽음.
+  /// `authScreenLaunchMode: inAppBrowserView` — iOS는 ASWebAuthenticationSession,
+  /// Android는 Custom Tabs. OAuth 완료 시 자동 닫히고 앱으로 복귀.
+  /// (platformDefault = 외부 Safari/Chrome → 사용자가 수동으로 "완료" 탭해야 닫힘 = 무한 로딩 처럼 보임.)
+  ///
+  /// redirectTo 없으면 Supabase가 콜백 후 갈 곳을 몰라 "사이트에 접근할 수 없음"으로 죽음.
   ///
   /// `queryParams: {'prompt': 'select_account'}` — 매번 Google 계정 선택 화면 강제.
-  /// 이전에 동의한 계정이 자동 SSO로 잡혀버리는 문제 방지.
   Future<void> signInWithGoogle() async {
     await supabase.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: oauthRedirectUrl,
+      authScreenLaunchMode: LaunchMode.inAppBrowserView,
       queryParams: const {'prompt': 'select_account'},
     );
   }
