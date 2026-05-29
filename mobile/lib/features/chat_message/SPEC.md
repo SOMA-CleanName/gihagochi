@@ -72,6 +72,8 @@ chatMessageInputSlotProvider(<dynamic>).overrideWith((ref, idolId) => MessageInp
 - `core.widgets.{loading_view, error_view, empty_view, app_text_field}` — 공용
 - features/chat_room의 슬롯 Provider: `chatMessageListSlotProvider`, `chatMessageInputSlotProvider` (override 대상)
 - features/chat_room의 `chatListControllerProvider` — broadcast 도착 시 invalidate (카드 갱신 hook)
+- features/gift `showGiftComingSoonSheet(context, idolId)` — 입력창 좌측 선물 버튼 호출 대상 (F-027)
+- features/character `triggerGiftMomentForIdol(ref, idolId)` — gift sheet close 후 캐릭터 위 모먼트 카드 트리거 (F-044 연계). 본인=아이돌이면 호출 X (자기 자신에게 선물 X).
 
 > **메인 빌더 영역 변경 (본 PR 동봉, 사전 승인)**:
 > 1. `mobile/lib/main.dart` — ProviderScope.overrides에 2줄 + import 추가 (chat_room이 첫 사례 만든 패턴 연장)

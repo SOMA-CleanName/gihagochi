@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_service.dart';
 import '../../../core/error/app_error.dart';
+import '../../character/integration/character_moment_trigger.dart';
 import '../../chat_media/presentation/photo_picker_sheet.dart';
 import '../../chat_media/presentation/voice_recorder_button.dart';
 import '../../gift/presentation/gift_coming_soon_sheet.dart';
@@ -42,6 +43,14 @@ class _MessageInputState extends ConsumerState<MessageInput> {
     _ctrl.removeListener(_onChanged);
     _ctrl.dispose();
     super.dispose();
+  }
+
+  /// F-027 선물 sheet 열고 → 닫힌 후 F-044 캐릭터 모먼트 트리거.
+  /// sheet 자체는 "준비 중" 안내라 결제/실로직 없음 — close 자체를 "선물 의향"으로 해석.
+  Future<void> _openGiftAndReact() async {
+    await showGiftComingSoonSheet(context, idolId: widget.idolId);
+    if (!mounted) return;
+    triggerGiftMomentForIdol(ref, widget.idolId);
   }
 
   Future<void> _send() async {
@@ -86,14 +95,12 @@ class _MessageInputState extends ConsumerState<MessageInput> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             // F-027 선물 — 팬만. 정책 2026-05-27: ⋮ 메뉴에서 입력창 좌측으로 이동.
+            // F-044 연계: sheet 닫힌 후 캐릭터 위에 "고마워!" 모먼트 카드 5s 표시.
             if (!isIdolSelf)
               IconButton(
                 tooltip: '선물',
                 icon: const Icon(Icons.card_giftcard_outlined),
-                onPressed: () => showGiftComingSoonSheet(
-                  context,
-                  idolId: widget.idolId,
-                ),
+                onPressed: () => _openGiftAndReact(),
               ),
             // F-019 사진 — 아이돌만.
             if (isIdolSelf)
