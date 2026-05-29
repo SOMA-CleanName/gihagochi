@@ -25,6 +25,8 @@
 | 8 | `device_tokens` | FCM 토큰 (사용자당 N개) | `notification` |
 | 9 | `notification_prefs` | 사용자별 알림 on/off | `notification` |
 | 10 | `terms_agreements` | 약관/개인정보/마케팅 동의 이력 (버전별) | `auth` |
+| 11 | `character_states` | 아이돌별 캐릭터 현재 상태 (1:1) | `character` |
+| 12 | `character_action_logs` | 캐릭터 행동 트리거 이력 (append-only) | `character` |
 
 **owner 규칙**: 해당 피처 폴더가 이 테이블의 스키마 변경(컬럼 추가 등) 마이그레이션 작성을 담당.
 다른 피처가 만지려면 owner와 사전 조율 (CODEOWNERS는 마이그레이션 폴더 자체를 메인 빌더가 게이트키핑).

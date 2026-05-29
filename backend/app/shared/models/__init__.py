@@ -3,6 +3,8 @@
 모델 파일 추가 시 여기에 import 한 줄 추가.
 """
 
+from app.shared.models.character_action_log import CharacterActionLog
+from app.shared.models.character_state import CharacterState
 from app.shared.models.device_token import DeviceToken
 from app.shared.models.idol_profile import IdolProfile
 from app.shared.models.idol_signup_application import IdolSignupApplication
@@ -15,6 +17,8 @@ from app.shared.models.subscription import Subscription
 from app.shared.models.terms_agreement import TermsAgreement
 
 __all__ = [
+    "CharacterActionLog",
+    "CharacterState",
     "DeviceToken",
     "IdolProfile",
     "IdolSignupApplication",
