@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflictError, ValidationError
@@ -291,3 +291,61 @@ async def test_terms_agreements_marketing_only_when_agreed(
 
     assert AgreementType.MARKETING in {r.type for r in with_rows}
     assert AgreementType.MARKETING not in {r.type for r in without_rows}
+
+
+# ============================================================
+# get_me — needs_reagree
+# ============================================================
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_get_me_needs_reagree_empty_for_current_versions(
+    session: AsyncSession, make_fresh_user
+) -> None:
+    """현재 활성 버전 그대로 동의했으면 needs_reagree는 빈 리스트."""
+    user_id = make_fresh_user()
+    await service.create_signup(
+        session,
+        user_id,
+        SignupRequest(
+            as_="fan",  # type: ignore[call-arg]
+            display_name="현재버전팬",
+            agreements=_valid_agreements(),
+        ),
+    )
+    await session.flush()
+
+    result = await service.get_me(session, user_id)
+    assert result.needs_reagree == []
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_get_me_needs_reagree_when_required_versions_stale(
+    session: AsyncSession, make_fresh_user
+) -> None:
+    """tos/privacy 동의 버전이 현재 활성 버전과 다르면 둘 다 needs_reagree."""
+    user_id = make_fresh_user()
+    await service.create_signup(
+        session,
+        user_id,
+        SignupRequest(
+            as_="fan",  # type: ignore[call-arg]
+            display_name="구버전팬",
+            agreements=_valid_agreements(),
+        ),
+    )
+    # 동의 row의 version을 옛 값으로 강제 → 현재 활성 v1과 mismatch.
+    await session.execute(
+        update(TermsAgreement)
+        .where(TermsAgreement.user_id == user_id)
+        .values(version="v0-stale")
+    )
+    await session.flush()
+
+    result = await service.get_me(session, user_id)
+    assert AgreementType.TOS in result.needs_reagree
+    assert AgreementType.PRIVACY in result.needs_reagree
+    # marketing은 _valid_agreements에서 agreed=False라 row 자체 없음 → stale 아님.
+    assert AgreementType.MARKETING not in result.needs_reagree

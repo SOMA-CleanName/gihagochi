@@ -18,7 +18,7 @@
 | Method | Path | 설명 | 인증 |
 |---|---|---|---|
 | POST | `/auth/signup` | 소셜 로그인 후 프로필 + (선택)아이돌 신청 + 약관 동의를 한 번에 생성 | `PendingAuthUser` (Supabase JWT만 검증, profile 없어도 OK — 별도 PR로 core.auth에 추가됨) |
-| GET  | `/auth/me` | 현재 사용자의 profiles + (있으면) idol_signup_applications 최신 상태 | AuthedUser |
+| GET  | `/auth/me` | 현재 사용자의 profiles + (있으면) idol_signup_applications 최신 상태 + `needs_reagree` (약관 재동의 필요 타입 목록) | AuthedUser |
 | POST | `/auth/logout` | 서버측 토큰 무효화 트리거 (Supabase 세션 종료. 클라이언트가 호출) | AuthedUser |
 | GET  | `/auth/terms/current` | 현재 활성 약관 version 목록 (tos / privacy / marketing) | 비인증 OK |
 
@@ -88,6 +88,10 @@ ENUM:
 - 로그아웃은 Supabase 기본 동작 (refresh token 무효화). 백엔드는 별도 블랙리스트 미관리.
 - 약관 동의: tos/privacy 미제출 또는 `agreed=false`면 400. marketing은 선택.
 - 약관 version은 `agreements.<type>.version` 문자열을 그대로 신뢰. 검증은 `/auth/terms/current` 응답과 일치하는지 확인 (mismatch 시 400, 클라이언트에 재요청 유도).
+- `/auth/me`의 `needs_reagree`: 사용자의 type별 최신 동의 버전이 `_CURRENT_TERMS_VERSIONS`와 다를 때 type을 포함.
+  - tos / privacy (필수): 동의 row 자체가 없거나 mismatch → stale
+  - marketing (옵션): 동의 row가 있고 mismatch만 stale (row 없으면 동의 안 한 것이라 skip)
+  - 클라가 비어있지 않으면 강제 재동의 모달 (별도 PR-b, PR-c에서 mobile + reagree endpoint 추가 예정)
 
 ---
 

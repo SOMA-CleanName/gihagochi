@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.shared.enums import SignupApplicationStatus, UserRole, UserStatus
+from app.shared.enums import AgreementType, SignupApplicationStatus, UserRole, UserStatus
 
 # ============================================================
 # /auth/signup — 요청
@@ -92,10 +92,15 @@ class SignupResponse(BaseModel):
 
 
 class MeResponse(BaseModel):
-    """GET /auth/me 응답. profile + 최신 아이돌 신청 상태(있으면)."""
+    """GET /auth/me 응답. profile + 최신 아이돌 신청 상태(있으면).
+
+    `needs_reagree`: 사용자가 최근 동의한 버전이 현재 활성 버전과 다른 약관 타입 목록.
+    클라가 비어있지 않으면 강제 재동의 모달을 띄움.
+    """
 
     profile: ProfileSummary
     latest_idol_application: IdolApplicationSummary | None
+    needs_reagree: list[AgreementType] = []
 
 
 # ============================================================

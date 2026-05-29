@@ -149,7 +149,7 @@ def _validate_agreements(agreements: AgreementsInput) -> None:
 
 
 async def get_me(session: AsyncSession, user_id: UUID) -> MeResponse:
-    """현재 사용자 프로필 + 최신 아이돌 신청 상태.
+    """현재 사용자 프로필 + 최신 아이돌 신청 상태 + 약관 재동의 필요 목록.
 
     user_id는 AuthedUser 의존성에서 이미 profile 존재 확인됨.
     """
@@ -158,10 +158,43 @@ async def get_me(session: AsyncSession, user_id: UUID) -> MeResponse:
     assert profile is not None, "AuthedUser 의존성 통과 시 profile 존재 보장"
 
     latest_app = await _get_latest_idol_application(session, user_id)
+    needs_reagree = await _get_stale_agreement_types(session, user_id)
     return MeResponse(
         profile=_to_profile_summary(profile),
         latest_idol_application=_to_application_summary(latest_app) if latest_app else None,
+        needs_reagree=needs_reagree,
     )
+
+
+async def _get_stale_agreement_types(
+    session: AsyncSession, user_id: UUID
+) -> list[AgreementType]:
+    """사용자의 type별 최신 동의 버전이 현재 활성 버전과 다른 type 목록.
+
+    - 필수(tos / privacy): row 없거나 mismatch → stale (강제 재동의)
+    - 옵션(marketing): row 있고 mismatch만 stale. row 없으면 동의 안 한 거라 skip.
+    """
+    rows = await session.execute(
+        select(TermsAgreement.type, TermsAgreement.version, TermsAgreement.agreed_at)
+        .where(TermsAgreement.user_id == user_id)
+        .order_by(TermsAgreement.type, desc(TermsAgreement.agreed_at))
+    )
+    latest_by_type: dict[AgreementType, str] = {}
+    for type_, version, _agreed_at in rows:
+        # ORDER BY로 type별 첫 row가 최신 — 이후 동일 type은 skip.
+        if type_ not in latest_by_type:
+            latest_by_type[type_] = version
+
+    stale: list[AgreementType] = []
+    for type_ in (AgreementType.TOS, AgreementType.PRIVACY):
+        current = _CURRENT_TERMS_VERSIONS[type_]
+        if latest_by_type.get(type_) != current:
+            stale.append(type_)
+    # marketing: row 있을 때만 mismatch 검사.
+    marketing_latest = latest_by_type.get(AgreementType.MARKETING)
+    if marketing_latest is not None and marketing_latest != _CURRENT_TERMS_VERSIONS[AgreementType.MARKETING]:
+        stale.append(AgreementType.MARKETING)
+    return stale
 
 
 async def _get_latest_idol_application(
