@@ -97,6 +97,30 @@ body {
   animation: bounce-down 1.6s ease-in-out infinite;
 }
 
+/* ── 텍스트 카드 — 형광 조명 위에서 가독성 보장 ─── */
+/* 모든 섹션의 텍스트 영역은 .text-card로 감싸기.
+   불투명 dark bg + soft border + backdrop-blur로 뒤 조명을 차단.
+   relative + isolation: isolate로 mix-blend overlay 안 들어옴. */
+.text-card {
+  position: relative;
+  isolation: isolate;
+  background: rgba(10, 10, 15, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1.5rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 2.25rem 1.75rem;
+}
+@media (min-width: 640px) {
+  .text-card {
+    padding: 2.5rem 2.25rem;
+  }
+}
+.text-card--inline {
+  /* 좌우 padding만 (Section 자체 padding과 함께 사용) */
+  padding: 1.75rem 1.5rem;
+}
+
 /* ── 네온 글로우 보조 utility ─────────────────────── */
 @keyframes neon-pulse {
   0%,
