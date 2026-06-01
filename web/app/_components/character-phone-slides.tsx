@@ -1,49 +1,159 @@
 "use client";
 
 /**
- * 랜딩 페이지 Character 섹션의 우측 비주얼.
+ * 랜딩 Character 섹션 우측 비주얼 — 핸드폰 mockup + 캐릭터 6종 슬라이드.
  *
- * 핸드폰 mockup 안에 실제 모바일 앱 캐릭터 6종을 슬라이드로 보여줌.
- * - 방 배경 PNG 풀스크린
- * - 캐릭터 6종 (idle/happy/sad/sing/eat/sleep) auto-rotate 페이드
- * - 호흡 scale 애니메이션 (CSS keyframe loop)
- * - 하단 채팅 mockup 카드 (반투명, 실제 채팅창 분위기)
- * - 우측 액션 도트 인디케이터
+ * - 6종 액션마다 (idle/happy/sad/sing/eat/sleep) 한 세트의 채팅 (팬↔아이돌)
+ * - auto-rotate 4s, 사용자 swipe(터치/마우스 드래그) 시 5초 일시정지
+ * - dot 인디케이터 클릭으로 직접 이동
+ * - CSS keyframe 호흡 scale (액션별 duration 2.2~4.2s)
  *
- * 실제 시뮬 캡처가 아닌 mock — 디자인 의도 (느낌)만 살림.
+ * 시연용 mock — 디자인 의도(느낌)만 살림.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Action = "idle" | "happy" | "sad" | "sing" | "eat" | "sleep";
 
-const ACTIONS: { key: Action; label: string; line: string; breatheMs: number }[] = [
-  { key: "idle", label: "기본", line: "오늘 하루 어땠어?", breatheMs: 2800 },
-  { key: "happy", label: "기쁨", line: "와 진짜 신난다!", breatheMs: 2400 },
-  { key: "sing", label: "노래", line: "♪ 한 소절 들려줄게", breatheMs: 2200 },
-  { key: "sad", label: "슬픔", line: "조금 보고 싶었어…", breatheMs: 3200 },
-  { key: "eat", label: "식사", line: "맛있는 거 먹는 중", breatheMs: 3400 },
-  { key: "sleep", label: "수면", line: "곧 잘 시간이야…", breatheMs: 4200 },
+type ChatLine = { from: "fan" | "idol"; text: string };
+
+const IDOL_NAME = "호시노 아이";
+
+const ACTIONS: {
+  key: Action;
+  label: string;
+  breatheMs: number;
+  chat: ChatLine[];
+}[] = [
+  {
+    key: "idle",
+    label: "기본",
+    breatheMs: 2800,
+    chat: [
+      { from: "fan", text: "오늘 하루 어땠어요?" },
+      { from: "idol", text: "잘 보냈어요. 같이 있어줘서 고마워요." },
+    ],
+  },
+  {
+    key: "happy",
+    label: "기쁨",
+    breatheMs: 2400,
+    chat: [
+      { from: "idol", text: "방금 좋은 소식 들었어요!" },
+      { from: "fan", text: "와 진짜? 축하해요 ✨" },
+    ],
+  },
+  {
+    key: "sing",
+    label: "노래",
+    breatheMs: 2200,
+    chat: [
+      { from: "fan", text: "신곡 한 소절만…?" },
+      { from: "idol", text: "♪ 그대만이 나의 빛…" },
+    ],
+  },
+  {
+    key: "sad",
+    label: "슬픔",
+    breatheMs: 3200,
+    chat: [
+      { from: "idol", text: "오늘은 조금 지쳤어요." },
+      { from: "fan", text: "괜찮아요. 푹 쉬어요 🤍" },
+    ],
+  },
+  {
+    key: "eat",
+    label: "식사",
+    breatheMs: 3400,
+    chat: [
+      { from: "fan", text: "밥 챙겨 먹었어요?" },
+      { from: "idol", text: "지금 도시락 먹는 중! 맛있어요 🍱" },
+    ],
+  },
+  {
+    key: "sleep",
+    label: "수면",
+    breatheMs: 4200,
+    chat: [
+      { from: "idol", text: "이제 자러 갈게요…" },
+      { from: "fan", text: "잘 자요. 좋은 꿈 꿔요 🌙" },
+    ],
+  },
 ];
 
-const ROTATE_MS = 3200;
+const ROTATE_MS = 4000;
+const RESUME_AFTER_INTERACTION_MS = 5000;
+const SWIPE_THRESHOLD_PX = 40;
 
 export function CharacterPhoneSlides() {
   const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // auto rotate
   useEffect(() => {
+    if (paused) return;
     const t = setInterval(() => {
       setActive((i) => (i + 1) % ACTIONS.length);
     }, ROTATE_MS);
     return () => clearInterval(t);
+  }, [paused]);
+
+  const pauseForInteraction = () => {
+    setPaused(true);
+    if (resumeTimer.current) clearTimeout(resumeTimer.current);
+    resumeTimer.current = setTimeout(
+      () => setPaused(false),
+      RESUME_AFTER_INTERACTION_MS,
+    );
+  };
+
+  const go = (delta: number) => {
+    setActive((i) => (i + delta + ACTIONS.length) % ACTIONS.length);
+    pauseForInteraction();
+  };
+
+  const jumpTo = (i: number) => {
+    setActive(i);
+    pauseForInteraction();
+  };
+
+  // pointer drag — touch + mouse 통합
+  const dragStartX = useRef<number | null>(null);
+  const onPointerDown = (e: React.PointerEvent) => {
+    dragStartX.current = e.clientX;
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (dragStartX.current === null) return;
+    const dx = e.clientX - dragStartX.current;
+    dragStartX.current = null;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+    go(dx < 0 ? +1 : -1);
+  };
+  const onPointerCancel = () => {
+    dragStartX.current = null;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (resumeTimer.current) clearTimeout(resumeTimer.current);
+    };
   }, []);
 
   const current = ACTIONS[active];
 
   return (
-    <div className="relative mx-auto w-full max-w-[320px]">
-      {/* 핸드폰 외곽 frame */}
-      <div className="relative aspect-[9/19] overflow-hidden rounded-[44px] border-[10px] border-black bg-black shadow-2xl shadow-black/50">
+    <div className="relative mx-auto w-full max-w-[320px] select-none">
+      {/* 핸드폰 외곽 — 드래그 영역 */}
+      <div
+        className="relative aspect-[9/19] cursor-grab overflow-hidden rounded-[44px] border-[10px] border-black bg-black shadow-2xl shadow-black/50 active:cursor-grabbing"
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        role="region"
+        aria-label="캐릭터 액션 슬라이드 (좌우로 드래그)"
+      >
         {/* 노치 */}
         <div
           aria-hidden
@@ -52,78 +162,77 @@ export function CharacterPhoneSlides() {
 
         {/* 방 배경 */}
         <div className="absolute inset-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/character/room_background.png"
             alt=""
             aria-hidden
             className="h-full w-full object-cover"
             style={{ imageRendering: "pixelated" }}
+            draggable={false}
           />
         </div>
 
-        {/* 상단 페이드 (status bar 영역 자연스럽게) */}
+        {/* 상단 그라데이션 */}
         <div
           aria-hidden
           className="absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-black/40 to-transparent"
         />
 
-        {/* 상단 가짜 status bar */}
+        {/* status bar */}
         <div className="absolute inset-x-0 top-1.5 z-20 flex items-center justify-between px-7 text-[10px] font-medium text-white/90">
           <span>9:41</span>
           <span className="opacity-70">●●●</span>
         </div>
 
-        {/* 헤더 (아이돌 이름) */}
+        {/* 헤더 */}
         <div className="absolute inset-x-0 top-9 z-20 flex items-center gap-2 px-4">
-          <div className="h-8 w-8 rounded-full border-2 border-pink-400 bg-purple-300/80" />
+          <div className="h-8 w-8 rounded-full border-2 border-pink-400 bg-gradient-to-br from-purple-300/80 to-pink-300/60" />
           <span className="text-sm font-semibold text-white drop-shadow">
-            똥쟁이
+            {IDOL_NAME}
           </span>
           <span className="ml-auto text-white/70">⋮</span>
         </div>
 
-        {/* 캐릭터 슬라이드 — 모두 같은 위치에 stacked, opacity 토글 */}
-        <div className="absolute inset-x-0" style={{ top: "20%", bottom: "40%" }}>
+        {/* 캐릭터 슬라이드 */}
+        <div className="absolute inset-x-0" style={{ top: "18%", bottom: "44%" }}>
           {ACTIONS.map((a, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               key={a.key}
               src={`/character/character_${a.key}.png`}
               alt={a.label}
-              className="absolute left-1/2 h-full -translate-x-1/2 object-contain transition-opacity duration-700 ease-out"
+              className="absolute left-1/2 h-full object-contain transition-opacity duration-700 ease-out"
               style={{
                 opacity: i === active ? 1 : 0,
                 imageRendering: "pixelated",
                 animation: `breathe ${current.breatheMs}ms ease-in-out infinite alternate`,
               }}
+              draggable={false}
             />
           ))}
         </div>
 
-        {/* 하단 채팅 카드 mockup */}
+        {/* 채팅 mockup (액션별 2턴 fan↔idol) */}
         <div
           className="absolute inset-x-0 bottom-0 z-10 backdrop-blur-md"
           style={{
-            top: "60%",
-            background: "rgba(22, 22, 29, 0.28)",
-            borderTop: "1px solid rgba(199, 112, 255, 0.3)",
+            top: "56%",
+            background: "rgba(22, 22, 29, 0.32)",
+            borderTop: "1px solid rgba(199, 112, 255, 0.35)",
           }}
         >
-          {/* 드래그 핸들 */}
           <div className="flex justify-center pt-2 pb-1">
             <div className="h-1 w-10 rounded-full bg-white/40" />
           </div>
 
-          {/* 가짜 메시지 (현재 액션에 따라 한 줄 변화) */}
-          <div className="space-y-2 px-4 pt-2">
-            <div className="flex items-start gap-2">
-              <div className="h-6 w-6 shrink-0 rounded-full border border-pink-400 bg-purple-300/80" />
-              <div
-                key={current.key}
-                className="rounded-2xl rounded-tl-md bg-white/[0.06] px-3 py-1.5 text-[11px] text-white/90 backdrop-blur transition-opacity duration-700"
-              >
-                {current.line}
-              </div>
-            </div>
+          <div
+            key={current.key}
+            className="space-y-1.5 px-3 pt-2 transition-opacity duration-500"
+          >
+            {current.chat.map((line, idx) => (
+              <ChatBubble key={`${current.key}-${idx}`} line={line} />
+            ))}
           </div>
 
           {/* 입력창 */}
@@ -136,31 +245,50 @@ export function CharacterPhoneSlides() {
           </div>
         </div>
 
-        {/* 우측 액션 인디케이터 — 진행 표시 */}
+        {/* dot 인디케이터 */}
         <div className="absolute right-2 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-1.5">
           {ACTIONS.map((a, i) => (
-            <span
+            <button
               key={a.key}
-              className="h-1.5 w-1.5 rounded-full transition-all duration-500"
+              type="button"
+              onClick={() => jumpTo(i)}
+              className="h-1.5 w-1.5 rounded-full transition-all duration-500 focus:outline-none"
               style={{
                 background: i === active ? "#FF3DA1" : "rgba(255,255,255,0.25)",
                 transform: i === active ? "scale(1.4)" : "scale(1)",
               }}
-              aria-hidden
+              aria-label={`${a.label}으로 이동`}
             />
           ))}
         </div>
       </div>
 
-      {/* 슬라이드 라벨 (frame 아래) */}
-      <div className="mt-5 flex items-center justify-center gap-3 text-sm">
-        <span className="font-semibold text-fg">{current.label}</span>
-        <span className="text-fg-faint">
-          {active + 1} / {ACTIONS.length}
-        </span>
+      {/* 라벨 + 좌우 버튼 (mobile에서 드래그 어려운 사용자 fallback) */}
+      <div className="mt-5 flex items-center justify-center gap-4">
+        <button
+          type="button"
+          onClick={() => go(-1)}
+          aria-label="이전"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-outline-soft text-fg-muted transition hover:border-pink-400 hover:text-fg"
+        >
+          ‹
+        </button>
+        <div className="min-w-[6rem] text-center text-sm">
+          <span className="font-semibold text-fg">{current.label}</span>{" "}
+          <span className="text-fg-faint">
+            {active + 1} / {ACTIONS.length}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => go(+1)}
+          aria-label="다음"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-outline-soft text-fg-muted transition hover:border-pink-400 hover:text-fg"
+        >
+          ›
+        </button>
       </div>
 
-      {/* breathe keyframe (Tailwind 4 inline) */}
       <style jsx>{`
         @keyframes breathe {
           0% {
@@ -171,6 +299,38 @@ export function CharacterPhoneSlides() {
           }
         }
       `}</style>
+    </div>
+  );
+}
+
+function ChatBubble({ line }: { line: ChatLine }) {
+  const isIdol = line.from === "idol";
+  return (
+    <div
+      className={`flex items-end gap-1.5 ${
+        isIdol ? "justify-start" : "justify-end"
+      }`}
+    >
+      {isIdol && (
+        <div className="h-5 w-5 shrink-0 rounded-full border border-pink-400 bg-gradient-to-br from-purple-300/80 to-pink-300/60" />
+      )}
+      <div
+        className={`max-w-[78%] px-2.5 py-1.5 text-[11px] leading-snug ${
+          isIdol
+            ? "rounded-2xl rounded-tl-md bg-white/[0.08] text-white/95"
+            : "rounded-2xl rounded-tr-md text-white"
+        }`}
+        style={
+          isIdol
+            ? undefined
+            : {
+                background:
+                  "linear-gradient(135deg, rgba(199,112,255,0.55), rgba(255,61,161,0.45))",
+              }
+        }
+      >
+        {line.text}
+      </div>
     </div>
   );
 }
