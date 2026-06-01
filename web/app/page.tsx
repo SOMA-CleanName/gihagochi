@@ -1,3 +1,4 @@
+import { CharacterPhoneSlides } from "./_components/character-phone-slides";
 import { SiteFooter } from "./_components/site-footer";
 import { SiteHeader } from "./_components/site-header";
 
@@ -216,43 +217,22 @@ function Character() {
             </p>
           </div>
 
-          <div className="relative">
-            <CharacterPreview />
+          <div className="relative flex justify-center lg:justify-end">
+            {/* 보라/핑크 글로우 — 핸드폰 mockup 뒤 */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-0"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 50%, rgba(199,112,255,0.35) 0%, rgba(255,61,161,0.18) 40%, transparent 70%)",
+                filter: "blur(40px)",
+              }}
+            />
+            <CharacterPhoneSlides />
           </div>
         </div>
       </div>
     </Section>
-  );
-}
-
-function CharacterPreview() {
-  return (
-    <div className="relative aspect-square w-full max-w-md overflow-hidden rounded-3xl border border-outline-soft bg-surface">
-      {/* 보라/핑크 큰 글로우 */}
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(circle at 60% 55%, rgba(199,112,255,0.55) 0%, rgba(255,61,161,0.25) 35%, transparent 70%)",
-          filter: "blur(20px)",
-        }}
-      />
-
-      {/* 떠다니는 채팅 버블 */}
-      <div className="absolute left-6 top-7 max-w-[220px] rounded-2xl rounded-bl-md border border-outline-soft bg-bg-elevated/90 px-3.5 py-2.5 backdrop-blur">
-        <p className="text-xs font-medium text-fg">
-          오늘 콘서트 너무 좋았어
-        </p>
-      </div>
-
-      {/* 응답 모션 라벨 */}
-      <div className="absolute bottom-7 right-6 max-w-[220px] rounded-2xl rounded-br-md border border-outline-soft bg-bg-elevated/90 px-3.5 py-2.5 backdrop-blur">
-        <p className="text-xs font-medium text-fg-muted">
-          캐릭터가 미소짓고 손을 흔들어요
-        </p>
-      </div>
-    </div>
   );
 }
 
