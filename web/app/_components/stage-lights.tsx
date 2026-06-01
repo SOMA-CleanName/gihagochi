@@ -13,7 +13,7 @@ export function StageLights() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-50 overflow-hidden"
       style={{ mixBlendMode: "screen" }}
     >
       {/* 위에서 비춰지는 콘 — 청록 dominant */}
