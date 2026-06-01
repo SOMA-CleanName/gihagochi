@@ -90,7 +90,7 @@ export function LightSticks() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 h-[55vh] overflow-hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-0 h-[55vh] overflow-hidden"
       style={{ mixBlendMode: "screen" }}
     >
       {STICKS.map((s, i) => (
