@@ -50,9 +50,9 @@ function Hero() {
   return (
     <Section
       id="top"
-      background="radial-gradient(ellipse 80% 60% at 50% 0%, rgba(199,112,255,0.22), transparent 65%), radial-gradient(ellipse 50% 40% at 25% 80%, rgba(0,229,255,0.08), transparent 60%), #0a0a0f"
+      background="radial-gradient(ellipse 80% 60% at 50% 0%, rgba(199,112,255,0.18), transparent 65%), radial-gradient(ellipse 50% 40% at 25% 80%, rgba(0,229,255,0.06), transparent 60%)"
     >
-      <div className="mx-auto w-full max-w-3xl text-center">
+      <div className="text-card mx-auto w-full max-w-3xl text-center">
         <h1 className="text-balance text-5xl font-semibold leading-[1.1] tracking-tight text-fg sm:text-7xl">
           당신의 아이돌,
           <br />
@@ -120,10 +120,10 @@ function Ways() {
   return (
     <Section
       id="ways"
-      background="radial-gradient(ellipse 65% 50% at 100% 100%, rgba(0,229,255,0.12), transparent 60%), radial-gradient(ellipse 40% 30% at 0% 0%, rgba(199,112,255,0.08), transparent 60%), #13131a"
+      background="radial-gradient(ellipse 65% 50% at 100% 100%, rgba(0,229,255,0.10), transparent 60%), radial-gradient(ellipse 40% 30% at 0% 0%, rgba(199,112,255,0.06), transparent 60%)"
     >
       <div className="mx-auto w-full max-w-5xl">
-        <div className="max-w-2xl">
+        <div className="text-card max-w-2xl">
           <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
             네 가지 방식으로,
             <br />한 명의 아이돌과.
@@ -138,7 +138,7 @@ function Ways() {
           {WAYS.map((w) => (
             <article
               key={w.title}
-              className="rounded-2xl border border-outline-soft bg-surface p-7 transition hover:border-outline"
+              className="text-card relative rounded-2xl border border-outline-soft transition hover:border-outline"
             >
               <div className="flex items-baseline justify-between">
                 <h3 className="text-xl font-semibold tracking-tight text-fg">
@@ -183,11 +183,11 @@ function Character() {
   return (
     <Section
       id="character"
-      background="radial-gradient(circle 50% at 70% 50%, rgba(255,61,161,0.16), transparent 55%), radial-gradient(circle 45% at 20% 30%, rgba(199,112,255,0.18), transparent 55%), #0a0a0f"
+      background="radial-gradient(circle 50% at 70% 50%, rgba(255,61,161,0.14), transparent 55%), radial-gradient(circle 45% at 20% 30%, rgba(199,112,255,0.14), transparent 55%)"
     >
       <div className="mx-auto w-full max-w-6xl">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <div>
+          <div className="text-card">
             <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
               채팅에 맞춰 움직이는,
               <br />
@@ -261,10 +261,10 @@ function Journey() {
   return (
     <Section
       id="journey"
-      background="linear-gradient(135deg, rgba(0,229,255,0.10) 0%, transparent 35%, transparent 65%, rgba(199,112,255,0.14) 100%), #13131a"
+      background="linear-gradient(135deg, rgba(0,229,255,0.08) 0%, transparent 35%, transparent 65%, rgba(199,112,255,0.10) 100%)"
     >
       <div className="mx-auto w-full max-w-5xl">
-        <div className="max-w-2xl">
+        <div className="text-card max-w-2xl">
           <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
             디지털에서 만나,
             <br />
@@ -276,9 +276,12 @@ function Journey() {
           </p>
         </div>
 
-        <ol className="mt-14 space-y-10 sm:mt-16">
+        <ol className="mt-14 space-y-6 sm:mt-16">
           {JOURNEY.map((s) => (
-            <li key={s.n} className="grid gap-3 sm:grid-cols-[6rem_1fr] sm:gap-8">
+            <li
+              key={s.n}
+              className="text-card grid gap-3 sm:grid-cols-[6rem_1fr] sm:gap-8"
+            >
               <span className="font-mono text-sm text-fg-faint">{s.n}</span>
               <div>
                 <h3 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
@@ -320,10 +323,10 @@ function HowItWorks() {
   return (
     <Section
       id="how"
-      background="radial-gradient(ellipse 60% 45% at 50% 50%, rgba(199,112,255,0.12), transparent 60%), radial-gradient(ellipse 40% 30% at 100% 0%, rgba(0,229,255,0.08), transparent 60%), #0a0a0f"
+      background="radial-gradient(ellipse 60% 45% at 50% 50%, rgba(199,112,255,0.10), transparent 60%), radial-gradient(ellipse 40% 30% at 100% 0%, rgba(0,229,255,0.06), transparent 60%)"
     >
       <div className="mx-auto w-full max-w-6xl">
-        <div className="max-w-2xl">
+        <div className="text-card max-w-2xl">
           <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
             1:1처럼 보이는,
             <br />
@@ -372,7 +375,7 @@ function ChatPreview({
   messages: Msg[];
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-outline-soft bg-surface">
+    <div className="text-card relative overflow-hidden rounded-2xl border border-outline-soft p-0">
       <div className="flex items-center justify-between border-b border-outline-soft px-5 py-3">
         <span className="text-xs font-medium text-fg-muted">{title}</span>
         <span className="text-[10px] font-medium text-fg-faint">
@@ -414,11 +417,11 @@ function Finale() {
       className="snap-section relative flex flex-col overflow-hidden"
       style={{
         background:
-          "radial-gradient(ellipse 70% 55% at 50% 100%, rgba(199,112,255,0.32), transparent 70%), radial-gradient(ellipse 50% 35% at 50% 0%, rgba(255,61,161,0.14), transparent 70%), #0a0a0f",
+          "radial-gradient(ellipse 70% 55% at 50% 100%, rgba(199,112,255,0.28), transparent 70%), radial-gradient(ellipse 50% 35% at 50% 0%, rgba(255,61,161,0.12), transparent 70%)",
       }}
     >
       <div className="flex flex-1 items-center justify-center px-6 pt-24 pb-12">
-        <div className="mx-auto w-full max-w-2xl text-center">
+        <div className="text-card mx-auto w-full max-w-2xl text-center">
           <h2 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight text-fg sm:text-6xl">
             함께 자라는 첫 무대,
             <br />
