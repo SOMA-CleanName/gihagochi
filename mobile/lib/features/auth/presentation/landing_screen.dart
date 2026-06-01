@@ -4,12 +4,14 @@
 ///       Supabase OAuth → 콜백 시 라우터가 redirect 결정.
 library;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/env.dart';
+import '../../../core/error/app_error.dart';
 import '../../../core/widgets/app_button.dart';
 import '../data/auth_repository.dart';
 
@@ -30,8 +32,25 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
       _error = null;
     });
     try {
-      await ref.read(authRepositoryProvider).signInWithGoogle();
-      // OAuth 콜백 후 onAuthStateChange → 라우터가 다음 화면 결정.
+      final repo = ref.read(authRepositoryProvider);
+      await repo.signInWithGoogle();
+      // 로그인 성공. 가입 완료 사용자인지 확인.
+      // - 200 OK → router refresh 가 `/main` 으로 처리 (그대로 둠).
+      // - 404 NotFoundError 또는 401 UnauthorizedError("등록되지 않은 사용자") → 신규.
+      // 백엔드 응답이 dio 인터셉터에서 DioException 으로 다시 wrap 되고 내부
+      // `error` 필드에 AppError 가 담김 → on DioException + inner 타입 검사로 분기.
+      try {
+        await repo.fetchMe();
+      } on DioException catch (e) {
+        final inner = e.error;
+        if (inner is NotFoundError || inner is UnauthorizedError) {
+          // 신규 가입자 — signup wizard 로. router refresh 보다 먼저 push 해야
+          // 디드락 회피 로직(profile_repository 의 자동 signOut) 발화 전에 도달.
+          if (mounted) context.go('/auth/signup/role');
+        } else {
+          rethrow;
+        }
+      }
     } catch (e, st) {
       // raw exception을 사용자에 노출하지 말 것 — Sentry/log에만 보내고 친화 메시지로.
       debugPrint('[auth.google] signInWithOAuth 실패: $e\n$st');

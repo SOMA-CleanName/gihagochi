@@ -48,8 +48,9 @@ class ProfileRepository {
   /// path를 signed URL로 변환한 결과로 채움 (1시간 TTL).
   ///
   /// auth.users는 있는데 profiles row가 없는 케이스(가입 미완료/DB 리셋)는
-  /// **자동 로그아웃** 후 NotFoundError를 던짐 — auth_guard가 /auth/landing으로 리다이렉트.
-  /// 디드락 회피 (마이페이지가 안 뜨면 로그아웃 진입점도 없음).
+  /// NotFoundError 만 던짐 — 호출자(main_screen 등)가 catch 해서 `/auth/signup/role` 로
+  /// 보내야 함. 자동 signOut 은 race condition 야기 (landing_screen 의 fetchMe 분기보다
+  /// 먼저 발화해서 분기 못 잡음).
   Future<MyProfile> fetchMyProfile() async {
     final userId = _userId;
     final Map<String, dynamic> profileRow;
@@ -61,8 +62,7 @@ class ProfileRepository {
           .single();
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') {
-        await supabase.auth.signOut();
-        throw const NotFoundError(message: '프로필이 없어 다시 로그인합니다.');
+        throw const NotFoundError(message: '프로필이 없습니다. 가입을 완료해주세요.');
       }
       rethrow;
     }

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_service.dart';
 import '../../../core/widgets/app_button.dart';
 import '../application/signup_controller.dart';
 import '../data/auth_repository.dart';
@@ -34,9 +35,14 @@ class _SignupTermsScreenState extends ConsumerState<SignupTermsScreen> {
       _error = null;
     });
     try {
-      // OAuth 먼저 — 끝나면 onAuthStateChange가 redirect를 트리거하고
-      // 라우터가 /auth/signup/profile로 보냄(프로필 미존재).
-      await ref.read(authRepositoryProvider).signInWithGoogle();
+      // 이미 로그인된 사용자(landing 에서 native sign-in 거친 신규 가입자)는
+      // OAuth 재호출 불필요 — 그대로 display_name 입력 화면으로.
+      // 미로그인 사용자(가입 wizard 직접 진입)면 native sign-in 먼저.
+      final session = ref.read(supabaseProvider).auth.currentSession;
+      if (session == null) {
+        await ref.read(authRepositoryProvider).signInWithGoogle();
+      }
+      if (mounted) context.go('/auth/signup/profile');
     } catch (e, st) {
       debugPrint('[auth.google] signup_terms: signInWithOAuth 실패: $e\n$st');
       if (mounted) {
