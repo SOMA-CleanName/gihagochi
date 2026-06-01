@@ -52,7 +52,7 @@ function Hero() {
       id="top"
       background="radial-gradient(ellipse 80% 60% at 50% 0%, rgba(199,112,255,0.18), transparent 65%), radial-gradient(ellipse 50% 40% at 25% 80%, rgba(0,229,255,0.06), transparent 60%)"
     >
-      <div className="text-card mx-auto w-full max-w-3xl text-center">
+      <div className="mx-auto w-full max-w-3xl text-center">
         <h1 className="text-balance text-5xl font-semibold leading-[1.1] tracking-tight text-fg sm:text-7xl">
           당신의 아이돌,
           <br />
@@ -123,7 +123,7 @@ function Ways() {
       background="radial-gradient(ellipse 65% 50% at 100% 100%, rgba(0,229,255,0.10), transparent 60%), radial-gradient(ellipse 40% 30% at 0% 0%, rgba(199,112,255,0.06), transparent 60%)"
     >
       <div className="mx-auto w-full max-w-5xl">
-        <div className="text-card max-w-2xl">
+        <div className="max-w-2xl">
           <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
             네 가지 방식으로,
             <br />한 명의 아이돌과.
@@ -187,7 +187,7 @@ function Character() {
     >
       <div className="mx-auto w-full max-w-6xl">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <div className="text-card">
+          <div>
             <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
               채팅에 맞춰 움직이는,
               <br />
@@ -264,7 +264,7 @@ function Journey() {
       background="linear-gradient(135deg, rgba(0,229,255,0.08) 0%, transparent 35%, transparent 65%, rgba(199,112,255,0.10) 100%)"
     >
       <div className="mx-auto w-full max-w-5xl">
-        <div className="text-card max-w-2xl">
+        <div className="max-w-2xl">
           <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
             디지털에서 만나,
             <br />
@@ -326,7 +326,7 @@ function HowItWorks() {
       background="radial-gradient(ellipse 60% 45% at 50% 50%, rgba(199,112,255,0.10), transparent 60%), radial-gradient(ellipse 40% 30% at 100% 0%, rgba(0,229,255,0.06), transparent 60%)"
     >
       <div className="mx-auto w-full max-w-6xl">
-        <div className="text-card max-w-2xl">
+        <div className="max-w-2xl">
           <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
             1:1처럼 보이는,
             <br />
@@ -421,7 +421,7 @@ function Finale() {
       }}
     >
       <div className="flex flex-1 items-center justify-center px-6 pt-24 pb-12">
-        <div className="text-card mx-auto w-full max-w-2xl text-center">
+        <div className="mx-auto w-full max-w-2xl text-center">
           <h2 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight text-fg sm:text-6xl">
             함께 자라는 첫 무대,
             <br />
