@@ -1,13 +1,12 @@
 "use client";
 
 /**
- * 페이지 전체에 깔리는 삼색 조명 오버레이 — 지하 아이돌 어두운 네온 컨셉.
+ * 페이지 상단 무대 spotlight — 청록/민트 dominant + 보라/핑크 액센트.
  *
- * 위/아래에서 비춰지는 보라/시안/핑크 콘 6개가 keyframe sweep으로 천천히 움직임.
- * pointer-events: none — 사용자 인터랙션 영향 없음.
+ * 지하 라이브 사진 톤 (천장에서 무대로 비추는 cool 톤 조명).
+ * 하단은 [[LightSticks]]가 책임.
  *
- * body 최상위에 fixed로 두어 모든 섹션 위/아래에서 보임. blend-mode로 어두운
- * 배경엔 색만 살짝, 밝은 영역엔 영향 미미.
+ * pointer-events: none, mix-blend-mode: screen.
  */
 
 export function StageLights() {
@@ -17,123 +16,115 @@ export function StageLights() {
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       style={{ mixBlendMode: "screen" }}
     >
-      {/* 위에서 비춰지는 콘 3개 */}
-      <span className="stage-cone stage-cone--top stage-cone--purple" />
-      <span className="stage-cone stage-cone--top stage-cone--pink" />
-      <span className="stage-cone stage-cone--top stage-cone--cyan" />
-
-      {/* 아래에서 비춰지는 콘 3개 (살짝 약하게) */}
-      <span className="stage-cone stage-cone--bottom stage-cone--cyan-soft" />
-      <span className="stage-cone stage-cone--bottom stage-cone--pink-soft" />
-      <span className="stage-cone stage-cone--bottom stage-cone--purple-soft" />
+      {/* 위에서 비춰지는 콘 — 청록 dominant */}
+      <span className="cone cone--cyan-main" />
+      <span className="cone cone--mint" />
+      <span className="cone cone--cyan-side" />
+      <span className="cone cone--purple-accent" />
+      <span className="cone cone--pink-accent" />
 
       <style jsx>{`
-        .stage-cone {
+        .cone {
           position: absolute;
-          width: 38vw;
-          height: 80vh;
           border-radius: 50%;
-          filter: blur(60px);
-          opacity: 0.55;
-        }
-
-        /* 위 콘 — 천장에 꽂힌 점에서 아래로 퍼지는 spotlight 느낌 */
-        .stage-cone--top {
-          top: -40vh;
+          filter: blur(70px);
+          top: -45vh;
           transform-origin: 50% 100%;
         }
-        .stage-cone--bottom {
-          bottom: -40vh;
-          transform-origin: 50% 0%;
-        }
 
-        .stage-cone--purple {
-          left: 5vw;
+        /* 중앙 청록 큰 콘 — 무대 메인 spotlight */
+        .cone--cyan-main {
+          width: 60vw;
+          height: 90vh;
+          left: 20vw;
+          opacity: 0.55;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(0, 229, 255, 0.65) 0%,
+            rgba(0, 229, 255, 0) 65%
+          );
+          animation: sweep-mid 14s ease-in-out infinite alternate;
+        }
+        /* 좌측 민트 */
+        .cone--mint {
+          width: 40vw;
+          height: 85vh;
+          left: 0;
+          opacity: 0.42;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(110, 255, 220, 0.5) 0%,
+            rgba(110, 255, 220, 0) 65%
+          );
+          animation: sweep-left 16s ease-in-out infinite alternate;
+        }
+        /* 우측 청록 */
+        .cone--cyan-side {
+          width: 38vw;
+          height: 80vh;
+          right: 0;
+          opacity: 0.4;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(80, 220, 255, 0.55) 0%,
+            rgba(80, 220, 255, 0) 65%
+          );
+          animation: sweep-right 13s ease-in-out infinite alternate;
+        }
+        /* 보라 액센트 (살짝) */
+        .cone--purple-accent {
+          width: 30vw;
+          height: 70vh;
+          left: 10vw;
+          opacity: 0.28;
           background: radial-gradient(
             ellipse at center,
             rgba(199, 112, 255, 0.55) 0%,
             rgba(199, 112, 255, 0) 65%
           );
-          animation: sweep-left 13s ease-in-out infinite alternate;
+          animation: sweep-left 18s ease-in-out infinite alternate-reverse;
         }
-        .stage-cone--pink {
-          left: 32vw;
+        /* 핑크 액센트 (살짝) */
+        .cone--pink-accent {
+          width: 32vw;
+          height: 72vh;
+          right: 12vw;
+          opacity: 0.3;
           background: radial-gradient(
             ellipse at center,
             rgba(255, 61, 161, 0.5) 0%,
             rgba(255, 61, 161, 0) 65%
           );
-          animation: sweep-mid 11s ease-in-out infinite alternate;
-        }
-        .stage-cone--cyan {
-          right: 5vw;
-          background: radial-gradient(
-            ellipse at center,
-            rgba(0, 229, 255, 0.4) 0%,
-            rgba(0, 229, 255, 0) 65%
-          );
-          animation: sweep-right 14s ease-in-out infinite alternate;
-        }
-
-        /* 하단 — 무대 아래 footlight 느낌. 약함. */
-        .stage-cone--cyan-soft {
-          left: 8vw;
-          opacity: 0.32;
-          background: radial-gradient(
-            ellipse at center,
-            rgba(0, 229, 255, 0.4) 0%,
-            rgba(0, 229, 255, 0) 65%
-          );
-          animation: sweep-mid 15s ease-in-out infinite alternate-reverse;
-        }
-        .stage-cone--pink-soft {
-          left: 35vw;
-          opacity: 0.3;
-          background: radial-gradient(
-            ellipse at center,
-            rgba(255, 61, 161, 0.45) 0%,
-            rgba(255, 61, 161, 0) 65%
-          );
-          animation: sweep-left 12s ease-in-out infinite alternate-reverse;
-        }
-        .stage-cone--purple-soft {
-          right: 8vw;
-          opacity: 0.32;
-          background: radial-gradient(
-            ellipse at center,
-            rgba(199, 112, 255, 0.45) 0%,
-            rgba(199, 112, 255, 0) 65%
-          );
-          animation: sweep-right 13s ease-in-out infinite alternate-reverse;
+          animation: sweep-right 17s ease-in-out infinite alternate-reverse;
         }
 
         @keyframes sweep-left {
           0% {
-            transform: translateX(-6vw) rotate(-6deg);
+            transform: translateX(-6vw) rotate(-7deg);
           }
           100% {
-            transform: translateX(6vw) rotate(8deg);
+            transform: translateX(6vw) rotate(9deg);
           }
         }
         @keyframes sweep-mid {
           0% {
-            transform: translateX(-4vw) rotate(4deg);
+            transform: translateX(-3vw) rotate(3deg);
           }
           100% {
-            transform: translateX(4vw) rotate(-6deg);
+            transform: translateX(3vw) rotate(-5deg);
           }
         }
         @keyframes sweep-right {
           0% {
-            transform: translateX(6vw) rotate(6deg);
+            transform: translateX(7vw) rotate(6deg);
           }
           100% {
-            transform: translateX(-6vw) rotate(-8deg);
+            transform: translateX(-7vw) rotate(-9deg);
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .stage-cone {
+          .cone {
             animation: none;
           }
         }

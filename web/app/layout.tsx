@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { LightSticks } from "./_components/light-sticks";
 import { StageLights } from "./_components/stage-lights";
 import "./globals.css";
 
@@ -68,6 +69,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full bg-bg text-fg kr-keep">
         <StageLights />
+        <LightSticks />
         <div className="relative z-10">{children}</div>
       </body>
     </html>
