@@ -118,21 +118,24 @@ export function CharacterPhoneSlides() {
     pauseForInteraction();
   };
 
-  // pointer drag — touch + mouse 통합
-  const dragStartX = useRef<number | null>(null);
+  // pointer drag — touch + mouse 통합. 가로 우세일 때만 슬라이드.
+  // 세로 우세면 페이지 스크롤로 통과 (touch-action: pan-y).
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
   const onPointerDown = (e: React.PointerEvent) => {
-    dragStartX.current = e.clientX;
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    dragStart.current = { x: e.clientX, y: e.clientY };
   };
   const onPointerUp = (e: React.PointerEvent) => {
-    if (dragStartX.current === null) return;
-    const dx = e.clientX - dragStartX.current;
-    dragStartX.current = null;
+    if (!dragStart.current) return;
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    dragStart.current = null;
+    // 세로 움직임이 더 크면 swipe 아님 (스크롤 의도)
+    if (Math.abs(dy) > Math.abs(dx)) return;
     if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
     go(dx < 0 ? +1 : -1);
   };
   const onPointerCancel = () => {
-    dragStartX.current = null;
+    dragStart.current = null;
   };
 
   useEffect(() => {
@@ -145,9 +148,11 @@ export function CharacterPhoneSlides() {
 
   return (
     <div className="relative mx-auto w-full max-w-[320px] select-none">
-      {/* 핸드폰 외곽 — 드래그 영역 */}
+      {/* 핸드폰 외곽 — 드래그 영역.
+          touch-action: pan-y — 세로 스크롤은 브라우저, 가로 swipe만 본 컴포넌트가 처리. */}
       <div
         className="relative aspect-[9/19] cursor-grab overflow-hidden rounded-[44px] border-[10px] border-black bg-black shadow-2xl shadow-black/50 active:cursor-grabbing"
+        style={{ touchAction: "pan-y" }}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
