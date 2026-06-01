@@ -54,9 +54,11 @@ html {
   background: var(--color-bg);
 }
 
-/* 메인 페이지(.snap-section 보유)에서만 mandatory snap. */
+/* 메인 페이지(.snap-section 보유)에서 부드러운 proximity snap.
+   mandatory + always는 작은 swipe도 강제로 다음 섹션 점프시켜 UX 불편함.
+   proximity = 사용자가 충분히 스크롤한 후에만 자동 snap. */
 html:has(.snap-section) {
-  scroll-snap-type: y mandatory;
+  scroll-snap-type: y proximity;
 }
 
 body {
@@ -73,7 +75,7 @@ body {
 .snap-section {
   min-height: 100dvh;
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  /* always 제거 — 한 번 swipe로 여러 섹션 점프 가능. proximity와 함께 부드럽게. */
 }
 
 .kr-keep {
