@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/error/app_error.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/theme/text_styles.dart';
@@ -39,13 +40,23 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final asyncProfile = ref.watch(myProfileControllerProvider);
     return asyncProfile.when(
       loading: () => const Scaffold(body: LoadingView()),
-      error: (e, _) => Scaffold(
-        body: ErrorView(
-          error: e,
-          onRetry: () =>
-              ref.read(myProfileControllerProvider.notifier).refresh(),
-        ),
-      ),
+      error: (e, _) {
+        // 가입 미완료 사용자(profiles row 없음) → signup wizard 로 강제 진입.
+        // landing_screen 의 _startGoogle 분기가 race condition 으로 못 잡는 경우 백업.
+        if (e is NotFoundError) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) context.go('/auth/signup/role');
+          });
+          return const Scaffold(body: LoadingView());
+        }
+        return Scaffold(
+          body: ErrorView(
+            error: e,
+            onRetry: () =>
+                ref.read(myProfileControllerProvider.notifier).refresh(),
+          ),
+        );
+      },
       data: (profile) {
         final isIdol = profile.role == UserRole.idol;
         // 채팅 탭 body 결정.

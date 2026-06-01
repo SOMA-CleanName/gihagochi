@@ -34,9 +34,11 @@ String? authGuard(Ref ref, GoRouterState state) {
     return '/auth/landing';
   }
 
-  // 로그인 + 인증 화면 → 팬 메인으로
-  // F-007 메인 화면 라우트. 등록은 features/profile.
-  if (user != null && isPublic) {
+  // 로그인 + 인증 화면 → 팬 메인으로.
+  // 단 `/auth/signup/*` 는 가입 미완료 사용자가 와야 하므로 통과 허용
+  // (auth.users 는 있지만 profiles row 없는 신규 가입자 → main_screen 이
+  //  NotFoundError catch 시 여기로 redirect).
+  if (user != null && isPublic && !loc.startsWith('/auth/signup')) {
     return '/main';
   }
 

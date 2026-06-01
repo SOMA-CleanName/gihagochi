@@ -18,6 +18,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/env.dart';
 import 'core/dev/dev_overlay.dart';
+import 'core/error/app_error.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_background.dart';
@@ -67,6 +68,19 @@ Future<void> main() async {
     },
     appRunner: () => runApp(
       ProviderScope(
+        // 4xx 클라이언트 에러는 retry 무의미 — 기본 5회 × backoff (≈30~40초) 회피.
+        // 신규 가입자 fetchMyProfile NotFoundError 같은 흐름에서 즉시 error 상태로 전환.
+        retry: (retryCount, error) {
+          if (error is NotFoundError ||
+              error is UnauthorizedError ||
+              error is ForbiddenError ||
+              error is ValidationError) {
+            return null; // retry X
+          }
+          // 기타 (network / 5xx 등): default Riverpod 정책 — exponential backoff.
+          if (retryCount > 5) return null;
+          return Duration(milliseconds: 200 * (1 << retryCount));
+        },
         overrides: [
           // chat_room 이 profile 의 채팅방 리스트 슬롯을 채움.
           chatListSlotProvider.overrideWith((ref) => const FanChatList()),
