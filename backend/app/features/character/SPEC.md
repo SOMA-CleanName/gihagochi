@@ -1,9 +1,9 @@
-# F-042 / F-043 / F-050 / F-051 / F-052 character — 캐릭터 상태 + 행동 트리거 + Avatar Forge
+# F-042 / F-043 character — 캐릭터 상태 + 행동 트리거
 
 > 작업 단위 #13 character의 backend.
 > - PR-2b (머지 완료): F-042 상태 DB + F-043 행동 트리거 IF
-> - **PR-5 (본 PR)**: F-050/F-051/F-052 — Avatar Forge 스키마 (테이블 3 + ENUM + 트리거 + RLS)
-> - PR-6 (예정): Avatar Forge CRUD API + 카탈로그 시드
+> - ~~PR-5: F-050/F-051/F-052 Avatar Forge 스키마~~ → **2026-06-08 폐기** (flame 채택, `0006_avatar_forge_drop`). 아래 Avatar Forge 섹션은 이력 보존용
+> - 새 방향: flame 기반 렌더링 (별도 작업 단위 SPEC 예정)
 
 ## 개요
 

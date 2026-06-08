@@ -1,4 +1,6 @@
-# F-039 ~ F-054 캐릭터 (Avatar Forge) — 요구사항 노트
+# F-039 ~ F-054 캐릭터 — 요구사항 노트
+
+> ⚠️ **2026-06-08 결정: Avatar Forge 폐기, flame 채택**. 본 문서 상단의 Avatar Forge 관련 결정(2026-06-04)은 **이력 보존용**. 현재 활성 결정은 §2026-06-08 섹션 참조.
 
 > 작업 단위 #13 (캐릭터/육성). 폴더: `features/character` + 메이커 UI는 `features/avatar_forge` 또는 `features/character` 하위.
 > 본 문서는 **진화하는 요구사항 공간**. 확정 항목은 → `mobile/lib/features/character/SPEC.md` (+ 신규 `mobile/lib/features/avatar_forge/SPEC.md`, `backend/app/features/character/SPEC.md`) 로 옮긴다.
@@ -221,6 +223,39 @@ idol_part_inventory(
 | **PR-8** | `features/avatar_forge/` (또는 `features/character/` sub) — 풀스크린 메이커. 카테고리 탭 + 부품 그리드 + 미리보기 + 저장 | PR-7 + 메이커 UX 와이어 | 클로드코드 |
 | **PR-9** | 메이커 진입점 — 첫 진입 자동 풀스크린 + 자기 채팅방 ⋮ "캐릭터 디자인" 메뉴 | PR-8 | 클로드코드 |
 | (v2.1) | gift 슬라이스 확장 — 선물 선택지가 카탈로그에서, 전송 시 인벤토리 추가 + 모먼트 트리거 | MVP 검증 후 | 클로드코드 |
+
+---
+
+### 2026-06-08 — flame 채택 + Avatar Forge 폐기
+
+**PoC 결과 + flame 채택으로 Avatar Forge 부품 시스템 폐기.**
+2026-06-04 "Flutter Stack / Rive·flame 의존성 추가 없음" 결정을 뒤집음.
+
+#### 폐기 범위
+- **F-049** Avatar Maker UI — 폐기
+- **F-050** 부품 카탈로그 — 폐기
+- **F-051** 아이돌 부품 인벤토리 — 폐기
+- **F-052** 슬롯 상태 저장/적용 — 폐기
+- **F-053** 선물 → 부품 발송 (v2.1) — 폐기
+- **F-054** 갈아끼우기 즉시 적용 UX (v2.1) — 폐기
+- **PR-5~PR-9 분할 계획 전체 폐기**
+- 부품 자가 조달 (28장) 후처리 — 시각 PoC 일부 사용, 본격 적용 없음
+
+#### 보존
+- 기존 머지된 **F-039~F-044** (방 배경 + 정적 캐릭터 6종 + 호흡 + 상태 DB + 행동 IF + 모먼트 카드) — 그대로
+- 신규: **flame 기반 렌더링** (F-041 애니메이션 본격 재작업 시 적용)
+
+#### 후속 처리
+- **PR-Δ (0006_avatar_forge_drop)**: 0005에서 만든 모든 객체(ENUM + 테이블 3 + 트리거 2 + 함수 1) DROP. 본 PR
+- `mobile/assets/character/parts/` + `web/public/character/parts/` 부품 PNG → 삭제 또는 보관 (별도 결정)
+- `web/app/dev/avatar-poc/` PoC 페이지 → 삭제 또는 보관 (별도 결정)
+- `docs/FEATURES.md §3.8` F-049~F-054 추가 보류 (애초에 §3.8 갱신 안 했음)
+- `docs/FEATURES.md §8.1` "캐릭터 렌더링 기술 확정 (Rive vs flame)" 미결 항목 → **flame으로 확정**
+
+#### 새 방향 (별도 작업 단위)
+- flame 도입 SPEC 작성 (별도 PR)
+- 기존 F-041 호흡(Flutter implicit) → flame 기반 재작업 결정
+- 캐릭터 자체는 단일 PNG 패턴 유지 (Avatar Forge 합성 X)
 
 ---
 
