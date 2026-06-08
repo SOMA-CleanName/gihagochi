@@ -1,10 +1,11 @@
-/// PR-D/E/F/G1 — CharacterComponent (Sprite + 액션 swap + 호흡 + 랜덤 + 탭 + 드래그).
+/// PR-D/E/F/G1/M — CharacterComponent (Sprite + 액션 swap + 호흡 + 랜덤 + 탭 + 드래그 + lift/shadow).
 ///
 /// `feature-specs/character.md` v2:
 /// - PR-D: 액션 PNG 6종 sprite swap 메커니즘
 /// - PR-E: 호흡 (Y sine wave) + 랜덤 액션 스케줄러
 /// - PR-F: 탭 인터랙션 (onTap callback)
 /// - PR-G1: 드래그 인터랙션 (로컬만, 백엔드 위치 저장은 PR-G2 별도)
+/// - PR-M (UX polish): 드래그 시 들림(lift) + 그림자 + 떨어지는 애니메이션
 ///
 /// 백엔드 state ↔ setAction 동기는 RoomCanvas의 ref.listen.
 library;
@@ -12,7 +13,9 @@ library;
 import 'dart:math';
 
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
+import 'package:flutter/animation.dart' show Curves;
 import 'package:flutter/painting.dart';
 
 import '../domain/character_action.dart';
@@ -78,6 +81,20 @@ class CharacterComponent extends SpriteComponent
   /// PR-G1 — 드래그 중 호흡 일시정지 (자유 위치 유지).
   bool _isDragging = false;
 
+  // ── PR-M: 드래그 lift + 그림자 + 떨어지는 애니메이션 ──────
+  /// 들림 높이 (logical px). drag 시작 시 캐릭터를 이만큼 위로 올림.
+  static const double _liftHeight = 24;
+
+  /// 떨어지는 애니메이션 시간.
+  static const double _settleDurationSec = 0.18;
+
+  /// 현재 들려있는 높이 (0 = 바닥, _liftHeight = 들림 상태).
+  /// drag 중에는 _liftHeight, drag 끝나면 0으로 애니메이션.
+  double _liftOffset = 0;
+
+  /// 그림자 컴포넌트 — drag 시작 시 parent에 add, drag 끝 + 안착 후 remove.
+  late final CircleComponent _shadow;
+
   // ── PR-E: 랜덤 액션 스케줄러 ──────────────────────────────
   /// 다음 랜덤 액션 발화 시각 (_elapsed 기준). 5~12s 사이 랜덤.
   double _nextActionAt = 0;
@@ -106,6 +123,16 @@ class CharacterComponent extends SpriteComponent
     _applyAction(_action);
     paint = Paint()..filterQuality = FilterQuality.none;
     _scheduleNextAction();
+
+    // PR-M — 그림자 컴포넌트 미리 생성 (drag 시작 시 parent에 add).
+    // 타원 효과를 위해 scale y 작게 (가로 길게, 세로 짧게).
+    _shadow = CircleComponent(
+      radius: 60,
+      anchor: Anchor.center,
+      paint: Paint()..color = const Color(0x4D000000), // black 30%
+      // 방 배경(-10)보다 위, 캐릭터(0)보다 아래.
+      priority: -1,
+    )..scale = Vector2(1.0, 0.25);
   }
 
   @override
@@ -171,24 +198,51 @@ class CharacterComponent extends SpriteComponent
     onTap?.call();
   }
 
-  // ── PR-G1: 드래그 (로컬만, 백엔드 위치 저장은 PR-G2) ──────
+  // ── PR-G1/M: 드래그 + 들림/그림자/안착 애니메이션 ────────
   @override
   void onDragStart(DragStartEvent event) {
     super.onDragStart(event);
     _isDragging = true;
+
+    // PR-M — 들림 효과 + 그림자 표시.
+    // 캐릭터를 _liftHeight만큼 위로. 발 위치(시각적 그림자 위치)는 position.y + _liftOffset 유지.
+    _liftOffset = _liftHeight;
+    position.y -= _liftHeight;
+    _shadow.position = Vector2(position.x, position.y + _liftOffset);
+    parent?.add(_shadow);
   }
 
   @override
   void onDragUpdate(DragUpdateEvent event) {
     position += event.localDelta;
+    // PR-M — 그림자도 따라감 (발 위치 = position.y + _liftOffset).
+    _shadow.position = Vector2(position.x, position.y + _liftOffset);
   }
 
   @override
   void onDragEnd(DragEndEvent event) {
     super.onDragEnd(event);
     _isDragging = false;
-    // 드래그 끝난 위치를 새 호흡 base로 — 다음 frame부터 자연스럽게 호흡 재개.
-    _baseY = position.y;
+
+    // PR-M — 들림 풀기: 떨어지는 애니메이션 (easeIn = 가속).
+    // 안착 후 _liftOffset = 0, _baseY 갱신, 그림자 제거.
+    final landingY = position.y + _liftOffset;
+    add(
+      MoveToEffect(
+        Vector2(position.x, landingY),
+        EffectController(
+          duration: _settleDurationSec,
+          curve: Curves.easeIn,
+        ),
+        onComplete: () {
+          _liftOffset = 0;
+          _baseY = position.y;
+          if (_shadow.parent != null) {
+            _shadow.removeFromParent();
+          }
+        },
+      ),
+    );
     // PR-G2: 백엔드 POST /character/{idol}/position 호출 (마이그레이션 동반, 별도 PR).
   }
 }
