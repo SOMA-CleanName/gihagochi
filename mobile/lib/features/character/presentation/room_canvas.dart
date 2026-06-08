@@ -137,12 +137,10 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   void _onDragEnd(DragEndDetails details) {
     setState(() => _isDragging = false);
     final v = details.velocity.pixelsPerSecond.dy;
-    // dy<0 (위로 swipe) → 채팅창 위로 snap (value=1)
-    // dy>0 (아래로 swipe) → 채팅창 아래로 snap (value=0)
-    final target = v.abs() > _snapVelocityThreshold
-        ? (v < 0 ? 1.0 : 0.0)
-        : (_expand.value > 0.5 ? 1.0 : 0.0);
-    _expand.animateTo(target, curve: Curves.easeOutCubic);
+    // 빠른 플릭만 방향대로 끝까지 snap. 천천히 놓으면 그 위치에 그대로 멈춤(중간 정지 가능).
+    if (v.abs() > _snapVelocityThreshold) {
+      _expand.animateTo(v < 0 ? 1.0 : 0.0, curve: Curves.easeOutCubic);
+    }
   }
 
   void _onHandleTap() {
@@ -152,9 +150,6 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
 
   @override
   Widget build(BuildContext context) {
-    final moment =
-        ref.watch(characterMomentControllerProvider(widget.idolId));
-
     // PR-F — 백엔드 state 변경 시 flame character sprite 동기.
     // 트리거 경로: 탭 / PR-2 디버그 메뉴 / cron / AI(v2) 모두 동일하게 흘러옴.
     ref.listen(characterStateControllerProvider(widget.idolId), (prev, next) {
@@ -166,9 +161,21 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
       });
     });
 
+    // 채팅 카드(MessageList 포함)는 _expand 애니메이션·드래그 중 재빌드되면 안 됨
+    // (이미지 리로드·깜빡임 방지). AnimatedBuilder의 child로 고정 → 위치(top)만 갱신.
+    final chatCard = _ChatCard(
+      idolId: widget.idolId,
+      isDragging: _isDragging,
+      onDragStart: _onDragStart,
+      onDragUpdate: _onDragUpdate,
+      onDragEnd: _onDragEnd,
+      onHandleTap: _onHandleTap,
+    );
+
     return AnimatedBuilder(
       animation: _expand,
-      builder: (context, _) {
+      child: chatCard,
+      builder: (context, child) {
         final screenH = MediaQuery.of(context).size.height;
         final chatTop = _chatTopFor(screenH, _expand.value);
         return Stack(
@@ -180,30 +187,30 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
             Positioned.fill(
               child: GameWidget(game: _game),
             ),
-            // Layer 2: 채팅창 — top만 동적, bottom=0. 반투명 + blur.
+            // Layer 2: 채팅창 — top만 동적, bottom=0. child로 고정돼 재빌드 안 됨.
             Positioned(
               top: chatTop,
               left: 0,
               right: 0,
               bottom: 0,
-              child: _ChatCard(
-                idolId: widget.idolId,
-                isDragging: _isDragging,
-                onDragStart: _onDragStart,
-                onDragUpdate: _onDragUpdate,
-                onDragEnd: _onDragEnd,
-                onHandleTap: _onHandleTap,
-              ),
+              child: child!,
             ),
-            // Layer 3 (F-044): 모먼트 카드 — 채팅창 top 위에 floating, IgnorePointer.
-            // chatTop이 변하면 함께 움직임. moment=null이면 SizedBox.shrink로 영향 0.
+            // Layer 3 (F-044): 모먼트 카드 — 별도 Consumer로 구독해 moment 변화가
+            // MessageList를 재빌드하지 않게 격리. chatTop 따라 함께 이동.
             Positioned(
               left: 0,
               right: 0,
               top: chatTop - _momentCardLift,
               child: Align(
                 alignment: Alignment.bottomCenter,
-                child: MomentCard(moment: moment),
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final moment = ref.watch(
+                      characterMomentControllerProvider(widget.idolId),
+                    );
+                    return MomentCard(moment: moment);
+                  },
+                ),
               ),
             ),
           ],
