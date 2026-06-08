@@ -12,6 +12,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/painting.dart';
 
 import 'character_component.dart';
+import 'encore_character_game.dart';
 
 /// 방 배경 PNG 원본 사이즈 (853×1844, 9:19).
 /// logical viewport(480×800)에 cover-fit으로 폭 480 맞추고 높이는 비율 유지.
@@ -25,8 +26,9 @@ const double _bgAspect = 1844 / 853;
 const double _characterWidth = 300;
 const double _characterFootY = 350;
 
-class RoomWorld extends World with HasGameReference {
-  /// 외부(PR-F)에서 setAction(...) 호출 가능. PR-D는 등장만, 액션 트리거는 PR-F.
+class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
+  /// 외부(RoomCanvas)에서 character.setAction(...) 호출 가능.
+  /// PR-F: characterStateController 변화 → ref.listen → character.setAction.
   late final CharacterComponent character;
 
   @override
@@ -49,6 +51,8 @@ class RoomWorld extends World with HasGameReference {
       targetWidth: _characterWidth,
       anchor: Anchor.bottomCenter,
       position: Vector2(0, _characterFootY),
+      // PR-F: 게임 생성 시 주입된 callback 전달. 탭 → 모먼트 + 백엔드 + haptic은 RoomCanvas 책임.
+      onTap: game.onCharacterTap,
     );
     add(character);
   }
