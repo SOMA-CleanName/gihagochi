@@ -1,197 +1,158 @@
-# F-039 / F-040 / F-042 / F-043 / F-044 character — 방 + 캐릭터 + 상태 + 행동 + 모먼트
+# F-039 ~ F-044 character (flame 기반) — 방 + 캐릭터 + 상호작용
 
-> 작업 단위 #13 character.
-> 현재 적용: PR-1 (F-039 방 배경, F-040 정적 캐릭터),
->           PR-4 (F-044 모먼트 카드 + 탭 반응),
->           PR-2 (F-042 상태 DB + F-043 행동 IF — backend 연동 완료, 탭 → POST /character/{idol}/actions).
-> 후속: PR-3 (F-041 애니, Flutter implicit 기반).
-> v2 분리: F-045/046/047/048.
+> 작업 단위 #13 character. **flame 게임엔진 기반** (2026-06-04 v2 결정).
+> 진리원: [`feature-specs/character.md`](../../../../feature-specs/character.md) v2 — 의사결정/매트릭스/PR 분할.
+> 본 SPEC.md = mobile 슬라이스 **확정 계약**.
 
-## 백엔드 연동 (PR-2)
+## 현재 적용
 
-- `data/character_repository.dart`: `fetchState(idolId)`, `triggerAction(idolId, action)` — 백엔드 GET/POST 호출.
-- `application/character_state_controller.dart`: `characterStateControllerProvider(idolId)` — Riverpod AsyncNotifier family.
-  - `build`: `fetchState` (row 없으면 default idle 응답)
-  - `trigger(action)`: `triggerAction` 호출 후 `state = AsyncData(next)` 즉시 갱신
-- `presentation/widgets/character_placeholder.dart`: state.currentAction 기반 PNG 표시 + 탭 시 다음 순환 액션 백엔드 POST.
+- **PR-B/C/D/E/F/G1/I-part1/H**: flame Game + RoomWorld + CharacterComponent + 호흡 + 랜덤 액션 + 탭 + 드래그 + 풀스크린 전환 + 가구 placeholder
 
-## 호흡 애니메이션 (PR-3, F-041)
-
-Flutter implicit animation 만 사용 (Rive/flame 의존성 없음).
-
-- **호흡 scale**: ±1.8% (`_breatheAmplitude`), `Curves.easeInOut`, 무한 왕복.
-- **액션별 duration** — `_breatheDurationFor(action)`:
-  - sleep: 4.2s (천천히)
-  - eat: 3.4s
-  - sing: 2.2s (빠르게)
-  - 그 외: 2.8s
-- **액션 전환 fade**: `AnimatedSwitcher` 280ms (`switchInCurve: easeOut`, `switchOutCurve: easeIn`).
-- 탭 sparkle scale (±6%, 420ms one-shot)과 곱셈 합성 — 호흡 중에도 탭 부풀림 자연스럽게.
-
-## 개요
-
-채팅방 진입 시 풀스크린 "아이돌의 방" 배경 + 그 안에 정적 캐릭터 PNG가 서있고,
-하단에 반투명 채팅 카드(메시지 list + 입력창)가 떠있는 다마고치형 레이아웃.
-
-본 PR은 **정적**이라 DB·애니메이션·의존성 0. PR-2/3/4를 위한 슬롯 위치를 잡는다.
-
----
-
-## 의존 화면 / 데이터
-
-- **진입 경로**: chat_room의 `/chat/:idolId` → `chatRoomCharacterSlotProvider` override로
-  본 슬라이스 `RoomCanvas` 렌더링.
-- **읽기**: 없음 (정적). 추후 PR-2에서 `character_states` 읽기 추가 예정.
-- **쓰기**: 없음.
-- **에셋**: 1차는 폴백 (도트 그라데이션 방 + 캐릭터 자리 placeholder).
-  실제 PNG는 디자이너 영역 (§8.1 후속).
-
----
-
-## 의존 (core / 다른 피처)
-
-- `core.theme.*` — 디자인 시스템 토큰
-- `chat_room/application/slot_providers.dart` — `chatRoomCharacterSlotProvider`
-  family Provider override 대상
-- `chat_message/presentation/{message_list, message_input}.dart` —
-  하단 채팅 카드 안에 다시 사용 (chat_room 슬롯 우회, 직접 import)
-
----
-
-## 레이아웃 (F-040 명세 반영)
+## 폴더 구조
 
 ```
-[Scaffold body]
- ┌─────────────────────────────────────────┐
- │   RoomCanvas (Stack, fill)              │
- │     - Layer 1: 방 배경 (그라데이션 + grid)│
- │     - Layer 2: 캐릭터 PNG (정적, center)│
- │     - Layer 3: 하단 반투명 채팅 카드     │
- │         ┌─────────────────────────────┐ │
- │         │ MessageList (스크롤)         │ │
- │         │ MessageInput                │ │
- │         └─────────────────────────────┘ │
- │           (높이 ~55%, glass effect)     │
- └─────────────────────────────────────────┘
+mobile/lib/features/character/
+├── domain/
+│   ├── character_action.dart        # CharacterActionType enum (idle/happy/sad/sing/eat/sleep)
+│   ├── character_state.dart         # CharacterState (current_action + hunger/happiness/energy)
+│   └── character_moment.dart        # CharacterMoment + CharacterMomentKind (gift/tap/feed/praise)
+├── data/
+│   └── character_repository.dart    # fetchState(idolId) / triggerAction(idolId, action)
+├── application/
+│   ├── character_state_controller.dart   # Riverpod AsyncNotifier.family
+│   └── character_moment_controller.dart  # 5s timer
+├── presentation/
+│   ├── room_canvas.dart             # chat_room slot — Stack[GameWidget, ChatCard, MomentCard]
+│   └── widgets/moment_card.dart     # F-044 카드 (gift/tap/feed/praise UI)
+├── game/                            # ★ flame 영역
+│   ├── encore_character_game.dart   # EncoreCharacterGame extends FlameGame
+│   ├── room_world.dart              # RoomWorld extends World
+│   ├── character_component.dart     # CharacterComponent extends SpriteComponent
+│   └── furniture_component.dart     # FurnitureComponent extends RectangleComponent (placeholder)
+└── integration/
+    └── action_debug_menu.dart       # chatRoomMenuActionsProvider 슬롯 (디버그)
 ```
 
-이전 PR #96의 드래그 핸들 패턴은 **폐기** — F-040 명세는 오버레이 패턴.
-chat_room_screen은 character 슬롯에 풀스크린 위임 + 자체 Column[char, list, input] 제거.
+## 디스플레이 정책
 
----
+| 항목 | 값 |
+|---|---|
+| flame logical canvas | **480×800** (3:5, 도트 게임 저해상도) |
+| filterQuality | `FilterQuality.none` (도트 보존) |
+| Camera | `CameraComponent.withFixedResolution(480, 800)` |
+| 게임 배경색 | `#1A0F2E` (방 PNG 로딩 전 + letterbox 대비) |
+| 캐릭터 width | 300 logical px (viewport의 62.5%) |
+| 캐릭터 anchor | `Anchor.bottomCenter` |
+| 캐릭터 발 위치 | viewport `(0, 350)` |
+| 호흡 amplitude | 2 logical px (Y sine wave) |
+| 가구 임계 거리 | 100 logical px |
 
-## 비즈니스 룰
-
-1. **F-039 방 배경**: `assets/character/room_background.png` (862×1825, 9:19) BoxFit.cover + FilterQuality.none.
-2. **F-040 정적 캐릭터**: `assets/character/character_*.png` 6종 (852×1846 공통, sad만 941×1672).
-   - 표시 폭 = 화면 폭의 50% (`characterWidthRatio`), 높이 = `width × 1846/852` (`_characterCanvasAspect`).
-   - sad는 BoxFit.contain으로 SizedBox 안에서 자동 비율 유지 — 약간 작게 보이는 게 정상.
-   - `filterQuality: FilterQuality.none` (픽셀 아트 nearest neighbor).
-   - 6종: idle / happy / sad / sing / eat / sleep — `CharacterActionType` enum과 매핑 (PR-2 백엔드 enum과 동일 이름).
-   - 데모 토글: 캐릭터 탭 시 6종 순환 (PR-2에서 백엔드 상태 도입 시 제거 예정).
-3. **채팅 카드**: 하단 ~55% 영역 반투명 (alpha 0.55) + blur 28. 카드 안에 message_list + input 그대로.
-4. **본인 = idolId (아이돌 자기 채팅방)** : 동일 레이아웃. F-043 트리거 버튼은 PR-2에서.
-
----
-
-## 엣지 케이스
-
-- 키보드 열림 → 채팅 카드가 viewInsets.bottom만큼 위로. 캐릭터/방은 영향 X (Stack).
-- 작은 디바이스 (높이 < 600) → 채팅 카드 height 비율 자동 ↑ (60~65%).
-- 에셋 미수급 → 폴백 시각으로 동일 레이아웃 유지.
-
----
-
-## 공개 인터페이스
+## flame 영역 공개 인터페이스
 
 ```dart
-// presentation/room_canvas.dart
-class RoomCanvas extends ConsumerWidget {
-  const RoomCanvas({super.key, required this.idolId});
-  final String idolId;
+// game/encore_character_game.dart
+class EncoreCharacterGame extends FlameGame {
+  EncoreCharacterGame({VoidCallback? onCharacterTap});
+  final VoidCallback? onCharacterTap;  // 탭 → 외부에서 모먼트 + 백엔드 처리
 }
-// chat_room의 chatRoomCharacterSlotProvider가 본 위젯으로 override.
-// chat_room_screen에선 body 전체를 char slot에 위임.
 
-// integration/character_moment_trigger.dart — PR-4 공개 IF
-/// 다른 피처(gift, chat_message 등)가 캐릭터 모먼트를 트리거할 때 호출.
-/// 예: gift sheet close 후 chat_message에서 호출 → 캐릭터 위 카드 5s 표시.
-void triggerCharacterMoment(WidgetRef ref, {
-  required String idolId,
-  required CharacterMomentKind kind, // gift | tap | feed | praise
-  String? message,
-});
+// game/room_world.dart — game.world로 접근
+class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
+  late final CharacterComponent character;  // setAction(...) 호출 진입점
+}
 
-// domain/character_moment.dart
-enum CharacterMomentKind { gift, tap, feed, praise }
-
-// routes.dart
-List<RouteBase> get characterRoutes; // 빈 리스트 (오버레이 패턴, 라우트 없음)
+// game/character_component.dart
+class CharacterComponent extends SpriteComponent with TapCallbacks, DragCallbacks {
+  CharacterComponent({required double targetWidth, VoidCallback? onTap, ...});
+  CharacterActionType get currentAction;
+  void setAction(CharacterActionType next);  // sprite + size 동기 교체
+}
 ```
 
----
+## 백엔드 연동 (F-042 / F-043)
 
-## PR-4 추가 (F-044) — 캐릭터 모먼트 카드 + 탭 반응
+- `data/character_repository.dart`: `fetchState(idolId)` / `triggerAction(idolId, action)` — 백엔드 GET/POST.
+- `application/character_state_controller.dart`: Riverpod AsyncNotifier.family.
+  - `build`: `fetchState` (row 없으면 default idle 응답)
+  - `trigger(action)`: POST → 응답 즉시 `state = AsyncData(next)`.
 
-### 범위
+### state ↔ flame 동기
 
-DB·의존성·마이그레이션 0. character 슬라이스 단독 변경.
+`presentation/room_canvas.dart`에서 `ref.listen`:
+- `characterStateControllerProvider(idolId)` 변화 → `world.character.setAction(state.currentAction)`
+- 트리거 경로 통합: **탭** / **디버그 메뉴** / **cron** / **AI(v2)** 모두 같은 path.
 
-1. **MomentCard** — 캐릭터 위쪽(채팅 카드 top 바로 위)에 떠있는 작은 glass 카드.
-   - slide-in 200ms → 5s 표시 → fade-out 250ms → dispose
-   - kind별 아이콘/색: gift=🎁 tertiary, tap=✨ secondary, feed=🍙 primary, praise=💜 primary
-   - 메시지 옵션: "고마워!", "함께해서 행복해" 등 (kind별 기본값 + override 가능)
+## 호흡 + 랜덤 액션 (F-041, flame)
 
-2. **캐릭터 탭 반응** — `CharacterPlaceholder` 탭 시:
-   - 즉시 sparkle scale 애니메이션 (자기 위)
-   - moment controller에 `CharacterMomentKind.tap` dispatch → MomentCard 표시
-   - haptic feedback (HapticFeedback.lightImpact)
+- **호흡**: `update(dt)` 안에서 `position.y = baseY + sin(elapsed * 2π / period) * 2`.
+- **액션별 주기** (`_breatheMs`):
+  - sleep 4.2s / eat 3.4s / sing 2.2s / 그 외 2.8s
+- **랜덤 액션 스케줄러**: 5~12s 사이 랜덤 간격.
+  - idle 50% + 나머지 5종 동등 분포 (각 10%).
+- **드래그 중 호흡 + 랜덤 액션 일시정지** (`_isDragging`).
 
-3. **공개 인터페이스** — `triggerCharacterMoment(...)` export.
-   - gift 슬라이스 직접 호출 X (gift는 character 모름). chat_message 또는 후속 PR에서 호출.
-   - 본 PR은 인터페이스만 export. 외부 호출자 변경 0.
+## 인터랙션
 
-### 비즈니스 룰
+### 탭 (PR-F)
+- `CharacterComponent.onTapDown` → `onTap?.call()` → `EncoreCharacterGame.onCharacterTap` → `RoomCanvas._handleCharacterTap`:
+  1. `HapticFeedback.lightImpact()`
+  2. `characterMomentControllerProvider(idolId).show(CharacterMomentKind.tap)`
+  3. `characterStateControllerProvider(idolId).trigger(CharacterActionType.happy)` (백엔드)
+- 백엔드 응답 → `ref.listen` → `character.setAction(happy)`.
 
-- 동일 idolId 재트리거 시 기존 moment 즉시 dispose + 새 moment 시작 (queue 안 함).
-- moment 표시 중에도 채팅 입력/스크롤 정상 (pointer events 통과 영역).
-- 캐릭터 탭 디바운스 500ms (sparkle 중 재탭 무시).
+### 드래그 (PR-G1)
+- `DragCallbacks.onDragUpdate` → `position += event.localDelta`.
+- 드래그 종료 → `_baseY = position.y` (새 위치에서 호흡 재개).
+- 백엔드 위치 저장(PR-G2)은 마이그레이션 영역 별도 PR (미진행).
 
-### 엣지 케이스
+### 가구 근접 (PR-H placeholder)
+- `RoomWorld.update`에서 매 frame `character.position ↔ 각 가구 position` 거리 측정.
+- 임계 100 logical px 안 → 가장 가까운 가구의 `actionWhenNear` 트리거.
+- **백엔드 우회**: 환경 트리거라 백엔드 저장 안 함.
+- 매핑: bed → sleep / desk → eat / chair → sing.
 
-- 채팅창 풀로 올림(value=1) → MomentCard 가려질 수 있음. card는 채팅 카드 top 기준으로 위치하니 따라 올라감 (Stack 안 Positioned with chatTop offset).
-- 위젯 dispose 중 timer fire → safe (mounted 체크).
-- 같은 kind 연속 → 카드 reset 후 재시작 (시각적으로 깜빡임 OK).
+## F-044 모먼트 카드 (Flutter)
 
-### 수동 테스트 시나리오
+- `presentation/room_canvas.dart` Layer 3에 `MomentCard` (Positioned, chatTop 위).
+- 5s 타이머 + 4 kind (gift / tap / feed / praise) UI.
+- 트리거: 탭 callback / 외부 (gift 슬라이스 등) 향후 확장.
 
-1. 채팅방 진입 → 캐릭터 탭 → sparkle + MomentCard ("반가워" tap kind) 5s 표시
-2. 5s 내 다시 탭 → 카드 즉시 reset + 재시작
-3. 채팅창 위로 드래그 → 카드도 따라 위로
-4. 카드 표시 중 메시지 입력 → 정상 동작 (카드 위 텍스트 펜딩 X)
-5. 디바이스 회전 (있다면) → 카드 위치 자연스럽게 재계산
+## 의존 (다른 슬라이스)
 
-### 메인 빌더 영역 변경 (PR-4)
+- `core/theme/*` — 디자인 시스템.
+- `chat_room/application/slot_providers.dart` — `chatRoomCharacterSlotProvider` override 대상.
+- `chat_message/presentation/{message_list, message_input}.dart` — RoomCanvas Layer 2 ChatCard 안.
+- `chat_room/application/chatRoomMenuActionsProvider` — 디버그 액션 메뉴 슬롯.
 
-- 없음. character 슬라이스 단독.
+## 자산
 
----
+- `mobile/assets/character/`:
+  - `room_background.png` (853×1844) — 방 배경
+  - `character_{idle,happy,sad,sing,eat,sleep}.png` — 액션 6종
+    - sad만 941×1672 (다른 비율) — `CharacterComponent._aspect`에서 액션별 height 자동 계산
+  - 부품 PNG는 Avatar Forge v1 폐기로 제거됨 (PR-I-part1 이전 정리).
 
-## 수동 테스트 시나리오 (PR 첨부)
+## 정책 결정 사항 (자체 결정, 검증 후 조정 가능)
 
-1. 팬으로 채팅방 진입 → 풀스크린 방 배경 + 캐릭터 placeholder + 하단 반투명 채팅 카드
-2. 메시지 입력/전송 동작 정상 (chat_message 슬롯 그대로)
-3. 키보드 열기 → 채팅 카드만 위로, 캐릭터/방은 유지
-4. 아이돌 본인 채팅방 진입 → 동일 레이아웃 (트리거 UI는 PR-2)
-5. 캐릭터/방 에셋 0인 상태에서 폴백 시각 정상
+| 항목 | 값 | 비고 |
+|---|---|---|
+| 호흡 amplitude | 2px | anchor=bottomCenter라 발 흔들림 — 미세하게 |
+| 랜덤 액션 idle 가중치 | 50% | 안정성/변화 균형 |
+| 랜덤 액션 간격 | 5~12s | 너무 자주/드물지 않게 |
+| 탭 액션 | happy | 긍정 반응 |
+| 가구 임계 거리 | 100px | viewport 480의 17% |
+| 가구 → 액션 매핑 | bed:sleep / desk:eat / chair:sing | 자체 결정 |
 
-기대 결과: 정적 레이아웃 완성, chat_message/input 종단 동작.
+## 후속 PR (계획)
 
----
+- **PR-G2** (메인 빌더 영역): 백엔드 위치 저장 — `character_states` ADD COLUMN position_x/y
+- **v2 PR-V2-A~F**: 시간대별/문맥별 자율 행동, LLM 트리거, Scenario 메이커, 가구 본격, 누적 성장 등
+- **v3**: Rive 정밀 모션, AI 행동 트리, LLM 인터프리터
 
-## 메인 빌더 영역 변경 (본 PR 동봉)
+## Open Questions
 
-- `mobile/lib/main.dart`: `chatRoomCharacterSlotProvider.overrideWith((ref, idolId) => RoomCanvas(idolId: idolId))` 1줄 추가
-- `mobile/lib/features/chat_room/presentation/chat_room_screen.dart`: 본문 Column[char, list, input] → 슬롯에 풀스크린 위임 (RoomCanvas가 채팅 카드 자체 포함)
-
-> chat_room owner = 본인이므로 직접 수정 OK (다른 owner 영역 아님).
+- flame_riverpod 도입 시점 — callback 패턴 한계 도달 시
+- 가구 PNG 정합성 — 방 배경 PNG와 anchor 좌표 매칭 (Scenario PoC 결과 의존)
+- 캐릭터 발 위치 (y=350) 검증 — 방 바닥 라인과 맞는지
+- GameWidget 영역 letterbox — viewport 3:5 vs 화면 비율 차이
+- 가구 setAction 직접 호출 vs 백엔드 trigger — 환경 트리거 정책 v2에서 결정
