@@ -245,9 +245,8 @@ class _ChatCard extends StatelessWidget {
         filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            // PR-N: 솔리드 — 채팅창 영역 뒤 GameWidget 안 비치게.
-            // 최저점 라인 아래는 채팅바만 보이고, 위로 올라간 영역은 캐릭터 가림 (의도).
-            color: AppColors.surface,
+            // 극도로 투명 + blur — 뒤 방 배경/캐릭터가 거의 그대로 비침 (character.md v2 영역 1).
+            color: AppColors.surface.withValues(alpha: 0.1),
             border: Border(
               top: BorderSide(
                 color: AppColors.primary.withValues(alpha: 0.3),
@@ -266,7 +265,22 @@ class _ChatCard extends StatelessWidget {
                 onTap: onHandleTap,
               ),
               Expanded(child: MessageList(idolId: idolId)),
-              MessageInput(idolId: idolId),
+              // 입력란 배경을 화면 바닥(네브바/홈 인디케이터 영역 포함)까지 솔리드로 확장.
+              // MessageInput 내부 SafeArea(bottom)를 removePadding으로 무력화하고,
+              // 동일 inset을 직접 padding으로 줘 컨텐츠는 네브바 위, 배경은 바닥까지.
+              ColoredBox(
+                color: AppColors.surface,
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeBottom: true,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.paddingOf(context).bottom,
+                    ),
+                    child: MessageInput(idolId: idolId),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

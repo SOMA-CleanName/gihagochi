@@ -27,7 +27,19 @@ const double _bgAspect = 1844 / 853;
 /// 캐릭터 발이 채팅창 라인 약간 위에 오게 _characterFootY=120.
 /// targetWidth 줄여서 머리가 viewport top 안 들어오게.
 const double _characterWidth = 220;
-const double _characterFootY = 120;
+
+/// 채팅창 최저선 = viewport 하단 60% ≈ y +80. 캐릭터 발 하한 = 여기(가장 앞·가장 큼).
+/// 초기 위치도 여기로 두어 원근 origin(maxScale)과 일치. 채팅창선 정합은 실기 확인 후 조정.
+const double _characterFootY = 80;
+
+/// 캐릭터 발(_groundX/Y)이 이동 가능한 경계 (logical world 좌표, 원점=화면 중앙).
+/// 맵이 한정적이라 이 범위 밖으로 못 나감. 실기기 확인 후 조정.
+/// - X: 좌우 ±130 (viewport ±240 안, 머리·몸 화면 밖 안 나가게)
+/// - minY = -140: 가장 뒤(작아짐) 한계. maxY(80) − minY = 220 = 원근 range와 정합 → 여기서 minScale.
+/// - maxY = 80: 가장 앞 한계 = 채팅창 최저선. 발이 채팅창 위로 못 내려감.
+const double _characterMoveX = 130;
+const double _characterMinFootY = -140;
+const double _characterMaxFootY = 80;
 
 /// PR-H / PR-M — 가구 ↔ 캐릭터 상호작용 임계 거리 (logical px).
 /// 캐릭터 사이즈 줄어서 임계도 조정. viewport 480의 ~27%.
@@ -65,26 +77,28 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
     // PR-H/M placeholder — 색 사각형 가구 3개.
     // 위치는 viewport(±240, ±400) logical 좌표. 방 배경 PNG의 실제 가구 위치와 정합성은 v2 PNG 교체 시 조정.
     // PR-M: 캐릭터 사이즈/위치 조정에 맞춰 가구도 비례 재배치.
+    // 가구는 채팅창(viewport 하단 60%, y≳+80) 위쪽 영역에 배치.
+    // 캐릭터 이동 범위(footY -100~170)와 겹쳐 위치 기반 상호작용 가능.
     _furniture.addAll([
       FurnitureComponent(
         kind: FurnitureKind.bed,
         actionWhenNear: CharacterActionType.sleep,
         size: Vector2(170, 80),
-        position: Vector2(-150, 240),
+        position: Vector2(-120, -20),
         anchor: Anchor.center,
       ),
       FurnitureComponent(
         kind: FurnitureKind.desk,
         actionWhenNear: CharacterActionType.eat,
         size: Vector2(150, 70),
-        position: Vector2(160, 240),
+        position: Vector2(125, -20),
         anchor: Anchor.center,
       ),
       FurnitureComponent(
         kind: FurnitureKind.chair,
         actionWhenNear: CharacterActionType.sing,
         size: Vector2(80, 80),
-        position: Vector2(170, 60),
+        position: Vector2(140, 70),
         anchor: Anchor.center,
       ),
     ]);
@@ -96,6 +110,8 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
       targetWidth: _characterWidth,
       anchor: Anchor.bottomCenter,
       position: Vector2(0, _characterFootY),
+      minGround: Vector2(-_characterMoveX, _characterMinFootY),
+      maxGround: Vector2(_characterMoveX, _characterMaxFootY),
       // PR-F: 게임 생성 시 주입된 callback 전달. 탭 → 모먼트 + 백엔드 + haptic은 RoomCanvas 책임.
       onTap: game.onCharacterTap,
     );
@@ -114,7 +130,7 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
   void _checkFurnitureProximity() {
     if (_furniture.isEmpty) return;
 
-    final pos = character.position;
+    final pos = character.groundPosition;
     FurnitureComponent? nearest;
     double minDist = double.infinity;
     for (final f in _furniture) {
