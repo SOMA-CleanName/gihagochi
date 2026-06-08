@@ -1,4 +1,4 @@
-# backend/ — gihagochi 백엔드
+# backend/ — 앙코르 (encore) 백엔드
 
 FastAPI + SQLAlchemy 2 async + Alembic + Supabase.
 **Phase 2 완료 상태** — 하네스 (`core/`, `shared/`, `_template/`, `main.py`) + 테스트 + Docker/Railway 설정 배치됨.
