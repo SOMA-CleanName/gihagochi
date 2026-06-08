@@ -31,7 +31,7 @@
 ## 디렉토리 지형
 
 ```
-gihagochi/
+encore/
 ├── backend/app/
 │   ├── core/         # 메인 빌더만. 호출은 OK, 수정 X.
 │   ├── shared/       # 동일.
