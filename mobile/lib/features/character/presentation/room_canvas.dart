@@ -29,9 +29,7 @@ import '../domain/character_action.dart';
 import '../domain/character_moment.dart';
 import '../game/encore_character_game.dart';
 import '../game/room_world.dart';
-import 'widgets/character_placeholder.dart';
 import 'widgets/moment_card.dart';
-import 'widgets/room_background.dart';
 
 // ── 드래그 범위 상수 (조정 가능) ──────────────────
 /// 채팅창 최대로 올렸을 때 — 화면 상단에서 이 비율 위치까지 올라감.
@@ -176,11 +174,9 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
         return Stack(
           fit: StackFit.expand,
           children: [
-            // Layer 1: 방 배경 — 풀스크린, 자르지 않음, 어떤 상태에서도 검정 X.
-            const RoomBackground(),
-            // Layer 2: 정적 캐릭터 — 위치/크기 고정 (채팅창 드래그와 무관).
-            // 캐릭터 발은 항상 chatTopMaxRatio 라인(화면 60%) 바로 위.
-            // 채팅창이 그보다 위로 올라오면 캐릭터를 위쪽부터 가림 — 의도된 동작.
+            // Layer 1: flame GameWidget — 방 배경 + 캐릭터 풀스크린 (캐릭터 영역만).
+            // 화면 상단 ~ chatTopMaxRatio(60%) 영역. 채팅창이 위로 올라오면 일부 가려짐 (의도).
+            // PR-I-part1: 기존 Flutter RoomBackground / CharacterPlaceholder + Layer 5 작은 박스 폐기.
             Positioned(
               top: 0,
               left: 0,
@@ -188,10 +184,10 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
               bottom: screenH * (1 - chatTopMaxRatio),
               child: SafeArea(
                 bottom: false,
-                child: CharacterPlaceholder(idolId: widget.idolId),
+                child: GameWidget(game: _game),
               ),
             ),
-            // Layer 3: 채팅창 — top만 동적, bottom=0. 반투명 + blur.
+            // Layer 2: 채팅창 — top만 동적, bottom=0. 반투명 + blur.
             Positioned(
               top: chatTop,
               left: 0,
@@ -206,7 +202,7 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
                 onHandleTap: _onHandleTap,
               ),
             ),
-            // Layer 4 (F-044): 모먼트 카드 — 채팅창 top 위에 floating, IgnorePointer.
+            // Layer 3 (F-044): 모먼트 카드 — 채팅창 top 위에 floating, IgnorePointer.
             // chatTop이 변하면 함께 움직임. moment=null이면 SizedBox.shrink로 영향 0.
             Positioned(
               left: 0,
@@ -215,26 +211,6 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: MomentCard(moment: moment),
-              ),
-            ),
-            // Layer 5 (PR-B 시범): flame GameWidget — 우상단 작은 박스.
-            // PR-B(빈 게임) 임베드 동작 검증용. PR-D에서 캐릭터 Component 추가,
-            // PR-I에서 RoomCanvas 자체를 GameWidget 기반으로 전환 시 본 layer는 폐기.
-            Positioned(
-              top: 0,
-              right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 60, right: 12),
-                  child: SizedBox(
-                    width: 100,
-                    height: 150,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: GameWidget(game: _game),
-                    ),
-                  ),
-                ),
               ),
             ),
           ],
