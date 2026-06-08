@@ -1,18 +1,13 @@
-/// PR-D — CharacterComponent (Sprite + 액션 PNG 6종 swap).
+/// PR-D/E — CharacterComponent (Sprite + 액션 swap + 호흡 + 랜덤 액션).
 ///
-/// `feature-specs/character.md` v2 "PR-D" 범위.
-/// 호흡 / 인터랙션 / 백엔드 연동은 PR-E~F.
+/// `feature-specs/character.md` v2:
+/// - PR-D: 액션 PNG 6종 sprite swap 메커니즘
+/// - PR-E: 호흡 (Y sine wave) + 랜덤 액션 스케줄러
 ///
-/// PNG 사이즈 정책 (character.md PR-1 디자이너 영역):
-/// - idle/happy/sing/eat/sleep: 853×1846 (세로 비율 ~2.164)
-/// - sad: 941×1672 (세로 비율 ~1.777, 약간 정사각형에 가까움)
-/// → 액션별 PNG 비율로 height 자동 계산해 stretch 방지.
-///
-/// 디스플레이 정책:
-/// - targetWidth: 300 (logical viewport 480의 62.5%)
-/// - anchor: Anchor.bottomCenter (캐릭터 발 기준)
-/// - position: RoomWorld가 결정 (방 바닥 라인에 맞춤)
+/// 백엔드 state 연동은 PR-F. 본 컴포넌트는 setAction(...) 인터페이스만 제공.
 library;
+
+import 'dart:math';
 
 import 'package:flame/components.dart';
 import 'package:flutter/painting.dart';
@@ -30,8 +25,8 @@ class CharacterComponent extends SpriteComponent with HasGameReference {
   CharacterActionType _action = CharacterActionType.idle;
   final Map<CharacterActionType, Sprite> _sprites = {};
 
-  /// PNG 원본 비율 (height / width). 디자이너가 PNG 교체 시 갱신 필요.
-  /// sad만 다른 비율 — 같은 width로 stretch 시 늘어나는 문제 방지 (height 별도 계산).
+  /// PNG 원본 비율 (height / width). 디자이너가 PNG 교체 시 갱신.
+  /// sad만 다른 비율(941×1672) — 액션별 height 자동 계산해 stretch 방지.
   static const Map<CharacterActionType, double> _aspect = {
     CharacterActionType.idle: 1846 / 853,
     CharacterActionType.happy: 1846 / 853,
@@ -50,21 +45,91 @@ class CharacterComponent extends SpriteComponent with HasGameReference {
     CharacterActionType.sleep: 'character_sleep.png',
   };
 
+  // ── PR-E: 호흡 ─────────────────────────────────────────────
+  /// 호흡 진폭 (logical px). viewport 800의 0.25% — 발이 미세하게 위아래.
+  /// 기존 PR-3 implicit 호흡(scale ±1.8%)을 Y sine wave로 변환 (character.md v2 명시).
+  static const double _breatheAmplitude = 2;
+
+  /// 액션별 호흡 주기 (ms). 기존 PR-3 정책 그대로:
+  /// sleep 천천히, sing 빠르게, 그 외 보통.
+  static const Map<CharacterActionType, int> _breatheMs = {
+    CharacterActionType.idle: 2800,
+    CharacterActionType.happy: 2400,
+    CharacterActionType.sad: 3200,
+    CharacterActionType.sing: 2200,
+    CharacterActionType.eat: 3400,
+    CharacterActionType.sleep: 4200,
+  };
+
+  late final double _baseY;
+  double _elapsed = 0;
+
+  // ── PR-E: 랜덤 액션 스케줄러 ──────────────────────────────
+  /// 다음 랜덤 액션 발화 시각 (_elapsed 기준). 5~12s 사이 랜덤.
+  double _nextActionAt = 0;
+
+  /// idle 가중치 — 50%면 절반은 idle 유지, 안정적 분포.
+  static const double _idleProbability = 0.5;
+
+  /// 랜덤 액션 간격 (초). [_minDelay, _maxDelay] 사이.
+  static const double _minDelay = 5;
+  static const double _maxDelay = 12;
+
+  final Random _rng = Random();
+
   CharacterActionType get currentAction => _action;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
-    // 모든 액션 sprite 사전 로드 — swap 시 await 없이 즉시 교체.
     for (final action in CharacterActionType.values) {
       final img = await game.images.load(_file[action]!);
       _sprites[action] = Sprite(img);
     }
 
+    _baseY = position.y;
     _applyAction(_action);
-    // 도트 보존 — character.md v2 "filterQuality.none 전제".
     paint = Paint()..filterQuality = FilterQuality.none;
+    _scheduleNextAction();
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _elapsed += dt;
+
+    // 호흡 — Y sine wave (character.md v2 명시).
+    final periodSec = _breatheMs[_action]! / 1000;
+    final wave = sin(_elapsed * 2 * pi / periodSec);
+    position.y = _baseY + wave * _breatheAmplitude;
+
+    // 랜덤 액션 스케줄러.
+    if (_elapsed >= _nextActionAt) {
+      _triggerRandomAction();
+      _scheduleNextAction();
+    }
+  }
+
+  void _scheduleNextAction() {
+    final delay = _minDelay + _rng.nextDouble() * (_maxDelay - _minDelay);
+    _nextActionAt = _elapsed + delay;
+  }
+
+  void _triggerRandomAction() {
+    if (_rng.nextDouble() < _idleProbability) {
+      setAction(CharacterActionType.idle);
+      return;
+    }
+    // 나머지 5종 동등 분포 (현재 액션과 같아도 setAction이 early return).
+    const others = [
+      CharacterActionType.happy,
+      CharacterActionType.sad,
+      CharacterActionType.sing,
+      CharacterActionType.eat,
+      CharacterActionType.sleep,
+    ];
+    setAction(others[_rng.nextInt(others.length)]);
   }
 
   /// 액션 전환 — sprite + size 동기 갱신.
