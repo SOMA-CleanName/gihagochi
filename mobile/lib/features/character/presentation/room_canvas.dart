@@ -174,18 +174,11 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
         return Stack(
           fit: StackFit.expand,
           children: [
-            // Layer 1: flame GameWidget — 방 배경 + 캐릭터 풀스크린 (캐릭터 영역만).
-            // 화면 상단 ~ chatTopMaxRatio(60%) 영역. 채팅창이 위로 올라오면 일부 가려짐 (의도).
-            // PR-I-part1: 기존 Flutter RoomBackground / CharacterPlaceholder + Layer 5 작은 박스 폐기.
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: screenH * (1 - chatTopMaxRatio),
-              child: SafeArea(
-                bottom: false,
-                child: GameWidget(game: _game),
-              ),
+            // Layer 1: flame GameWidget — 방 + 캐릭터 화면 풀스크린.
+            // AppBar 뒤(extendBodyBehindAppBar) + 채팅창 영역까지 전체 채움.
+            // 채팅창은 반투명 overlay라 GameWidget 비침. character.md v2 영역 1 명세.
+            Positioned.fill(
+              child: GameWidget(game: _game),
             ),
             // Layer 2: 채팅창 — top만 동적, bottom=0. 반투명 + blur.
             Positioned(

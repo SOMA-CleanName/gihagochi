@@ -21,17 +21,17 @@ import 'furniture_component.dart';
 /// 결과 높이 = 480 × (1844 / 853) ≈ 1037 → viewport 800보다 큼 → 상하 잘림 (의도).
 const double _bgAspect = 1844 / 853;
 
-/// 캐릭터 디스플레이 정책 (PR-D 결정).
-/// targetWidth는 logical viewport 480의 62.5% — 방 안 인물로 적절한 비율.
-/// position.y는 viewport 하단(+400) 기준 50 위 = 발이 viewport y=350에 위치.
-/// 정확한 방 바닥 라인 매칭은 flutter run 검증 후 조정 (Open).
-const double _characterWidth = 300;
-const double _characterFootY = 350;
+/// 캐릭터 디스플레이 정책 (PR-D / PR-M ux polish 조정).
+/// 풀스크린 GameWidget(PR-M)이라 viewport 480×800이 화면 전체에 fit.
+/// 채팅창이 화면 60% bottom부터 시작 (chatTopMaxRatio) → viewport y=80 라인.
+/// 캐릭터 발이 채팅창 라인 약간 위에 오게 _characterFootY=120.
+/// targetWidth 줄여서 머리가 viewport top 안 들어오게.
+const double _characterWidth = 220;
+const double _characterFootY = 120;
 
-/// PR-H — 가구 ↔ 캐릭터 상호작용 임계 거리 (logical px).
-/// viewport 480의 ~17%. 가구 중심에서 본 거리.
-/// 자체 결정 — 시뮬 검증 후 조정 가능.
-const double _interactionDistance = 100;
+/// PR-H / PR-M — 가구 ↔ 캐릭터 상호작용 임계 거리 (logical px).
+/// 캐릭터 사이즈 줄어서 임계도 조정. viewport 480의 ~27%.
+const double _interactionDistance = 130;
 
 class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
   /// 외부(RoomCanvas)에서 character.setAction(...) 호출 가능.
@@ -57,31 +57,34 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
         position: Vector2.zero(),
         // 도트 아트 보존 — nearest neighbor.
         paint: Paint()..filterQuality = FilterQuality.none,
+        // 가장 아래 — 캐릭터 그림자(PR-M, priority -1)보다도 아래.
+        priority: -10,
       ),
     );
 
-    // PR-H placeholder — 색 사각형 가구 3개.
+    // PR-H/M placeholder — 색 사각형 가구 3개.
     // 위치는 viewport(±240, ±400) logical 좌표. 방 배경 PNG의 실제 가구 위치와 정합성은 v2 PNG 교체 시 조정.
+    // PR-M: 캐릭터 사이즈/위치 조정에 맞춰 가구도 비례 재배치.
     _furniture.addAll([
       FurnitureComponent(
         kind: FurnitureKind.bed,
         actionWhenNear: CharacterActionType.sleep,
-        size: Vector2(140, 70),
-        position: Vector2(-140, 280),
+        size: Vector2(170, 80),
+        position: Vector2(-150, 240),
         anchor: Anchor.center,
       ),
       FurnitureComponent(
         kind: FurnitureKind.desk,
         actionWhenNear: CharacterActionType.eat,
-        size: Vector2(120, 60),
-        position: Vector2(160, 280),
+        size: Vector2(150, 70),
+        position: Vector2(160, 240),
         anchor: Anchor.center,
       ),
       FurnitureComponent(
         kind: FurnitureKind.chair,
         actionWhenNear: CharacterActionType.sing,
-        size: Vector2(60, 60),
-        position: Vector2(160, 180),
+        size: Vector2(80, 80),
+        position: Vector2(170, 60),
         anchor: Anchor.center,
       ),
     ]);
