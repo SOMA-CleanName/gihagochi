@@ -95,10 +95,14 @@ class CharacterComponent extends SpriteComponent
   /// 그림자 컴포넌트 — drag 시작 시 parent에 add, drag 끝 + 안착 후 remove.
   late final CircleComponent _shadow;
 
-  /// PR-N — 그림자 y 보정. 캐릭터 PNG 안 실제 발 위치가 PNG bottom(anchor)보다
-  /// 약간 위에 있어서 그림자가 너무 아래로 빠짐 → 위로 끌어올림.
-  /// 양수 = 위로 (logical px). 검증 후 미세 조정.
-  static const double _shadowFootOffset = -16;
+  /// PR-N/O — 그림자 y 보정. PNG 안 실제 발이 PNG bottom(anchor)보다 위에 있는 비율.
+  /// size.y의 이 비율만큼 그림자가 anchor에서 위로. 액션마다 PNG height 다른데 비율로 대응.
+  /// 자체 추정 0.06 (캐릭터 height 476 logical 기준 ~28px). 검증 후 조정.
+  static const double _shadowFootRatio = 0.06;
+
+  /// 현재 size 기준 그림자 y offset (음수 = 위로).
+  /// 원근법 scale 적용된 size 기준이라 캐릭터 작아져도 비율 유지.
+  double get _shadowYOffset => -size.y * _shadowFootRatio;
 
   // ── PR-N: 원근법 ────────────────────────────────────────────
   /// 가장 앞쪽(max scale) 기준 y. onLoad에서 초기 발 위치로 init.
@@ -234,31 +238,33 @@ class CharacterComponent extends SpriteComponent
     onTap?.call();
   }
 
-  // ── PR-G1/M/N: 드래그 + 들림/그림자/안착/원근법 ──────────
+  // ── PR-G1/M/N/O: 드래그 + 들림/그림자/안착/원근법 ────────
+  /// 그림자가 캐릭터 시각적 발 위치에 그려지도록 매 frame 갱신.
+  /// drag 중에는 들린 캐릭터 따라 + 시각적 발 보정.
+  /// settle 중에도 그림자는 처음 표시된 자리 그대로 (캐릭터가 그쪽으로 떨어짐).
+  void _updateShadowPosition() {
+    _shadow.position = Vector2(
+      position.x,
+      position.y + _liftOffset + _shadowYOffset,
+    );
+  }
+
   @override
   void onDragStart(DragStartEvent event) {
     super.onDragStart(event);
     _isDragging = true;
 
     // PR-M — 들림 효과 + 그림자 표시.
-    // 그림자는 캐릭터 실제 발 위치 = position.y + _liftOffset + _shadowFootOffset (PR-N PNG 보정).
     _liftOffset = _liftHeight;
     position.y -= _liftHeight;
-    _shadow.position = Vector2(
-      position.x,
-      position.y + _liftOffset + _shadowFootOffset,
-    );
+    _updateShadowPosition();
     parent?.add(_shadow);
   }
 
   @override
   void onDragUpdate(DragUpdateEvent event) {
     position += event.localDelta;
-    // PR-M/N — 그림자도 따라감 (캐릭터 실제 발 위치).
-    _shadow.position = Vector2(
-      position.x,
-      position.y + _liftOffset + _shadowFootOffset,
-    );
+    _updateShadowPosition();
   }
 
   @override
@@ -266,9 +272,12 @@ class CharacterComponent extends SpriteComponent
     super.onDragEnd(event);
     _isDragging = false;
 
-    // PR-M — 들림 풀기: 떨어지는 애니메이션 (easeIn = 가속).
-    // landingY = 현재 그림자가 표시된 발 위치. 캐릭터(position)가 그림자 자리로 떨어짐.
-    final landingY = position.y + _liftOffset;
+    // PR-M/O — 들림 풀기: 떨어지는 애니메이션.
+    // 떨어진 후 시각적 발이 그림자 중앙에 정확히 오게 landingY 보정.
+    // 시각적 발 = position.y + _shadowYOffset
+    // 시각적 발 = 그림자.y (이미 표시된 위치) → position.y(after) = 그림자.y - _shadowYOffset
+    // _shadowYOffset은 음수라 position이 그림자보다 아래(anchor 위치).
+    final landingY = _shadow.position.y - _shadowYOffset;
     add(
       MoveToEffect(
         Vector2(position.x, landingY),
