@@ -241,11 +241,13 @@ class _ChatCard extends StatelessWidget {
         topRight: Radius.circular(AppRadius.xl),
       ),
       child: BackdropFilter(
+        // 채팅창이 최저점 위로 올라온 경계 영역의 부드러운 전환을 위해 blur는 유지.
         filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            // 매우 투명 — 채팅 뒤로 캐릭터가 보일 정도.
-            color: AppColors.surface.withValues(alpha: 0.10),
+            // PR-N: 솔리드 — 채팅창 영역 뒤 GameWidget 안 비치게.
+            // 최저점 라인 아래는 채팅바만 보이고, 위로 올라간 영역은 캐릭터 가림 (의도).
+            color: AppColors.surface,
             border: Border(
               top: BorderSide(
                 color: AppColors.primary.withValues(alpha: 0.3),

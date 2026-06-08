@@ -81,7 +81,7 @@ class CharacterComponent extends SpriteComponent
   /// PR-G1 — 드래그 중 호흡 일시정지 (자유 위치 유지).
   bool _isDragging = false;
 
-  // ── PR-M: 드래그 lift + 그림자 + 떨어지는 애니메이션 ──────
+  // ── PR-M/N: 드래그 lift + 그림자 + 원근법 ─────────────────
   /// 들림 높이 (logical px). drag 시작 시 캐릭터를 이만큼 위로 올림.
   static const double _liftHeight = 24;
 
@@ -94,6 +94,21 @@ class CharacterComponent extends SpriteComponent
 
   /// 그림자 컴포넌트 — drag 시작 시 parent에 add, drag 끝 + 안착 후 remove.
   late final CircleComponent _shadow;
+
+  /// PR-N — 그림자 y 보정. 캐릭터 PNG 안 실제 발 위치가 PNG bottom(anchor)보다
+  /// 약간 위에 있어서 그림자가 너무 아래로 빠짐 → 위로 끌어올림.
+  /// 양수 = 위로 (logical px). 검증 후 미세 조정.
+  static const double _shadowFootOffset = -16;
+
+  // ── PR-N: 원근법 ────────────────────────────────────────────
+  /// 가장 앞쪽(max scale) 기준 y. onLoad에서 초기 발 위치로 init.
+  /// 사용자가 캐릭터를 뒤로 끌면 (position.y < _perspectiveOriginY) scale 작아짐.
+  late final double _perspectiveOriginY;
+
+  /// 원근 거리 범위 (logical px). originY에서 이만큼 뒤로 가면 minScale.
+  static const double _perspectiveRange = 220;
+  static const double _perspectiveMaxScale = 1.0;
+  static const double _perspectiveMinScale = 0.55;
 
   // ── PR-E: 랜덤 액션 스케줄러 ──────────────────────────────
   /// 다음 랜덤 액션 발화 시각 (_elapsed 기준). 5~12s 사이 랜덤.
@@ -120,6 +135,7 @@ class CharacterComponent extends SpriteComponent
     }
 
     _baseY = position.y;
+    _perspectiveOriginY = position.y;
     _applyAction(_action);
     paint = Paint()..filterQuality = FilterQuality.none;
     _scheduleNextAction();
@@ -135,18 +151,38 @@ class CharacterComponent extends SpriteComponent
     )..scale = Vector2(1.0, 0.25);
   }
 
+  /// PR-N — 원근법 + 그림자 scale 동기.
+  /// position.y가 _perspectiveOriginY보다 작아질수록(뒤로) scale 작아짐.
+  /// 매 frame 호출 — 호흡으로 미세 변동되지만 시각적 무관(0.4% 정도).
+  void _applyPerspectiveScale() {
+    final delta = _perspectiveOriginY - position.y;
+    final t = (delta / _perspectiveRange).clamp(0.0, 1.0);
+    final s = _perspectiveMaxScale -
+        (_perspectiveMaxScale - _perspectiveMinScale) * t;
+    scale = Vector2.all(s);
+    // 그림자도 같이 작아짐. 본래 scale.y는 0.25(타원) 유지.
+    _shadow.scale = Vector2(s, 0.25 * s);
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
     _elapsed += dt;
 
     // PR-G1 — 드래그 중엔 자유 위치 유지 + 호흡 일시정지 + 액션 스케줄러 멈춤.
-    if (_isDragging) return;
+    // PR-N — 드래그 중에도 원근법은 적용 (사용자가 뒤로 끌면 작아지는 시각 효과).
+    if (_isDragging) {
+      _applyPerspectiveScale();
+      return;
+    }
 
     // 호흡 — Y sine wave (character.md v2 명시).
     final periodSec = _breatheMs[_action]! / 1000;
     final wave = sin(_elapsed * 2 * pi / periodSec);
     position.y = _baseY + wave * _breatheAmplitude;
+
+    // PR-N — 원근법 매 frame 적용 (호흡 + 드래그 + settle 애니메이션 중에도).
+    _applyPerspectiveScale();
 
     // 랜덤 액션 스케줄러.
     if (_elapsed >= _nextActionAt) {
@@ -198,25 +234,31 @@ class CharacterComponent extends SpriteComponent
     onTap?.call();
   }
 
-  // ── PR-G1/M: 드래그 + 들림/그림자/안착 애니메이션 ────────
+  // ── PR-G1/M/N: 드래그 + 들림/그림자/안착/원근법 ──────────
   @override
   void onDragStart(DragStartEvent event) {
     super.onDragStart(event);
     _isDragging = true;
 
     // PR-M — 들림 효과 + 그림자 표시.
-    // 캐릭터를 _liftHeight만큼 위로. 발 위치(시각적 그림자 위치)는 position.y + _liftOffset 유지.
+    // 그림자는 캐릭터 실제 발 위치 = position.y + _liftOffset + _shadowFootOffset (PR-N PNG 보정).
     _liftOffset = _liftHeight;
     position.y -= _liftHeight;
-    _shadow.position = Vector2(position.x, position.y + _liftOffset);
+    _shadow.position = Vector2(
+      position.x,
+      position.y + _liftOffset + _shadowFootOffset,
+    );
     parent?.add(_shadow);
   }
 
   @override
   void onDragUpdate(DragUpdateEvent event) {
     position += event.localDelta;
-    // PR-M — 그림자도 따라감 (발 위치 = position.y + _liftOffset).
-    _shadow.position = Vector2(position.x, position.y + _liftOffset);
+    // PR-M/N — 그림자도 따라감 (캐릭터 실제 발 위치).
+    _shadow.position = Vector2(
+      position.x,
+      position.y + _liftOffset + _shadowFootOffset,
+    );
   }
 
   @override
@@ -225,7 +267,7 @@ class CharacterComponent extends SpriteComponent
     _isDragging = false;
 
     // PR-M — 들림 풀기: 떨어지는 애니메이션 (easeIn = 가속).
-    // 안착 후 _liftOffset = 0, _baseY 갱신, 그림자 제거.
+    // landingY = 현재 그림자가 표시된 발 위치. 캐릭터(position)가 그림자 자리로 떨어짐.
     final landingY = position.y + _liftOffset;
     add(
       MoveToEffect(
