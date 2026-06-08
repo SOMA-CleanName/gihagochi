@@ -20,7 +20,7 @@ import 'package:flutter/painting.dart';
 import 'room_world.dart';
 
 class EncoreCharacterGame extends FlameGame {
-  EncoreCharacterGame()
+  EncoreCharacterGame({this.onCharacterTap})
       : super(
           world: RoomWorld(),
           camera: CameraComponent.withFixedResolution(
@@ -31,6 +31,10 @@ class EncoreCharacterGame extends FlameGame {
     // 본 슬라이스 에셋만 사용 — 다른 슬라이스 영향 없게 게임 인스턴스 한정.
     images.prefix = 'assets/character/';
   }
+
+  /// PR-F — 캐릭터 탭 시 외부(RoomCanvas)가 받아 처리할 callback.
+  /// RoomWorld.onLoad에서 character.onTap에 주입. flame 자체는 Riverpod 모름 — callback 패턴.
+  final VoidCallback? onCharacterTap;
 
   /// 방 배경 PNG 로딩 전 잠깐 보이는 색.
   /// 본격 캐릭터/방 에셋 들어오면 의미 사라짐 (RoomWorld가 덮음).

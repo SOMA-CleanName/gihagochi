@@ -1,27 +1,35 @@
-/// PR-D/E — CharacterComponent (Sprite + 액션 swap + 호흡 + 랜덤 액션).
+/// PR-D/E/F — CharacterComponent (Sprite + 액션 swap + 호흡 + 랜덤 액션 + 탭).
 ///
 /// `feature-specs/character.md` v2:
 /// - PR-D: 액션 PNG 6종 sprite swap 메커니즘
 /// - PR-E: 호흡 (Y sine wave) + 랜덤 액션 스케줄러
+/// - PR-F: 탭 인터랙션 (onTap callback) — 실제 액션 트리거/모먼트는 외부 callback이 처리
 ///
-/// 백엔드 state 연동은 PR-F. 본 컴포넌트는 setAction(...) 인터페이스만 제공.
+/// 백엔드 state ↔ setAction 동기는 RoomCanvas의 ref.listen.
 library;
 
 import 'dart:math';
 
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flutter/painting.dart';
 
 import '../domain/character_action.dart';
 
-class CharacterComponent extends SpriteComponent with HasGameReference {
+class CharacterComponent extends SpriteComponent
+    with HasGameReference, TapCallbacks {
   CharacterComponent({
     required this.targetWidth,
+    this.onTap,
     super.position,
     super.anchor,
   });
 
   final double targetWidth;
+
+  /// PR-F — 캐릭터 탭 시 호출. 모먼트 트리거 + 백엔드 액션 호출은 외부 책임.
+  /// null이면 탭 무시.
+  final VoidCallback? onTap;
   CharacterActionType _action = CharacterActionType.idle;
   final Map<CharacterActionType, Sprite> _sprites = {};
 
@@ -141,7 +149,16 @@ class CharacterComponent extends SpriteComponent with HasGameReference {
   }
 
   void _applyAction(CharacterActionType action) {
-    sprite = _sprites[action];
+    // Defensive — onLoad 끝나기 전에 setAction 호출되면 sprite null. 다음 적용에서 따라감.
+    final s = _sprites[action];
+    if (s == null) return;
+    sprite = s;
     size = Vector2(targetWidth, targetWidth * _aspect[action]!);
+  }
+
+  // ── PR-F: 탭 인터랙션 ─────────────────────────────────────
+  @override
+  void onTapDown(TapDownEvent event) {
+    onTap?.call();
   }
 }

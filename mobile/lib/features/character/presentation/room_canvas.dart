@@ -10,11 +10,13 @@
 /// - 채팅창은 반투명 + blur → 뒤 방 배경 은은하게 비침
 library;
 
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/colors.dart';
@@ -22,7 +24,11 @@ import '../../../core/theme/radius.dart';
 import '../../chat_message/presentation/message_input.dart';
 import '../../chat_message/presentation/message_list.dart';
 import '../application/character_moment_controller.dart';
+import '../application/character_state_controller.dart';
+import '../domain/character_action.dart';
+import '../domain/character_moment.dart';
 import '../game/encore_character_game.dart';
+import '../game/room_world.dart';
 import 'widgets/character_placeholder.dart';
 import 'widgets/moment_card.dart';
 import 'widgets/room_background.dart';
@@ -78,7 +84,23 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
       duration: const Duration(milliseconds: 260),
       value: 0.0, // 초기 = 가장 내림 (캐릭터 영역 최대)
     );
-    _game = EncoreCharacterGame();
+    _game = EncoreCharacterGame(onCharacterTap: _handleCharacterTap);
+  }
+
+  /// PR-F — flame 캐릭터 탭 시 호출.
+  /// 1) haptic
+  /// 2) 모먼트 카드 (tap kind)
+  /// 3) 백엔드 액션 트리거 (happy) — 응답 시 state 변경 → ref.listen이 character.setAction(happy)
+  void _handleCharacterTap() {
+    HapticFeedback.lightImpact();
+    ref
+        .read(characterMomentControllerProvider(widget.idolId).notifier)
+        .show(CharacterMomentKind.tap);
+    unawaited(
+      ref
+          .read(characterStateControllerProvider(widget.idolId).notifier)
+          .trigger(CharacterActionType.happy),
+    );
   }
 
   @override
@@ -134,6 +156,18 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   Widget build(BuildContext context) {
     final moment =
         ref.watch(characterMomentControllerProvider(widget.idolId));
+
+    // PR-F — 백엔드 state 변경 시 flame character sprite 동기.
+    // 트리거 경로: 탭 / PR-2 디버그 메뉴 / cron / AI(v2) 모두 동일하게 흘러옴.
+    ref.listen(characterStateControllerProvider(widget.idolId), (prev, next) {
+      next.whenData((state) {
+        final world = _game.world;
+        if (world is RoomWorld) {
+          world.character.setAction(state.currentAction);
+        }
+      });
+    });
+
     return AnimatedBuilder(
       animation: _expand,
       builder: (context, _) {
