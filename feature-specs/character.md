@@ -6,7 +6,7 @@
 > **2026-06-04 v1**: Avatar Forge(부품 조립) 신규 작성
 > **2026-06-04 v2 (현재)**: flame 게임엔진 채택, 전체 재설계
 >
-> ⚠️ v1의 Avatar Forge 부품 시스템(슬롯 + 부품 카탈로그)은 **폐기**. PR #128 close. 본 v2 문서가 character 슬라이스 진리원.
+> ⚠️ v1의 Avatar Forge 부품 시스템(슬롯 + 부품 카탈로그)은 **폐기**. PR #128 (Avatar Forge v1 스키마) → 머지됨 (2026-06-04). 사용 안 함. 별도 PR로 삭제 마이그 예정 (PR #130에서 시도됐으나 close — 별도 트랙). 본 v2 문서가 character 슬라이스 진리원.
 
 ---
 
@@ -49,7 +49,7 @@
 - 부품 조립 시스템 = 양산성에 매몰되어 본질 우회한 결과
 - 첫 시드 5명은 어차피 외주/직접 제작이 답
 - 양산은 Scenario.gg(LoRA 기반) 같은 SaaS가 더 우수
-- PR #128(`character_parts` + `idol_part_inventory` + `idol_character_slot_state`) close
+- PR #128(`character_parts` + `idol_part_inventory` + `idol_character_slot_state`) 머지됨 (2026-06-04), 사용 안 함. 삭제 마이그는 별도 트랙 (PR #130 close, 우선순위 낮음)
 
 **매몰비용 인지**:
 - PR-1~4 머지된 일부 재작성 (LayeredAvatar 폐기, flame Game으로)
@@ -398,8 +398,8 @@ class FurnitureComponent extends SpriteComponent {
 
 | PR | 처리 | 메모 |
 |---|---|---|
-| #128 (Avatar Forge v1 스키마) | **Close** | flame 채택으로 부품 시스템 불필요 |
-| #129 (character.md docs v1) | **머지** | history 가치, PR-A에서 갱신 |
+| #128 (Avatar Forge v1 스키마) | **머지됨 (2026-06-04). 사용 안 함.** | 별도 PR로 삭제 마이그 예정. PR #130에서 시도됐으나 close (별도 트랙). |
+| #129 (character.md docs v1) | **머지됨 (2026-06-04).** | v1은 폐기 대상 (Avatar Forge 기반). 본 PR #131(v2)이 character.md 통째 덮어씀. |
 
 ### 신규 PR 트랙 (MVP, flame 마이그)
 
@@ -514,7 +514,7 @@ class FurnitureComponent extends SpriteComponent {
 - 폐기 검토:
   - Motion Distill (2026-06-04 PoC 결과로 폐기)
   - Avatar Forge v1 부품 시스템 (2026-06-04 비전 재검토로 폐기)
-- 폐기된 PR: #128 (Avatar Forge v1 스키마, close 예정)
+- 폐기된 PR: #128 (Avatar Forge v1 스키마, 머지됨 2026-06-04 — 사용 안 함, 삭제 마이그는 별도 트랙)
 - 채택:
   - **flame 게임엔진** (Flutter용 2D 게임엔진)
   - **Scenario.gg PoC** (LoRA 기반 캐릭터 일관성, 별도 트랙)
