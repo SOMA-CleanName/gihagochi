@@ -1,9 +1,10 @@
-/// PR-D/E/F — CharacterComponent (Sprite + 액션 swap + 호흡 + 랜덤 액션 + 탭).
+/// PR-D/E/F/G1 — CharacterComponent (Sprite + 액션 swap + 호흡 + 랜덤 + 탭 + 드래그).
 ///
 /// `feature-specs/character.md` v2:
 /// - PR-D: 액션 PNG 6종 sprite swap 메커니즘
 /// - PR-E: 호흡 (Y sine wave) + 랜덤 액션 스케줄러
-/// - PR-F: 탭 인터랙션 (onTap callback) — 실제 액션 트리거/모먼트는 외부 callback이 처리
+/// - PR-F: 탭 인터랙션 (onTap callback)
+/// - PR-G1: 드래그 인터랙션 (로컬만, 백엔드 위치 저장은 PR-G2 별도)
 ///
 /// 백엔드 state ↔ setAction 동기는 RoomCanvas의 ref.listen.
 library;
@@ -17,7 +18,7 @@ import 'package:flutter/painting.dart';
 import '../domain/character_action.dart';
 
 class CharacterComponent extends SpriteComponent
-    with HasGameReference, TapCallbacks {
+    with HasGameReference, TapCallbacks, DragCallbacks {
   CharacterComponent({
     required this.targetWidth,
     this.onTap,
@@ -69,8 +70,13 @@ class CharacterComponent extends SpriteComponent
     CharacterActionType.sleep: 4200,
   };
 
-  late final double _baseY;
+  /// 호흡 base Y — onLoad에서 1회 init, 드래그 종료 시 새 위치로 갱신.
+  /// PR-G2(백엔드 위치 저장) 진입 시 fetch한 저장 위치도 본 변수에 반영.
+  late double _baseY;
   double _elapsed = 0;
+
+  /// PR-G1 — 드래그 중 호흡 일시정지 (자유 위치 유지).
+  bool _isDragging = false;
 
   // ── PR-E: 랜덤 액션 스케줄러 ──────────────────────────────
   /// 다음 랜덤 액션 발화 시각 (_elapsed 기준). 5~12s 사이 랜덤.
@@ -106,6 +112,9 @@ class CharacterComponent extends SpriteComponent
   void update(double dt) {
     super.update(dt);
     _elapsed += dt;
+
+    // PR-G1 — 드래그 중엔 자유 위치 유지 + 호흡 일시정지 + 액션 스케줄러 멈춤.
+    if (_isDragging) return;
 
     // 호흡 — Y sine wave (character.md v2 명시).
     final periodSec = _breatheMs[_action]! / 1000;
@@ -160,5 +169,26 @@ class CharacterComponent extends SpriteComponent
   @override
   void onTapDown(TapDownEvent event) {
     onTap?.call();
+  }
+
+  // ── PR-G1: 드래그 (로컬만, 백엔드 위치 저장은 PR-G2) ──────
+  @override
+  void onDragStart(DragStartEvent event) {
+    super.onDragStart(event);
+    _isDragging = true;
+  }
+
+  @override
+  void onDragUpdate(DragUpdateEvent event) {
+    position += event.localDelta;
+  }
+
+  @override
+  void onDragEnd(DragEndEvent event) {
+    super.onDragEnd(event);
+    _isDragging = false;
+    // 드래그 끝난 위치를 새 호흡 base로 — 다음 frame부터 자연스럽게 호흡 재개.
+    _baseY = position.y;
+    // PR-G2: 백엔드 POST /character/{idol}/position 호출 (마이그레이션 동반, 별도 PR).
   }
 }
