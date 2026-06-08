@@ -155,11 +155,13 @@ class CharacterComponent extends SpriteComponent
     )..scale = Vector2(1.0, 0.25);
   }
 
-  /// PR-N — 원근법 + 그림자 scale 동기.
-  /// position.y가 _perspectiveOriginY보다 작아질수록(뒤로) scale 작아짐.
-  /// 매 frame 호출 — 호흡으로 미세 변동되지만 시각적 무관(0.4% 정도).
+  /// PR-N/P — 원근법 + 그림자 scale 동기.
+  /// effectiveY = position + _liftOffset → 들기 전 anchor 위치 기반.
+  /// 들림(_liftOffset=24)으로 position.y가 위로 떠도 effectiveY는 들기 전 위치 유지.
+  /// → drag 중 ↔ settle 후 scale 일관 (들었을 때와 놓았을 때 크기 같음).
   void _applyPerspectiveScale() {
-    final delta = _perspectiveOriginY - position.y;
+    final effectiveY = position.y + _liftOffset;
+    final delta = _perspectiveOriginY - effectiveY;
     final t = (delta / _perspectiveRange).clamp(0.0, 1.0);
     final s = _perspectiveMaxScale -
         (_perspectiveMaxScale - _perspectiveMinScale) * t;
