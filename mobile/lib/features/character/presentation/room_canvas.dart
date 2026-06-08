@@ -13,6 +13,7 @@ library;
 import 'dart:ui' as ui;
 import 'dart:ui' show lerpDouble;
 
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,6 +22,7 @@ import '../../../core/theme/radius.dart';
 import '../../chat_message/presentation/message_input.dart';
 import '../../chat_message/presentation/message_list.dart';
 import '../application/character_moment_controller.dart';
+import '../game/encore_character_game.dart';
 import 'widgets/character_placeholder.dart';
 import 'widgets/moment_card.dart';
 import 'widgets/room_background.dart';
@@ -63,6 +65,10 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   late final AnimationController _expand;
   bool _isDragging = false;
 
+  /// PR-B 시범 — flame 게임 인스턴스 보존 (매 rebuild 재생성 방지).
+  /// PR-I에서 RoomCanvas 자체 정리 시 _game 라이프사이클은 새 위젯으로 이관.
+  late final EncoreCharacterGame _game;
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +78,7 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
       duration: const Duration(milliseconds: 260),
       value: 0.0, // 초기 = 가장 내림 (캐릭터 영역 최대)
     );
+    _game = EncoreCharacterGame();
   }
 
   @override
@@ -174,6 +181,26 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: MomentCard(moment: moment),
+              ),
+            ),
+            // Layer 5 (PR-B 시범): flame GameWidget — 우상단 작은 박스.
+            // PR-B(빈 게임) 임베드 동작 검증용. PR-D에서 캐릭터 Component 추가,
+            // PR-I에서 RoomCanvas 자체를 GameWidget 기반으로 전환 시 본 layer는 폐기.
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 60, right: 12),
+                  child: SizedBox(
+                    width: 100,
+                    height: 150,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: GameWidget(game: _game),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
