@@ -167,9 +167,7 @@ async def get_me(session: AsyncSession, user_id: UUID) -> MeResponse:
     )
 
 
-async def _get_stale_agreement_types(
-    session: AsyncSession, user_id: UUID
-) -> list[AgreementType]:
+async def _get_stale_agreement_types(session: AsyncSession, user_id: UUID) -> list[AgreementType]:
     """사용자의 type별 최신 동의 버전이 현재 활성 버전과 다른 type 목록.
 
     - 필수(tos / privacy): row 없거나 mismatch → stale (강제 재동의)
@@ -193,7 +191,10 @@ async def _get_stale_agreement_types(
             stale.append(type_)
     # marketing: row 있을 때만 mismatch 검사.
     marketing_latest = latest_by_type.get(AgreementType.MARKETING)
-    if marketing_latest is not None and marketing_latest != _CURRENT_TERMS_VERSIONS[AgreementType.MARKETING]:
+    if (
+        marketing_latest is not None
+        and marketing_latest != _CURRENT_TERMS_VERSIONS[AgreementType.MARKETING]
+    ):
         stale.append(AgreementType.MARKETING)
     return stale
 
