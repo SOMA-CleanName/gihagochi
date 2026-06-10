@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy import DateTime, Float, ForeignKey, SmallInteger, text
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
 
@@ -45,6 +46,9 @@ class CharacterState(Base):
     # PR-G2 드래그 위치 영속화 — flame world 좌표(logical). null = 미설정(모바일이 기본 위치 사용).
     position_x: Mapped[float | None] = mapped_column(Float, nullable=True)
     position_y: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # 가구 배치 (아이돌별, 모든 팬 공유). {kind: {x, y, w}} JSONB. null = 기본 배치(모바일 코드).
+    # 아이돌 본인만 편집. 위치/크기 = flame world 좌표(logical).
+    furniture_layout: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -15,10 +15,12 @@ import 'dart:ui' as ui;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/auth_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radius.dart';
 import '../../chat_message/presentation/message_input.dart';
@@ -30,6 +32,7 @@ import '../data/character_repository.dart';
 import '../domain/character_action.dart';
 import '../domain/character_moment.dart';
 import '../game/encore_character_game.dart';
+import '../game/furniture_component.dart';
 import '../game/room_world.dart';
 import 'widgets/moment_card.dart';
 
@@ -77,6 +80,18 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   /// PR-G2 — 위치/액션 로컬 캐시 (진입 즉시 복원).
   final CharacterCache _cache = CharacterCache();
 
+  /// 가구 편집 모드 (디버그 + 아이돌 본인만). 저장된 배치 최초 1회 적용 플래그.
+  bool _editMode = false;
+  bool _furnitureRestored = false;
+  FurnitureComponent? _selectedFurniture;
+
+  /// 편집 가능 여부 = 디버그 빌드 + 로그인 사용자가 이 아이돌 본인.
+  bool get _canEdit {
+    if (!kDebugMode) return false;
+    final me = ref.read(supabaseProvider).auth.currentUser?.id;
+    return me != null && me == widget.idolId;
+  }
+
   /// PR-B 시범 — flame 게임 인스턴스 보존 (매 rebuild 재생성 방지).
   /// PR-I에서 RoomCanvas 자체 정리 시 _game 라이프사이클은 새 위젯으로 이관.
   late final EncoreCharacterGame _game;
@@ -94,7 +109,50 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
       onCharacterTap: _handleCharacterTap,
       onPositionSaved: _handlePositionSaved,
       loadCached: () => _cache.read(widget.idolId),
+      onFurnitureSelected: _handleFurnitureSelected,
     );
+  }
+
+  void _handleFurnitureSelected(FurnitureComponent f) {
+    if (!_editMode) return;
+    if (_selectedFurniture != f) setState(() => _selectedFurniture = f);
+  }
+
+  void _toggleEdit() {
+    final world = _game.world;
+    if (world is! RoomWorld) return;
+    setState(() {
+      _editMode = !_editMode;
+      _selectedFurniture = null;
+      world.setEditMode(_editMode);
+    });
+  }
+
+  /// 편집 종료 + 배치 저장 (아이돌 본인만 서버 허용). 로컬은 즉시 반영돼 있음.
+  Future<void> _saveFurnitureAndExit() async {
+    final world = _game.world;
+    if (world is RoomWorld) {
+      final layout = world.currentFurnitureLayout();
+      final repo = ref.read(characterRepositoryProvider);
+      unawaited(
+        repo.saveFurniture(widget.idolId, layout).then(
+          (_) {},
+          onError: (_, __) {},
+        ),
+      );
+      world.setEditMode(false);
+    }
+    setState(() {
+      _editMode = false;
+      _selectedFurniture = null;
+    });
+  }
+
+  void _onFurnitureSizeChanged(double w) {
+    final f = _selectedFurniture;
+    if (f == null) return;
+    f.setTargetWidth(w);
+    setState(() {}); // 슬라이더 값 반영
   }
 
   /// PR-G2 — 드래그 종료 시 위치 저장. 실패해도 로컬 위치는 유지(스낵바 X — 조용히).
@@ -200,6 +258,11 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
               );
             }
           }
+          // 가구 배치 최초 1회 복원 (아이돌별, 모든 팬 공유).
+          if (!_furnitureRestored && state.furnitureLayout != null) {
+            _furnitureRestored = true;
+            world.applyFurnitureLayout(state.furnitureLayout!);
+          }
         }
       });
     });
@@ -256,9 +319,92 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
                 ),
               ),
             ),
+            // Layer 4 (디버그 편집): 가구 편집 토글 버튼 — 디버그 + 아이돌 본인만.
+            if (_canEdit)
+              Positioned(
+                top: MediaQuery.paddingOf(context).top + 8,
+                right: 8,
+                child: FloatingActionButton.small(
+                  heroTag: 'furniture-edit',
+                  backgroundColor: _editMode
+                      ? AppColors.primary
+                      : AppColors.surface.withValues(alpha: 0.85),
+                  onPressed: _editMode ? _saveFurnitureAndExit : _toggleEdit,
+                  child: Icon(_editMode ? Icons.check : Icons.edit_outlined),
+                ),
+              ),
+            // Layer 5 (디버그 편집): 선택 가구 크기 슬라이더 패널.
+            if (_editMode)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _FurnitureEditPanel(
+                  selected: _selectedFurniture,
+                  onSizeChanged: _onFurnitureSizeChanged,
+                  onCancel: _toggleEdit,
+                  onSave: _saveFurnitureAndExit,
+                ),
+              ),
           ],
         );
       },
+    );
+  }
+}
+
+/// 디버그 가구 편집 패널 — 선택 가구 크기 슬라이더 + 저장/취소.
+class _FurnitureEditPanel extends StatelessWidget {
+  const _FurnitureEditPanel({
+    required this.selected,
+    required this.onSizeChanged,
+    required this.onCancel,
+    required this.onSave,
+  });
+
+  final FurnitureComponent? selected;
+  final ValueChanged<double> onSizeChanged;
+  final VoidCallback onCancel;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final f = selected;
+    return Material(
+      color: AppColors.surface.withValues(alpha: 0.95),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      f == null
+                          ? '가구를 탭해서 선택 → 드래그로 이동 / 슬라이더로 크기'
+                          : '${f.kind.name} — 크기 ${f.targetWidth.round()}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  TextButton(onPressed: onCancel, child: const Text('취소')),
+                  TextButton(onPressed: onSave, child: const Text('저장')),
+                ],
+              ),
+              if (f != null)
+                Slider(
+                  min: 40,
+                  max: 360,
+                  value: f.targetWidth.clamp(40, 360),
+                  onChanged: onSizeChanged,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

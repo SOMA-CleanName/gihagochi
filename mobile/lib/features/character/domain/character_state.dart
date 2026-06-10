@@ -10,6 +10,7 @@ library;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'character_action.dart';
+import 'furniture_placement.dart';
 
 part 'character_state.freezed.dart';
 part 'character_state.g.dart';
@@ -26,6 +27,8 @@ abstract class CharacterState with _$CharacterState {
     // PR-G2 — 드래그 위치(flame world 좌표). null = 미설정 → 기본 위치 사용.
     @JsonKey(name: 'position_x') double? positionX,
     @JsonKey(name: 'position_y') double? positionY,
+    // 가구 배치 {kind: {x,y,w}}. null = 기본 배치(모바일 코드).
+    @JsonKey(name: 'furniture_layout') Map<String, FurniturePlacement>? furnitureLayout,
   }) = _CharacterState;
 
   factory CharacterState.fromJson(Map<String, dynamic> json) =>

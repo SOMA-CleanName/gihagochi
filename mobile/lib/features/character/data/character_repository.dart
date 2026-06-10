@@ -4,6 +4,7 @@
 ///   GET  /character/{idol_id}/state
 ///   POST /character/{idol_id}/actions    body={"action": "..."}
 ///   POST /character/{idol_id}/position   body={"x": .., "y": ..}
+///   POST /character/{idol_id}/furniture  body={"layout": {kind: {x,y,w}}}
 library;
 
 import 'package:dio/dio.dart';
@@ -12,6 +13,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/api/dio_client.dart';
 import '../domain/character_action.dart';
 import '../domain/character_state.dart';
+import '../domain/furniture_placement.dart';
 
 part 'character_repository.g.dart';
 
@@ -48,6 +50,18 @@ class CharacterRepository {
     final res = await dio.post(
       '/character/$idolId/position',
       data: {'x': x, 'y': y},
+    );
+    return CharacterState.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// 가구 배치 저장 (아이돌 본인만 — 서버 403 가드). 응답은 갱신된 CharacterState.
+  Future<CharacterState> saveFurniture(
+    String idolId,
+    Map<String, FurniturePlacement> layout,
+  ) async {
+    final res = await dio.post(
+      '/character/$idolId/furniture',
+      data: {'layout': layout.map((k, v) => MapEntry(k, v.toJson()))},
     );
     return CharacterState.fromJson(res.data as Map<String, dynamic>);
   }

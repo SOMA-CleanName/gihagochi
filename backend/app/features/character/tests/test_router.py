@@ -71,6 +71,16 @@ async def test_post_position_requires_auth(client: AsyncClient) -> None:
     assert response.status_code == 401
 
 
+@pytest.mark.asyncio
+async def test_post_furniture_requires_auth(client: AsyncClient) -> None:
+    """POST /character/{idol_id}/furniture는 AuthedUser 필요."""
+    response = await client.post(
+        f"/character/{uuid4()}/furniture",
+        json={"layout": {}},
+    )
+    assert response.status_code == 401
+
+
 # ============================================================
 # 서비스 — 비즈니스 룰
 # ============================================================
@@ -194,3 +204,21 @@ async def test_get_state_includes_position(session: AsyncSession, make_fresh_use
     result = await service.get_state(session, idol_id)
     assert result.position_x == 5.0
     assert result.position_y == -15.0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_save_furniture_persists_layout(session: AsyncSession, make_fresh_user) -> None:
+    """가구 배치 저장 → state row 생성/갱신 + get_state에 포함."""
+    idol_id = make_fresh_user()
+    await auth_service.create_signup(session, idol_id, _signup_input("아이돌"))
+    await session.flush()
+
+    layout = {"bed": {"x": 1.0, "y": 2.0, "w": 3.0}}
+    saved = await service.save_furniture(session, idol_id, layout)
+    assert saved.furniture_layout is not None
+    assert saved.furniture_layout["bed"].w == 3.0
+
+    fetched = await service.get_state(session, idol_id)
+    assert fetched.furniture_layout is not None
+    assert fetched.furniture_layout["bed"].x == 1.0

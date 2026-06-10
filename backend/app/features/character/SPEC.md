@@ -21,6 +21,7 @@ MVP는 권한 단순화 — AuthedUser면 모두 트리거 가능. 비즈니스 
 | GET  | `/character/{idol_id}/state` | 캐릭터 현재 상태(+위치). row 없으면 default(idle, 100/100/100, 위치 null) | 비인증 OK |
 | POST | `/character/{idol_id}/actions` | 행동 트리거 → log INSERT + state 업데이트 | AuthedUser |
 | POST | `/character/{idol_id}/position` | 캐릭터 위치 저장(PR-G2). state 없으면 default+위치로 INSERT | AuthedUser |
+| POST | `/character/{idol_id}/furniture` | 가구 배치 저장(아이돌별·팬 공유). state 없으면 default+배치로 INSERT | **아이돌 본인만** (403) |
 
 ### POST 요청 본문
 
@@ -33,6 +34,15 @@ MVP는 권한 단순화 — AuthedUser면 모두 트리거 가능. 비즈니스 
 ```jsonc
 { "x": 0.0, "y": 80.0 }
 ```
+
+### POST /furniture 요청 본문
+
+```jsonc
+{ "layout": { "bed": { "x": 115, "y": -50, "w": 210 }, "desk": { "x": -120, "y": -55, "w": 200 } } }
+```
+
+가구별 위치/크기(flame world 좌표). 아이돌 본인이 아니면 403. 응답은 `CharacterStateResponse`(furniture_layout 포함).
+DB: `character_states.furniture_layout` JSONB (마이그 `0007`).
 
 flame world 좌표(logical). 드래그 종료 시 모바일이 호출. 응답은 `CharacterStateResponse`(위치 포함).
 
