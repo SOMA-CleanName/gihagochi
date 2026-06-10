@@ -33,6 +33,18 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        // 팀 공용 debug keystore — 모든 개발자가 동일 SHA-1로 빌드해야
+        // Google 로그인(SHA-1 기반 OAuth)이 한 번의 Firebase 등록으로 전원 동작.
+        // 각자 ~/.android/debug.keystore를 쓰면 SHA-1이 달라 ApiException:10 발생.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
