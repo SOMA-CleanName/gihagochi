@@ -19,7 +19,6 @@ from app.features.character.schemas import (
 from app.shared.enums import CharacterActionType
 from app.shared.models import CharacterActionLog, CharacterState, Profile
 
-
 # 기본 상태 값 — DB row 없을 때 응답에 사용.
 _DEFAULT_HUNGER = 100
 _DEFAULT_HAPPINESS = 100
@@ -35,9 +34,7 @@ async def get_state(session: AsyncSession, idol_id: UUID) -> CharacterStateRespo
     if profile is None:
         raise NotFoundError("아이돌을 찾을 수 없습니다.")
 
-    state = await session.scalar(
-        select(CharacterState).where(CharacterState.idol_id == idol_id)
-    )
+    state = await session.scalar(select(CharacterState).where(CharacterState.idol_id == idol_id))
     if state is None:
         from datetime import UTC, datetime
 
@@ -67,9 +64,7 @@ async def record_action(
     if profile is None:
         raise NotFoundError("아이돌을 찾을 수 없습니다.")
 
-    state = await session.scalar(
-        select(CharacterState).where(CharacterState.idol_id == idol_id)
-    )
+    state = await session.scalar(select(CharacterState).where(CharacterState.idol_id == idol_id))
     if state is None:
         state = CharacterState(
             idol_id=idol_id,

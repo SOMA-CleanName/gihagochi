@@ -339,9 +339,7 @@ async def test_get_me_needs_reagree_when_required_versions_stale(
     )
     # 동의 row의 version을 옛 값으로 강제 → 현재 활성 v1과 mismatch.
     await session.execute(
-        update(TermsAgreement)
-        .where(TermsAgreement.user_id == user_id)
-        .values(version="v0-stale")
+        update(TermsAgreement).where(TermsAgreement.user_id == user_id).values(version="v0-stale")
     )
     await session.flush()
 
@@ -382,27 +380,21 @@ async def test_reagree_inserts_new_rows_and_clears_stale(
     )
     # 기존 동의를 구버전으로 강제 → stale 상태 만듦.
     await session.execute(
-        update(TermsAgreement)
-        .where(TermsAgreement.user_id == user_id)
-        .values(version="v0-stale")
+        update(TermsAgreement).where(TermsAgreement.user_id == user_id).values(version="v0-stale")
     )
     await session.flush()
     before = await service.get_me(session, user_id)
     assert AgreementType.TOS in before.needs_reagree
 
     # 재동의 — 현재 활성 버전으로.
-    await service.reagree(
-        session, user_id, ReagreeRequest(agreements=_valid_agreements())
-    )
+    await service.reagree(session, user_id, ReagreeRequest(agreements=_valid_agreements()))
     await session.flush()
 
     after = await service.get_me(session, user_id)
     assert after.needs_reagree == []
     # 기존 row 보존 + 새 row 추가 → tos/privacy 각 2 row.
     rows = (
-        await session.scalars(
-            select(TermsAgreement).where(TermsAgreement.user_id == user_id)
-        )
+        await session.scalars(select(TermsAgreement).where(TermsAgreement.user_id == user_id))
     ).all()
     tos_rows = [r for r in rows if r.type == AgreementType.TOS]
     assert len(tos_rows) == 2
@@ -410,9 +402,7 @@ async def test_reagree_inserts_new_rows_and_clears_stale(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_reagree_version_mismatch_raises(
-    session: AsyncSession, make_fresh_user
-) -> None:
+async def test_reagree_version_mismatch_raises(session: AsyncSession, make_fresh_user) -> None:
     """잘못된 version으로 재동의 → ValidationError."""
     user_id = make_fresh_user()
     await service.create_signup(

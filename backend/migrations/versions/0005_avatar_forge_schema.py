@@ -81,9 +81,7 @@ def upgrade() -> None:
         );
         """
     )
-    op.execute(
-        "CREATE INDEX character_parts_category_idx ON character_parts (category);"
-    )
+    op.execute("CREATE INDEX character_parts_category_idx ON character_parts (category);")
 
     # 3. idol_character_slot_state — 아이돌별 현재 슬롯 (JSONB)
     op.execute(
@@ -236,14 +234,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # 트리거 drop (테이블 의존)
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_validate_slot_state_keys "
-        "ON idol_character_slot_state;"
-    )
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_slot_state_updated_at "
-        "ON idol_character_slot_state;"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trg_validate_slot_state_keys ON idol_character_slot_state;")
+    op.execute("DROP TRIGGER IF EXISTS trg_slot_state_updated_at ON idol_character_slot_state;")
 
     # 함수 drop — slot_state 전용. set_updated_at은 character_states가 쓰니까 DROP X
     op.execute("DROP FUNCTION IF EXISTS validate_slot_state_keys();")

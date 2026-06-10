@@ -41,6 +41,9 @@ def _signup_input(name: str) -> SignupRequest:
 # ============================================================
 
 
+# 비인증 OK라 인증 가드를 통과해 service까지 도달 → profile 조회(DB) 발생.
+# 따라서 DB 없는 non-integration job에선 돌면 안 됨 → integration 마커.
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_get_state_unknown_idol_returns_404(client: AsyncClient) -> None:
     """GET /character/{idol_id}/state — 비인증 OK, 존재하지 않으면 404."""
@@ -79,9 +82,7 @@ async def test_get_state_returns_default_when_no_row(
     assert result.happiness == 100
     assert result.energy == 100
 
-    row = await session.scalar(
-        select(CharacterState).where(CharacterState.idol_id == idol_id)
-    )
+    row = await session.scalar(select(CharacterState).where(CharacterState.idol_id == idol_id))
     assert row is None
 
 
@@ -95,9 +96,7 @@ async def test_get_state_unknown_idol_raises(session: AsyncSession) -> None:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_record_action_creates_state_and_log(
-    session: AsyncSession, make_fresh_user
-) -> None:
+async def test_record_action_creates_state_and_log(session: AsyncSession, make_fresh_user) -> None:
     """첫 action → state row 새로 생성 + log 1건."""
     idol_id = make_fresh_user()
     actor_id = make_fresh_user()
@@ -105,9 +104,7 @@ async def test_record_action_creates_state_and_log(
     await auth_service.create_signup(session, actor_id, _signup_input("팬"))
     await session.flush()
 
-    result = await service.record_action(
-        session, idol_id, CharacterActionType.HAPPY, actor_id
-    )
+    result = await service.record_action(session, idol_id, CharacterActionType.HAPPY, actor_id)
     assert result.state.current_action == CharacterActionType.HAPPY
     assert result.log.action == CharacterActionType.HAPPY
     assert result.log.performed_by == actor_id
@@ -128,9 +125,7 @@ async def test_record_action_creates_state_and_log(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_record_action_updates_existing_state(
-    session: AsyncSession, make_fresh_user
-) -> None:
+async def test_record_action_updates_existing_state(session: AsyncSession, make_fresh_user) -> None:
     """기존 state row가 있으면 current_action만 업데이트 + log append."""
     idol_id = make_fresh_user()
     await auth_service.create_signup(session, idol_id, _signup_input("아이돌"))
