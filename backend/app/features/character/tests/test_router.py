@@ -41,6 +41,9 @@ def _signup_input(name: str) -> SignupRequest:
 # ============================================================
 
 
+# 비인증 OK라 인증 가드를 통과해 service까지 도달 → profile 조회(DB) 발생.
+# 따라서 DB 없는 non-integration job에선 돌면 안 됨 → integration 마커.
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_get_state_unknown_idol_returns_404(client: AsyncClient) -> None:
     """GET /character/{idol_id}/state — 비인증 OK, 존재하지 않으면 404."""
