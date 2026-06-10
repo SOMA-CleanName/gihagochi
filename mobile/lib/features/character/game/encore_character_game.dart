@@ -17,11 +17,15 @@ import 'package:flame/camera.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/painting.dart';
 
+import '../data/character_cache.dart';
 import 'room_world.dart';
 
 class EncoreCharacterGame extends FlameGame {
-  EncoreCharacterGame({this.onCharacterTap, this.onPositionSaved})
-      : super(
+  EncoreCharacterGame({
+    this.onCharacterTap,
+    this.onPositionSaved,
+    this.loadCached,
+  })  : super(
           world: RoomWorld(),
           camera: CameraComponent.withFixedResolution(
             width: 480,
@@ -38,6 +42,9 @@ class EncoreCharacterGame extends FlameGame {
 
   /// PR-G2 — 드래그 종료 시 위치(논리 바닥 좌표)를 외부가 받아 백엔드 저장.
   final void Function(double x, double y)? onPositionSaved;
+
+  /// PR-G2 — 캐릭터 onLoad에서 호출할 로컬 캐시 로더 (진입 즉시 위치/액션 복원).
+  final Future<CachedCharacter?> Function()? loadCached;
 
   /// 방 배경 PNG 로딩 전 잠깐 보이는 색.
   /// 본격 캐릭터/방 에셋 들어오면 의미 사라짐 (RoomWorld가 덮음).

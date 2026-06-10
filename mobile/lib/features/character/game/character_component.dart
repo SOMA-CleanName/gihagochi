@@ -15,9 +15,11 @@ library;
 import 'dart:math';
 
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/painting.dart';
 
+import '../data/character_cache.dart';
 import '../domain/character_action.dart';
 
 class CharacterComponent extends SpriteComponent
@@ -28,9 +30,13 @@ class CharacterComponent extends SpriteComponent
     required this.maxGround,
     this.onTap,
     this.onPositionChanged,
+    this.loadCached,
     super.position,
     super.anchor,
   });
+
+  /// PR-G2 — onLoad에서 호출. 캐시된 위치/액션 있으면 즉시 복원 (서버 fetch 대기 X).
+  final Future<CachedCharacter?> Function()? loadCached;
 
   final double targetWidth;
 
@@ -147,10 +153,18 @@ class CharacterComponent extends SpriteComponent
   /// 가구 근접 판정 등 "캐릭터가 실제 어디 서있나"는 position 대신 이걸 사용.
   Vector2 get groundPosition => Vector2(_groundX, _groundY);
 
-  /// PR-G2 — 저장된 위치 복원 (백엔드 fetch 후). 경계 clamp.
-  void setGroundPosition(double x, double y) {
-    _groundX = x.clamp(minGround.x, maxGround.x);
-    _groundY = y.clamp(minGround.y, maxGround.y);
+  /// PR-G2 — 저장 위치 복원. animate면 현재 위치에서 부드럽게 이동(등장 후 점프 방지).
+  Vector2? _moveTarget;
+  void setGroundPosition(double x, double y, {bool animate = false}) {
+    final cx = x.clamp(minGround.x, maxGround.x);
+    final cy = y.clamp(minGround.y, maxGround.y);
+    if (animate) {
+      _moveTarget = Vector2(cx, cy);
+    } else {
+      _groundX = cx;
+      _groundY = cy;
+      _moveTarget = null;
+    }
   }
 
   @override
@@ -160,6 +174,14 @@ class CharacterComponent extends SpriteComponent
     for (final action in CharacterActionType.values) {
       final img = await game.images.load(_file[action]!);
       _sprites[action] = Sprite(img);
+    }
+
+    // PR-G2 — 캐시된 위치/액션 즉시 복원 (서버 응답 대기 없이 진입 즉시 정확한 모습).
+    final cached = await loadCached?.call();
+    if (cached != null) {
+      _groundX = cached.x.clamp(minGround.x, maxGround.x);
+      _groundY = cached.y.clamp(minGround.y, maxGround.y);
+      _action = cached.action;
     }
 
     _applyAction(_action);
@@ -175,7 +197,20 @@ class CharacterComponent extends SpriteComponent
       // 방 배경(-10)보다 위, 캐릭터(0)보다 아래.
       priority: -1,
     );
-    parent?.add(_shadow);
+
+    // PR-G2 — 이미지 로드 직후 등장 (위치 fetch를 기다리지 않음 → 5초 빈방 방지).
+    // 복원은 setGroundPosition(animate:true)로 부드럽게 이동하므로 점프도 없음.
+    opacity = 0;
+    reveal();
+  }
+
+  /// PR-G2 — 첫 위치 확정 후 캐릭터+그림자 등장 (페이드인). 점프 깜빡임 방지.
+  bool _revealed = false;
+  void reveal() {
+    if (_revealed) return;
+    _revealed = true;
+    if (_shadow.parent == null) parent?.add(_shadow);
+    add(OpacityEffect.to(1, EffectController(duration: 0.25)));
   }
 
   /// 원근법 scale — _groundY 에만 의존 (lift·호흡 무관).
@@ -191,6 +226,19 @@ class CharacterComponent extends SpriteComponent
   void update(double dt) {
     super.update(dt);
     _elapsed += dt;
+
+    // PR-G2 — 복원 위치로 부드럽게 이동 (드래그/누르는 중엔 멈춤).
+    final target = _moveTarget;
+    if (target != null && !_isDragging && !_isHeld) {
+      final k = (dt * 8).clamp(0.0, 1.0);
+      _groundX += (target.x - _groundX) * k;
+      _groundY += (target.y - _groundY) * k;
+      if ((target.x - _groundX).abs() < 0.5 && (target.y - _groundY).abs() < 0.5) {
+        _groundX = target.x;
+        _groundY = target.y;
+        _moveTarget = null;
+      }
+    }
 
     // 들림 — 누르거나 드래그하는 동안 떠오르고, 떼면 착지. 부드럽게 보간.
     // position을 직접 옮기지 않으므로 호흡과 충돌하지 않음. 그림자는 항상 유지.
