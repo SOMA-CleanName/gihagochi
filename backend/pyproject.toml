@@ -42,7 +42,7 @@ dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "httpx>=0.28",  # FastAPI 테스트 클라이언트
-    "ruff>=0.7.4",
+    "ruff==0.15.15",  # 정확히 핀 — 버전 드리프트로 format --check가 CI에서 깨지는 것 방지
 ]
 
 [build-system]
