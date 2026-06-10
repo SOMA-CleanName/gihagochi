@@ -116,6 +116,8 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
       onTap: game.onCharacterTap,
       // PR-G2: 드래그 종료 위치 저장도 RoomCanvas 책임.
       onPositionChanged: game.onPositionSaved,
+      // PR-G2: 로컬 캐시 로더 — 진입 즉시 위치/액션 복원.
+      loadCached: game.loadCached,
     );
     add(character);
   }

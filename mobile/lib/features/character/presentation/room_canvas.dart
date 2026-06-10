@@ -25,6 +25,8 @@ import '../../chat_message/presentation/message_input.dart';
 import '../../chat_message/presentation/message_list.dart';
 import '../application/character_moment_controller.dart';
 import '../application/character_state_controller.dart';
+import '../data/character_cache.dart';
+import '../data/character_repository.dart';
 import '../domain/character_action.dart';
 import '../domain/character_moment.dart';
 import '../game/encore_character_game.dart';
@@ -72,6 +74,9 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   /// PR-G2 — 저장된 위치를 최초 1회만 복원 (이후 드래그 저장으로 인한 재호출 무시).
   bool _positionRestored = false;
 
+  /// PR-G2 — 위치/액션 로컬 캐시 (진입 즉시 복원).
+  final CharacterCache _cache = CharacterCache();
+
   /// PR-B 시범 — flame 게임 인스턴스 보존 (매 rebuild 재생성 방지).
   /// PR-I에서 RoomCanvas 자체 정리 시 _game 라이프사이클은 새 위젯으로 이관.
   late final EncoreCharacterGame _game;
@@ -88,15 +93,27 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
     _game = EncoreCharacterGame(
       onCharacterTap: _handleCharacterTap,
       onPositionSaved: _handlePositionSaved,
+      loadCached: () => _cache.read(widget.idolId),
     );
   }
 
   /// PR-G2 — 드래그 종료 시 위치 저장. 실패해도 로컬 위치는 유지(스낵바 X — 조용히).
+  /// 1) 로컬 캐시 낙관적 갱신(서버 응답 X) → 다음 진입 즉시 복원
+  /// 2) keepAlive dio repository로 직접 fire-and-forget (화면 바로 나가도 진행)
   void _handlePositionSaved(double x, double y) {
+    if (!mounted) return;
+    final action = ref
+            .read(characterStateControllerProvider(widget.idolId))
+            .value
+            ?.currentAction ??
+        CharacterActionType.idle;
+    unawaited(_cache.write(widget.idolId, x, y, action));
+    final repo = ref.read(characterRepositoryProvider);
     unawaited(
-      ref
-          .read(characterStateControllerProvider(widget.idolId).notifier)
-          .savePosition(x, y),
+      repo.savePosition(widget.idolId, x, y).then(
+        (_) {},
+        onError: (_, __) {}, // 저장 실패는 조용히 무시 (다음 드래그에서 재시도)
+      ),
     );
   }
 
@@ -172,15 +189,16 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
         final world = _game.world;
         if (world is RoomWorld) {
           world.character.setAction(state.currentAction);
-          // PR-G2 — 저장된 위치 최초 1회 복원.
-          if (!_positionRestored &&
-              state.positionX != null &&
-              state.positionY != null) {
+          // PR-G2 — 첫 응답에 저장 위치로 부드럽게 이동 (캐릭터는 이미 등장해 있음).
+          if (!_positionRestored) {
             _positionRestored = true;
-            world.character.setGroundPosition(
-              state.positionX!,
-              state.positionY!,
-            );
+            if (state.positionX != null && state.positionY != null) {
+              world.character.setGroundPosition(
+                state.positionX!,
+                state.positionY!,
+                animate: true,
+              );
+            }
           }
         }
       });
