@@ -11,11 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import AuthedUser
 from app.core.db import get_session
+from app.core.errors import ForbiddenError
 from app.features.character import service
 from app.features.character.schemas import (
     ActionRequest,
     ActionResponse,
     CharacterStateResponse,
+    FurnitureLayoutRequest,
     PositionRequest,
 )
 
@@ -60,3 +62,20 @@ async def save_character_position(
     state row 없으면 default 값 + 위치로 INSERT. 권한은 MVP 단순화(AuthedUser).
     """
     return await service.save_position(session, idol_id, req.x, req.y)
+
+
+@router.post("/{idol_id}/furniture", response_model=CharacterStateResponse)
+async def save_character_furniture(
+    idol_id: UUID,
+    req: FurnitureLayoutRequest,
+    user: AuthedUser,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> CharacterStateResponse:
+    """가구 배치 저장 (아이돌별, 모든 팬 공유). **아이돌 본인만** 편집 가능.
+
+    state row 없으면 default 값 + 배치로 INSERT.
+    """
+    if user.id != idol_id:
+        raise ForbiddenError("본인 캐릭터의 가구만 편집할 수 있습니다.")
+    layout = {k: v.model_dump() for k, v in req.layout.items()}
+    return await service.save_furniture(session, idol_id, layout)

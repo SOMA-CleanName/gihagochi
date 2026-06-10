@@ -46,6 +46,7 @@ async def get_state(session: AsyncSession, idol_id: UUID) -> CharacterStateRespo
             energy=_DEFAULT_ENERGY,
             position_x=None,
             position_y=None,
+            furniture_layout=None,
             updated_at=datetime.now(UTC),
         )
     return _to_state_response(state)
@@ -136,6 +137,37 @@ async def save_position(
     return _to_state_response(state)
 
 
+async def save_furniture(
+    session: AsyncSession,
+    idol_id: UUID,
+    layout: dict,
+) -> CharacterStateResponse:
+    """가구 배치 저장 (아이돌별, 모든 팬 공유). 본인 권한 체크는 router.
+
+    state row 없으면 default 값 + 배치로 INSERT.
+    """
+    profile = await session.scalar(select(Profile).where(Profile.id == idol_id))
+    if profile is None:
+        raise NotFoundError("아이돌을 찾을 수 없습니다.")
+
+    state = await session.scalar(select(CharacterState).where(CharacterState.idol_id == idol_id))
+    if state is None:
+        state = CharacterState(
+            idol_id=idol_id,
+            hunger=_DEFAULT_HUNGER,
+            happiness=_DEFAULT_HAPPINESS,
+            energy=_DEFAULT_ENERGY,
+            furniture_layout=layout,
+        )
+        session.add(state)
+    else:
+        state.furniture_layout = layout
+
+    await session.flush()
+    await session.refresh(state)
+    return _to_state_response(state)
+
+
 def _to_state_response(state: CharacterState) -> CharacterStateResponse:
     return CharacterStateResponse(
         idol_id=state.idol_id,
@@ -145,5 +177,6 @@ def _to_state_response(state: CharacterState) -> CharacterStateResponse:
         energy=state.energy,
         position_x=state.position_x,
         position_y=state.position_y,
+        furniture_layout=state.furniture_layout,
         updated_at=state.updated_at,
     )

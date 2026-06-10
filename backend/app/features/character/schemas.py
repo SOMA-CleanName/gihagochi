@@ -22,6 +22,8 @@ class CharacterStateResponse(BaseModel):
     # PR-G2 — 드래그 위치(flame world 좌표). 미설정이면 null → 모바일이 기본 위치 사용.
     position_x: float | None
     position_y: float | None
+    # 가구 배치 {kind: {x, y, w}}. 미설정이면 null → 모바일 기본 배치.
+    furniture_layout: dict[str, "FurniturePlacement"] | None
     updated_at: datetime
 
 
@@ -42,6 +44,23 @@ class PositionRequest(BaseModel):
 
     x: float
     y: float
+
+
+class FurniturePlacement(BaseModel):
+    """가구 1개의 배치 — flame world 좌표(logical) + 표시 폭."""
+
+    x: float
+    y: float
+    w: float
+
+
+class FurnitureLayoutRequest(BaseModel):
+    """POST /character/{idol_id}/furniture 요청 (가구 편집).
+
+    {kind: {x, y, w}} 맵 통째로 저장. 아이돌 본인만 호출 가능.
+    """
+
+    layout: dict[str, FurniturePlacement]
 
 
 class ActionLogSummary(BaseModel):

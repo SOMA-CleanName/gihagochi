@@ -12,6 +12,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/painting.dart';
 
 import '../domain/character_action.dart';
+import '../domain/furniture_placement.dart';
 import 'character_component.dart';
 import 'encore_character_game.dart';
 import 'furniture_component.dart';
@@ -55,6 +56,9 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
 
   /// 직전 frame의 근접 가구 액션 — 같은 가구 옆에 머무를 때 setAction 반복 호출 방지.
   CharacterActionType? _lastNearbyAction;
+
+  /// 편집 모드 — true면 가구 드래그/선택 가능 + 근접 액션 트리거 멈춤.
+  bool _editMode = false;
 
   @override
   Future<void> onLoad() async {
@@ -118,6 +122,7 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
       ),
     ]);
     for (final f in _furniture) {
+      f.onSelected = game.onFurnitureSelected;
       add(f);
     }
 
@@ -140,8 +145,38 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
   @override
   void update(double dt) {
     super.update(dt);
-    _checkFurnitureProximity();
+    // 편집 중엔 가구 근접 액션을 멈춤 (드래그로 위치 바꾸는 중 오발화 방지).
+    if (!_editMode) _checkFurnitureProximity();
   }
+
+  /// 편집 모드 토글 — 모든 가구 드래그/선택 가능 여부.
+  void setEditMode(bool on) {
+    _editMode = on;
+    for (final f in _furniture) {
+      f.editable = on;
+    }
+  }
+
+  /// 저장된 배치 적용 (GET state furniture_layout). 가구 kind.name 키 매칭.
+  void applyFurnitureLayout(Map<String, FurniturePlacement> layout) {
+    for (final f in _furniture) {
+      final p = layout[f.kind.name];
+      if (p != null) {
+        f.setWorldPosition(p.x, p.y);
+        f.setTargetWidth(p.w);
+      }
+    }
+  }
+
+  /// 현재 배치 수집 (저장용).
+  Map<String, FurniturePlacement> currentFurnitureLayout() => {
+        for (final f in _furniture)
+          f.kind.name: FurniturePlacement(
+            x: f.position.x,
+            y: f.position.y,
+            w: f.targetWidth,
+          ),
+      };
 
   /// PR-H — 캐릭터가 가구 임계 거리 안에 들어오면 가구 액션 트리거.
   /// 임계 밖으로 벗어나면 _lastNearbyAction reset → 다음 진입 시 다시 발화.
