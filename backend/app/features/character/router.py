@@ -16,6 +16,7 @@ from app.features.character.schemas import (
     ActionRequest,
     ActionResponse,
     CharacterStateResponse,
+    PositionRequest,
 )
 
 router = APIRouter(prefix="/character", tags=["character"])
@@ -45,3 +46,17 @@ async def trigger_character_action(
     인증된 사용자가 performed_by. 비즈니스 룰 (팬 vs 아이돌 권한 차이)은 후속 PR.
     """
     return await service.record_action(session, idol_id, req.action, user.id)
+
+
+@router.post("/{idol_id}/position", response_model=CharacterStateResponse)
+async def save_character_position(
+    idol_id: UUID,
+    req: PositionRequest,
+    user: AuthedUser,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> CharacterStateResponse:
+    """드래그 위치 저장 (PR-G2). 드래그 종료 시 모바일이 호출.
+
+    state row 없으면 default 값 + 위치로 INSERT. 권한은 MVP 단순화(AuthedUser).
+    """
+    return await service.save_position(session, idol_id, req.x, req.y)

@@ -27,6 +27,7 @@ class CharacterComponent extends SpriteComponent
     required this.minGround,
     required this.maxGround,
     this.onTap,
+    this.onPositionChanged,
     super.position,
     super.anchor,
   });
@@ -41,6 +42,9 @@ class CharacterComponent extends SpriteComponent
   /// PR-F — 캐릭터 탭 시 호출. 모먼트 트리거 + 백엔드 액션 호출은 외부 책임.
   /// null이면 탭 무시.
   final VoidCallback? onTap;
+
+  /// PR-G2 — 드래그 종료 시 호출(논리 바닥 좌표). 백엔드 위치 저장은 외부 책임.
+  final void Function(double x, double y)? onPositionChanged;
   CharacterActionType _action = CharacterActionType.idle;
   final Map<CharacterActionType, Sprite> _sprites = {};
 
@@ -120,9 +124,9 @@ class CharacterComponent extends SpriteComponent
   late final CircleComponent _shadow;
 
   // ── 원근법 ──────────────────────────────────────────────────
-  /// 가장 앞쪽(maxScale) 기준 발 y. onLoad에서 초기 발 위치로 init.
-  /// 뒤로(작은 y) 끌수록 scale 작아짐. _groundY 에만 의존 → lift/호흡 무관.
-  late final double _perspectiveOriginY;
+  /// 가장 앞쪽(maxScale) 기준 발 y = 발 하한(maxGround.y, 채팅창 최저선).
+  /// 초기/복원 위치와 무관하게 고정 → 원근 기준 안정. 뒤로(작은 y) 갈수록 scale 작아짐.
+  late final double _perspectiveOriginY = maxGround.y;
 
   /// 원근 거리 범위 (logical px). originY에서 이만큼 뒤로 가면 minScale.
   static const double _perspectiveRange = 220;
@@ -143,6 +147,12 @@ class CharacterComponent extends SpriteComponent
   /// 가구 근접 판정 등 "캐릭터가 실제 어디 서있나"는 position 대신 이걸 사용.
   Vector2 get groundPosition => Vector2(_groundX, _groundY);
 
+  /// PR-G2 — 저장된 위치 복원 (백엔드 fetch 후). 경계 clamp.
+  void setGroundPosition(double x, double y) {
+    _groundX = x.clamp(minGround.x, maxGround.x);
+    _groundY = y.clamp(minGround.y, maxGround.y);
+  }
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
@@ -152,7 +162,6 @@ class CharacterComponent extends SpriteComponent
       _sprites[action] = Sprite(img);
     }
 
-    _perspectiveOriginY = _groundY;
     _applyAction(_action);
     paint = Paint()..filterQuality = FilterQuality.none;
     _scheduleNextAction();
@@ -303,6 +312,7 @@ class CharacterComponent extends SpriteComponent
     super.onDragEnd(event);
     _isDragging = false;
     // update()가 _liftOffset을 0으로 감쇠 → 발이 그림자(=_groundY) 중앙으로 안착.
-    // PR-G2: 백엔드 POST /character/{idol}/position 호출 (마이그레이션 동반, 별도 PR).
+    // PR-G2 — 드래그 종료 시에만 위치 저장 (백엔드 호출은 외부 책임).
+    onPositionChanged?.call(_groundX, _groundY);
   }
 }

@@ -19,6 +19,9 @@ class CharacterStateResponse(BaseModel):
     hunger: int
     happiness: int
     energy: int
+    # PR-G2 — 드래그 위치(flame world 좌표). 미설정이면 null → 모바일이 기본 위치 사용.
+    position_x: float | None
+    position_y: float | None
     updated_at: datetime
 
 
@@ -29,6 +32,16 @@ class ActionRequest(BaseModel):
     """
 
     action: CharacterActionType
+
+
+class PositionRequest(BaseModel):
+    """POST /character/{idol_id}/position 요청 (PR-G2).
+
+    flame world 좌표(logical). 드래그 종료 시 모바일이 호출.
+    """
+
+    x: float
+    y: float
 
 
 class ActionLogSummary(BaseModel):

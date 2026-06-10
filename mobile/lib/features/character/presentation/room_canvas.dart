@@ -69,6 +69,9 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   late final AnimationController _expand;
   bool _isDragging = false;
 
+  /// PR-G2 — 저장된 위치를 최초 1회만 복원 (이후 드래그 저장으로 인한 재호출 무시).
+  bool _positionRestored = false;
+
   /// PR-B 시범 — flame 게임 인스턴스 보존 (매 rebuild 재생성 방지).
   /// PR-I에서 RoomCanvas 자체 정리 시 _game 라이프사이클은 새 위젯으로 이관.
   late final EncoreCharacterGame _game;
@@ -82,7 +85,19 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
       duration: const Duration(milliseconds: 260),
       value: 0.0, // 초기 = 가장 내림 (캐릭터 영역 최대)
     );
-    _game = EncoreCharacterGame(onCharacterTap: _handleCharacterTap);
+    _game = EncoreCharacterGame(
+      onCharacterTap: _handleCharacterTap,
+      onPositionSaved: _handlePositionSaved,
+    );
+  }
+
+  /// PR-G2 — 드래그 종료 시 위치 저장. 실패해도 로컬 위치는 유지(스낵바 X — 조용히).
+  void _handlePositionSaved(double x, double y) {
+    unawaited(
+      ref
+          .read(characterStateControllerProvider(widget.idolId).notifier)
+          .savePosition(x, y),
+    );
   }
 
   /// PR-F — flame 캐릭터 탭 시 호출.
@@ -157,6 +172,16 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
         final world = _game.world;
         if (world is RoomWorld) {
           world.character.setAction(state.currentAction);
+          // PR-G2 — 저장된 위치 최초 1회 복원.
+          if (!_positionRestored &&
+              state.positionX != null &&
+              state.positionY != null) {
+            _positionRestored = true;
+            world.character.setGroundPosition(
+              state.positionX!,
+              state.positionY!,
+            );
+          }
         }
       });
     });

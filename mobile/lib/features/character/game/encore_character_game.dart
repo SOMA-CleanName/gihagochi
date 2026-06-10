@@ -20,7 +20,7 @@ import 'package:flutter/painting.dart';
 import 'room_world.dart';
 
 class EncoreCharacterGame extends FlameGame {
-  EncoreCharacterGame({this.onCharacterTap})
+  EncoreCharacterGame({this.onCharacterTap, this.onPositionSaved})
       : super(
           world: RoomWorld(),
           camera: CameraComponent.withFixedResolution(
@@ -35,6 +35,9 @@ class EncoreCharacterGame extends FlameGame {
   /// PR-F — 캐릭터 탭 시 외부(RoomCanvas)가 받아 처리할 callback.
   /// RoomWorld.onLoad에서 character.onTap에 주입. flame 자체는 Riverpod 모름 — callback 패턴.
   final VoidCallback? onCharacterTap;
+
+  /// PR-G2 — 드래그 종료 시 위치(논리 바닥 좌표)를 외부가 받아 백엔드 저장.
+  final void Function(double x, double y)? onPositionSaved;
 
   /// 방 배경 PNG 로딩 전 잠깐 보이는 색.
   /// 본격 캐릭터/방 에셋 들어오면 의미 사라짐 (RoomWorld가 덮음).

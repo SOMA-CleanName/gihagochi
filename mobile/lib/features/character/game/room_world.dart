@@ -114,6 +114,8 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
       maxGround: Vector2(_characterMoveX, _characterMaxFootY),
       // PR-F: 게임 생성 시 주입된 callback 전달. 탭 → 모먼트 + 백엔드 + haptic은 RoomCanvas 책임.
       onTap: game.onCharacterTap,
+      // PR-G2: 드래그 종료 위치 저장도 RoomCanvas 책임.
+      onPositionChanged: game.onPositionSaved,
     );
     add(character);
   }

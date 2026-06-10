@@ -7,7 +7,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, SmallInteger, text
+from sqlalchemy import DateTime, Float, ForeignKey, SmallInteger, text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
@@ -42,6 +42,9 @@ class CharacterState(Base):
     hunger: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="100")
     happiness: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="100")
     energy: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="100")
+    # PR-G2 드래그 위치 영속화 — flame world 좌표(logical). null = 미설정(모바일이 기본 위치 사용).
+    position_x: Mapped[float | None] = mapped_column(Float, nullable=True)
+    position_y: Mapped[float | None] = mapped_column(Float, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

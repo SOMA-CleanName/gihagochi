@@ -18,14 +18,23 @@ MVP는 권한 단순화 — AuthedUser면 모두 트리거 가능. 비즈니스 
 
 | Method | Path | 설명 | 인증 |
 |---|---|---|---|
-| GET  | `/character/{idol_id}/state` | 캐릭터 현재 상태. row 없으면 default(idle, 100/100/100) | 비인증 OK |
+| GET  | `/character/{idol_id}/state` | 캐릭터 현재 상태(+위치). row 없으면 default(idle, 100/100/100, 위치 null) | 비인증 OK |
 | POST | `/character/{idol_id}/actions` | 행동 트리거 → log INSERT + state 업데이트 | AuthedUser |
+| POST | `/character/{idol_id}/position` | 캐릭터 위치 저장(PR-G2). state 없으면 default+위치로 INSERT | AuthedUser |
 
 ### POST 요청 본문
 
 ```jsonc
 { "action": "happy" }
 ```
+
+### POST /position 요청 본문
+
+```jsonc
+{ "x": 0.0, "y": 80.0 }
+```
+
+flame world 좌표(logical). 드래그 종료 시 모바일이 호출. 응답은 `CharacterStateResponse`(위치 포함).
 
 `action` ∈ `idle | happy | sad | sing | eat | sleep` (`character_action_type` ENUM).
 
@@ -44,7 +53,8 @@ MVP는 권한 단순화 — AuthedUser면 모두 트리거 가능. 비즈니스 
 
 - **읽기**: `profiles`, `character_states`
 - **쓰기**: `character_states` (INSERT/UPDATE), `character_action_logs` (INSERT)
-- **새 컬럼/테이블 필요**: 없음 — `0004_character_states`로 이미 생성됨 (PR-2a)
+- **새 컬럼 (PR-G2, `0006_character_position`)**: `character_states.position_x`, `position_y` (double, nullable)
+  - null = 미설정 → 모바일이 기본 위치 사용. 드래그 종료 시 UPDATE.
 
 ---
 
@@ -89,6 +99,13 @@ async def record_action(
     action: CharacterActionType,
     performed_by: UUID | None,
 ) -> ActionResponse: ...
+
+async def save_position(
+    session: AsyncSession,
+    idol_id: UUID,
+    x: float,
+    y: float,
+) -> CharacterStateResponse: ...
 ```
 
 `performed_by=None`은 시스템 트리거 전용 (cron 등). 외부 피처는 항상 user_id 전달.

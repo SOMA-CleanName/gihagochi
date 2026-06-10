@@ -25,4 +25,11 @@ class CharacterStateController extends _$CharacterStateController {
     final next = await repo.triggerAction(idolId, action);
     state = AsyncData(next);
   }
+
+  /// PR-G2 — 드래그 위치 저장 (드래그 종료 시). 실패해도 로컬 위치는 유지.
+  Future<void> savePosition(double x, double y) async {
+    final repo = ref.read(characterRepositoryProvider);
+    final next = await repo.savePosition(idolId, x, y);
+    state = AsyncData(next);
+  }
 }

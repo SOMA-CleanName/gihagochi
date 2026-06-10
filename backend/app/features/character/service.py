@@ -19,7 +19,6 @@ from app.features.character.schemas import (
 from app.shared.enums import CharacterActionType
 from app.shared.models import CharacterActionLog, CharacterState, Profile
 
-
 # 기본 상태 값 — DB row 없을 때 응답에 사용.
 _DEFAULT_HUNGER = 100
 _DEFAULT_HAPPINESS = 100
@@ -35,9 +34,7 @@ async def get_state(session: AsyncSession, idol_id: UUID) -> CharacterStateRespo
     if profile is None:
         raise NotFoundError("아이돌을 찾을 수 없습니다.")
 
-    state = await session.scalar(
-        select(CharacterState).where(CharacterState.idol_id == idol_id)
-    )
+    state = await session.scalar(select(CharacterState).where(CharacterState.idol_id == idol_id))
     if state is None:
         from datetime import UTC, datetime
 
@@ -47,6 +44,8 @@ async def get_state(session: AsyncSession, idol_id: UUID) -> CharacterStateRespo
             hunger=_DEFAULT_HUNGER,
             happiness=_DEFAULT_HAPPINESS,
             energy=_DEFAULT_ENERGY,
+            position_x=None,
+            position_y=None,
             updated_at=datetime.now(UTC),
         )
     return _to_state_response(state)
@@ -67,9 +66,7 @@ async def record_action(
     if profile is None:
         raise NotFoundError("아이돌을 찾을 수 없습니다.")
 
-    state = await session.scalar(
-        select(CharacterState).where(CharacterState.idol_id == idol_id)
-    )
+    state = await session.scalar(select(CharacterState).where(CharacterState.idol_id == idol_id))
     if state is None:
         state = CharacterState(
             idol_id=idol_id,
@@ -105,6 +102,40 @@ async def record_action(
     )
 
 
+async def save_position(
+    session: AsyncSession,
+    idol_id: UUID,
+    x: float,
+    y: float,
+) -> CharacterStateResponse:
+    """드래그 위치 저장 (PR-G2). state row 없으면 default 값으로 새로 INSERT.
+
+    AuthedUser면 모두 호출 가능 (MVP, record_action과 동일 권한 정책).
+    """
+    profile = await session.scalar(select(Profile).where(Profile.id == idol_id))
+    if profile is None:
+        raise NotFoundError("아이돌을 찾을 수 없습니다.")
+
+    state = await session.scalar(select(CharacterState).where(CharacterState.idol_id == idol_id))
+    if state is None:
+        state = CharacterState(
+            idol_id=idol_id,
+            hunger=_DEFAULT_HUNGER,
+            happiness=_DEFAULT_HAPPINESS,
+            energy=_DEFAULT_ENERGY,
+            position_x=x,
+            position_y=y,
+        )
+        session.add(state)
+    else:
+        state.position_x = x
+        state.position_y = y
+
+    await session.flush()
+    await session.refresh(state)
+    return _to_state_response(state)
+
+
 def _to_state_response(state: CharacterState) -> CharacterStateResponse:
     return CharacterStateResponse(
         idol_id=state.idol_id,
@@ -112,5 +143,7 @@ def _to_state_response(state: CharacterState) -> CharacterStateResponse:
         hunger=state.hunger,
         happiness=state.happiness,
         energy=state.energy,
+        position_x=state.position_x,
+        position_y=state.position_y,
         updated_at=state.updated_at,
     )
