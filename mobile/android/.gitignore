@@ -12,3 +12,5 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+# 예외: 팀 공용 debug keystore — Google 로그인 SHA-1 통일용 (release 아님, 커밋 OK).
+!app/debug.keystore
