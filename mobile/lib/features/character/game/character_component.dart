@@ -274,6 +274,11 @@ class CharacterComponent extends SpriteComponent
       ..position = Vector2(_groundX, _groundY)
       ..scale = Vector2(baseScale, 0.25 * baseScale);
 
+    // z-order — 발 y를 priority로 → 가구(priority=바닥선)와 y-sort 되어 앞뒤 자동.
+    // 발이 가구 바닥보다 아래(앞)면 priority 큼 → 가구 앞에 그려짐.
+    priority = _groundY.round();
+    _shadow.priority = priority - 1;
+
     // 랜덤 액션 스케줄러 — 누르는 중 멈춤.
     if (!holding && _elapsed >= _nextActionAt) {
       _triggerRandomAction();
