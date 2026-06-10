@@ -60,45 +60,60 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    final bgImage = await game.images.load('room_background.png');
+    // 가구 없는 빈 방 배경 (room_empty.png). 853×1844, 9:19.
+    final bgImage = await game.images.load('room_empty.png');
     add(
       SpriteComponent(
         sprite: Sprite(bgImage),
         size: Vector2(480, 480 * _bgAspect),
         anchor: Anchor.center,
         position: Vector2.zero(),
-        // 도트 아트 보존 — nearest neighbor.
         paint: Paint()..filterQuality = FilterQuality.none,
-        // 가장 아래 — 캐릭터 그림자(PR-M, priority -1)보다도 아래.
-        priority: -10,
+        // 가장 아래 — 모든 y-sort 대상(가구/캐릭터/그림자)보다 뒤.
+        priority: -10000,
       ),
     );
 
-    // PR-H/M placeholder — 색 사각형 가구 3개.
-    // 위치는 viewport(±240, ±400) logical 좌표. 방 배경 PNG의 실제 가구 위치와 정합성은 v2 PNG 교체 시 조정.
-    // PR-M: 캐릭터 사이즈/위치 조정에 맞춰 가구도 비례 재배치.
-    // 가구는 채팅창(viewport 하단 60%, y≳+80) 위쪽 영역에 배치.
-    // 캐릭터 이동 범위(footY -100~170)와 겹쳐 위치 기반 상호작용 가능.
+    // PR-H — 실제 가구 sprite. anchor center, targetWidth/position은 실기 확인 후 조정.
+    // priority -5: 방 배경 위, 캐릭터(0)·그림자(-1) 아래 → 캐릭터가 항상 가구 앞.
+    // 가구-액션 매핑: bed=sleep / desk=eat / standmic=sing / chair=happy.
+    // (mirror는 배경 글로우라 보류. 매핑은 사용자 확정 후 조정.)
+    // bottomMargin = PNG 불투명 영역의 바닥 여백 비율(실측) → z-order 기준선 보정.
     _furniture.addAll([
       FurnitureComponent(
         kind: FurnitureKind.bed,
         actionWhenNear: CharacterActionType.sleep,
-        size: Vector2(170, 80),
-        position: Vector2(-120, -20),
+        assetFile: 'furniture_bed.png',
+        targetWidth: 210,
+        bottomMargin: 0.247,
+        position: Vector2(115, -50),
         anchor: Anchor.center,
       ),
       FurnitureComponent(
         kind: FurnitureKind.desk,
         actionWhenNear: CharacterActionType.eat,
-        size: Vector2(150, 70),
-        position: Vector2(125, -20),
+        assetFile: 'furniture_desk.png',
+        targetWidth: 200,
+        bottomMargin: 0.293,
+        position: Vector2(-120, -55),
+        anchor: Anchor.center,
+      ),
+      FurnitureComponent(
+        kind: FurnitureKind.standmic,
+        actionWhenNear: CharacterActionType.sing,
+        assetFile: 'furniture_standmic.png',
+        targetWidth: 95,
+        bottomMargin: 0.049,
+        position: Vector2(150, 35),
         anchor: Anchor.center,
       ),
       FurnitureComponent(
         kind: FurnitureKind.chair,
-        actionWhenNear: CharacterActionType.sing,
-        size: Vector2(80, 80),
-        position: Vector2(140, 70),
+        actionWhenNear: CharacterActionType.happy,
+        assetFile: 'furniture_chair.png',
+        targetWidth: 120,
+        bottomMargin: 0.188,
+        position: Vector2(-30, 35),
         anchor: Anchor.center,
       ),
     ]);
