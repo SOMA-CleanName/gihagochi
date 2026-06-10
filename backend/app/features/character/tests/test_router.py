@@ -61,6 +61,16 @@ async def test_post_action_requires_auth(client: AsyncClient) -> None:
     assert response.status_code == 401
 
 
+@pytest.mark.asyncio
+async def test_post_position_requires_auth(client: AsyncClient) -> None:
+    """POST /character/{idol_id}/position은 AuthedUser 필요 (PR-G2)."""
+    response = await client.post(
+        f"/character/{uuid4()}/position",
+        json={"x": 0.0, "y": 80.0},
+    )
+    assert response.status_code == 401
+
+
 # ============================================================
 # 서비스 — 비즈니스 룰
 # ============================================================
@@ -147,3 +157,40 @@ async def test_record_action_updates_existing_state(session: AsyncSession, make_
         )
     ).all()
     assert len(log_rows) == 2
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_save_position_creates_and_updates(session: AsyncSession, make_fresh_user) -> None:
+    """첫 위치 저장 → state row 생성(default + 위치), 재저장 → 위치만 갱신 (PR-G2)."""
+    idol_id = make_fresh_user()
+    await auth_service.create_signup(session, idol_id, _signup_input("아이돌"))
+    await session.flush()
+
+    first = await service.save_position(session, idol_id, 10.0, 20.0)
+    assert first.position_x == 10.0
+    assert first.position_y == 20.0
+    assert first.current_action == CharacterActionType.IDLE
+
+    second = await service.save_position(session, idol_id, -30.0, 80.0)
+    assert second.position_x == -30.0
+    assert second.position_y == 80.0
+
+    rows = (
+        await session.scalars(select(CharacterState).where(CharacterState.idol_id == idol_id))
+    ).all()
+    assert len(rows) == 1
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_get_state_includes_position(session: AsyncSession, make_fresh_user) -> None:
+    """저장된 위치가 get_state 응답에 포함 (PR-G2)."""
+    idol_id = make_fresh_user()
+    await auth_service.create_signup(session, idol_id, _signup_input("아이돌"))
+    await session.flush()
+
+    await service.save_position(session, idol_id, 5.0, -15.0)
+    result = await service.get_state(session, idol_id)
+    assert result.position_x == 5.0
+    assert result.position_y == -15.0

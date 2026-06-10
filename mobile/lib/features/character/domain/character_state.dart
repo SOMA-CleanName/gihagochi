@@ -23,6 +23,9 @@ abstract class CharacterState with _$CharacterState {
     required int happiness,
     required int energy,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
+    // PR-G2 — 드래그 위치(flame world 좌표). null = 미설정 → 기본 위치 사용.
+    @JsonKey(name: 'position_x') double? positionX,
+    @JsonKey(name: 'position_y') double? positionY,
   }) = _CharacterState;
 
   factory CharacterState.fromJson(Map<String, dynamic> json) =>

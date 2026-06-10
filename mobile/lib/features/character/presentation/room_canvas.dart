@@ -69,6 +69,9 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   late final AnimationController _expand;
   bool _isDragging = false;
 
+  /// PR-G2 — 저장된 위치를 최초 1회만 복원 (이후 드래그 저장으로 인한 재호출 무시).
+  bool _positionRestored = false;
+
   /// PR-B 시범 — flame 게임 인스턴스 보존 (매 rebuild 재생성 방지).
   /// PR-I에서 RoomCanvas 자체 정리 시 _game 라이프사이클은 새 위젯으로 이관.
   late final EncoreCharacterGame _game;
@@ -82,7 +85,19 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
       duration: const Duration(milliseconds: 260),
       value: 0.0, // 초기 = 가장 내림 (캐릭터 영역 최대)
     );
-    _game = EncoreCharacterGame(onCharacterTap: _handleCharacterTap);
+    _game = EncoreCharacterGame(
+      onCharacterTap: _handleCharacterTap,
+      onPositionSaved: _handlePositionSaved,
+    );
+  }
+
+  /// PR-G2 — 드래그 종료 시 위치 저장. 실패해도 로컬 위치는 유지(스낵바 X — 조용히).
+  void _handlePositionSaved(double x, double y) {
+    unawaited(
+      ref
+          .read(characterStateControllerProvider(widget.idolId).notifier)
+          .savePosition(x, y),
+    );
   }
 
   /// PR-F — flame 캐릭터 탭 시 호출.
@@ -137,12 +152,10 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   void _onDragEnd(DragEndDetails details) {
     setState(() => _isDragging = false);
     final v = details.velocity.pixelsPerSecond.dy;
-    // dy<0 (위로 swipe) → 채팅창 위로 snap (value=1)
-    // dy>0 (아래로 swipe) → 채팅창 아래로 snap (value=0)
-    final target = v.abs() > _snapVelocityThreshold
-        ? (v < 0 ? 1.0 : 0.0)
-        : (_expand.value > 0.5 ? 1.0 : 0.0);
-    _expand.animateTo(target, curve: Curves.easeOutCubic);
+    // 빠른 플릭만 방향대로 끝까지 snap. 천천히 놓으면 그 위치에 그대로 멈춤(중간 정지 가능).
+    if (v.abs() > _snapVelocityThreshold) {
+      _expand.animateTo(v < 0 ? 1.0 : 0.0, curve: Curves.easeOutCubic);
+    }
   }
 
   void _onHandleTap() {
@@ -152,9 +165,6 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
 
   @override
   Widget build(BuildContext context) {
-    final moment =
-        ref.watch(characterMomentControllerProvider(widget.idolId));
-
     // PR-F — 백엔드 state 변경 시 flame character sprite 동기.
     // 트리거 경로: 탭 / PR-2 디버그 메뉴 / cron / AI(v2) 모두 동일하게 흘러옴.
     ref.listen(characterStateControllerProvider(widget.idolId), (prev, next) {
@@ -162,13 +172,35 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
         final world = _game.world;
         if (world is RoomWorld) {
           world.character.setAction(state.currentAction);
+          // PR-G2 — 저장된 위치 최초 1회 복원.
+          if (!_positionRestored &&
+              state.positionX != null &&
+              state.positionY != null) {
+            _positionRestored = true;
+            world.character.setGroundPosition(
+              state.positionX!,
+              state.positionY!,
+            );
+          }
         }
       });
     });
 
+    // 채팅 카드(MessageList 포함)는 _expand 애니메이션·드래그 중 재빌드되면 안 됨
+    // (이미지 리로드·깜빡임 방지). AnimatedBuilder의 child로 고정 → 위치(top)만 갱신.
+    final chatCard = _ChatCard(
+      idolId: widget.idolId,
+      isDragging: _isDragging,
+      onDragStart: _onDragStart,
+      onDragUpdate: _onDragUpdate,
+      onDragEnd: _onDragEnd,
+      onHandleTap: _onHandleTap,
+    );
+
     return AnimatedBuilder(
       animation: _expand,
-      builder: (context, _) {
+      child: chatCard,
+      builder: (context, child) {
         final screenH = MediaQuery.of(context).size.height;
         final chatTop = _chatTopFor(screenH, _expand.value);
         return Stack(
@@ -180,30 +212,30 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
             Positioned.fill(
               child: GameWidget(game: _game),
             ),
-            // Layer 2: 채팅창 — top만 동적, bottom=0. 반투명 + blur.
+            // Layer 2: 채팅창 — top만 동적, bottom=0. child로 고정돼 재빌드 안 됨.
             Positioned(
               top: chatTop,
               left: 0,
               right: 0,
               bottom: 0,
-              child: _ChatCard(
-                idolId: widget.idolId,
-                isDragging: _isDragging,
-                onDragStart: _onDragStart,
-                onDragUpdate: _onDragUpdate,
-                onDragEnd: _onDragEnd,
-                onHandleTap: _onHandleTap,
-              ),
+              child: child!,
             ),
-            // Layer 3 (F-044): 모먼트 카드 — 채팅창 top 위에 floating, IgnorePointer.
-            // chatTop이 변하면 함께 움직임. moment=null이면 SizedBox.shrink로 영향 0.
+            // Layer 3 (F-044): 모먼트 카드 — 별도 Consumer로 구독해 moment 변화가
+            // MessageList를 재빌드하지 않게 격리. chatTop 따라 함께 이동.
             Positioned(
               left: 0,
               right: 0,
               top: chatTop - _momentCardLift,
               child: Align(
                 alignment: Alignment.bottomCenter,
-                child: MomentCard(moment: moment),
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final moment = ref.watch(
+                      characterMomentControllerProvider(widget.idolId),
+                    );
+                    return MomentCard(moment: moment);
+                  },
+                ),
               ),
             ),
           ],
@@ -245,9 +277,8 @@ class _ChatCard extends StatelessWidget {
         filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            // PR-N: 솔리드 — 채팅창 영역 뒤 GameWidget 안 비치게.
-            // 최저점 라인 아래는 채팅바만 보이고, 위로 올라간 영역은 캐릭터 가림 (의도).
-            color: AppColors.surface,
+            // 극도로 투명 + blur — 뒤 방 배경/캐릭터가 거의 그대로 비침 (character.md v2 영역 1).
+            color: AppColors.surface.withValues(alpha: 0.1),
             border: Border(
               top: BorderSide(
                 color: AppColors.primary.withValues(alpha: 0.3),
@@ -266,7 +297,22 @@ class _ChatCard extends StatelessWidget {
                 onTap: onHandleTap,
               ),
               Expanded(child: MessageList(idolId: idolId)),
-              MessageInput(idolId: idolId),
+              // 입력란 배경을 화면 바닥(네브바/홈 인디케이터 영역 포함)까지 솔리드로 확장.
+              // MessageInput 내부 SafeArea(bottom)를 removePadding으로 무력화하고,
+              // 동일 inset을 직접 padding으로 줘 컨텐츠는 네브바 위, 배경은 바닥까지.
+              ColoredBox(
+                color: AppColors.surface,
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeBottom: true,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.paddingOf(context).bottom,
+                    ),
+                    child: MessageInput(idolId: idolId),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
