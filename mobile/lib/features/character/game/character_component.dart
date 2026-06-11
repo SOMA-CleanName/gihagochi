@@ -116,6 +116,17 @@ class CharacterComponent extends SpriteComponent
   /// 손가락으로 누르고 있음 (tap down ~ up). 드래그가 아니어도 들어올림.
   bool _isHeld = false;
 
+  /// 이동(animate) 중 걷기 — walk 스프라이트 + bob + 진행방향 flip.
+  /// CharacterActionType 밖(시각 전용). walk PNG는 idle 캔버스에 정렬됨.
+  bool _isWalking = false;
+  double _walkDir = 1; // 1=기본 방향, -1=좌우 반전
+  Sprite? _walkSprite;
+  static const double _walkAspect = 1844 / 853; // idle 정렬 전처리값
+  static const double _walkFootRatio = 0.229;
+  static const double _walkBobAmp = 14;
+  static const double _walkBobFreq = 12;
+  static const double _walkSpeed = 115; // 걷기 이동 속도 (logical px/s)
+
   // ── PR-M~P: 드래그 lift + 그림자 + 원근법 ─────────────────
   /// 들림 높이 (logical px). drag 중 캐릭터를 이만큼 위로 시각 이동.
   static const double _liftHeight = 24;
@@ -151,16 +162,20 @@ class CharacterComponent extends SpriteComponent
 
   /// PR-G2 — 저장 위치 복원. animate면 현재 위치에서 부드럽게 이동(등장 후 점프 방지).
   Vector2? _moveTarget;
-  void setGroundPosition(double x, double y, {bool animate = false}) {
+  void setGroundPosition(double x, double y,
+      {bool animate = false, bool walk = false}) {
     final cy = y.clamp(minGround.y, maxGround.y);
     final xl = _xLimitForGround(cy);
     final cx = x.clamp(-xl, xl);
     if (animate) {
       _moveTarget = Vector2(cx, cy);
+      _isWalking = walk;
+      if (walk && (cx - _groundX).abs() > 1) _walkDir = cx >= _groundX ? 1 : -1;
     } else {
       _groundX = cx;
       _groundY = cy;
       _moveTarget = null;
+      _isWalking = false;
     }
   }
 
@@ -172,6 +187,7 @@ class CharacterComponent extends SpriteComponent
       final img = await game.images.load(_file[action]!);
       _sprites[action] = Sprite(img);
     }
+    _walkSprite = Sprite(await game.images.load('character_walk.png'));
 
     // PR-G2 — 캐시된 위치/액션 즉시 복원 (서버 응답 대기 없이 진입 즉시 정확한 모습).
     final cached = await loadCached?.call();
@@ -231,16 +247,33 @@ class CharacterComponent extends SpriteComponent
     super.update(dt);
     _elapsed += dt;
 
-    // PR-G2 — 복원 위치로 부드럽게 이동 (드래그/누르는 중엔 멈춤).
+    // 이동 — 걷기(메시지 반응)는 일정 속도로 천천히, 위치 복원은 빠른 lerp 수렴.
     final target = _moveTarget;
     if (target != null && !_isDragging && !_isHeld) {
-      final k = (dt * 8).clamp(0.0, 1.0);
-      _groundX += (target.x - _groundX) * k;
-      _groundY += (target.y - _groundY) * k;
-      if ((target.x - _groundX).abs() < 0.5 && (target.y - _groundY).abs() < 0.5) {
-        _groundX = target.x;
-        _groundY = target.y;
-        _moveTarget = null;
+      if (_isWalking) {
+        final dx = target.x - _groundX;
+        final dy = target.y - _groundY;
+        final dist = sqrt(dx * dx + dy * dy);
+        final step = _walkSpeed * dt;
+        if (dist <= step || dist < 0.5) {
+          _groundX = target.x;
+          _groundY = target.y;
+          _moveTarget = null;
+          _isWalking = false;
+        } else {
+          _groundX += dx / dist * step;
+          _groundY += dy / dist * step;
+        }
+      } else {
+        final k = (dt * 8).clamp(0.0, 1.0);
+        _groundX += (target.x - _groundX) * k;
+        _groundY += (target.y - _groundY) * k;
+        if ((target.x - _groundX).abs() < 0.5 &&
+            (target.y - _groundY).abs() < 0.5) {
+          _groundX = target.x;
+          _groundY = target.y;
+          _moveTarget = null;
+        }
       }
     }
 
@@ -255,23 +288,34 @@ class CharacterComponent extends SpriteComponent
           : max(_liftOffset - step, liftTarget);
     }
 
-    // 호흡 — 세로 미세 scale (발 고정, 머리만 살짝). y 위치는 안 흔듦. 누르는 중 멈춤.
+    // 이동 중엔 걷기 — walk 스프라이트 + bob + 진행방향 flip (호흡은 멈춤).
+    final useWalk = _isWalking && _walkSprite != null;
+
+    // 호흡 — 세로 미세 scale (발 고정). 누르거나 걷는 중엔 멈춤.
     var breatheScale = 1.0;
-    if (!holding) {
+    if (!holding && !useWalk) {
       final periodSec = _breatheMs[_action]! / 1000;
       breatheScale = 1 + sin(_elapsed * 2 * pi / periodSec) * _breatheScaleAmp;
     }
 
     // scale·position·그림자를 source of truth에서 파생.
-    // baseScale = 원근만, s = 원근 × 호흡. footLift가 s를 반영하므로 호흡해도 발 고정.
     final baseScale = _scaleForGround();
     final s = baseScale * breatheScale;
-    scale = Vector2.all(s);
 
-    // 시각적 발바닥(footRatio 보정)을 _groundY 에 정합 → 액션 바뀌어도 바닥 일정.
-    // anchor bottomCenter 기준 position.y = PNG bottom 이므로, 발이 위로 뜬 만큼 더해줌.
-    final footLift = size.y * s * _footRatio[_action]!;
-    position = Vector2(_groundX, _groundY - _liftOffset + footLift);
+    // sprite·size — 걷는 중이면 walk, 아니면 현재 액션.
+    final desiredSprite = useWalk ? _walkSprite! : _sprites[_action];
+    if (desiredSprite != null && sprite != desiredSprite) sprite = desiredSprite;
+    final asp = useWalk ? _walkAspect : _aspect[_action]!;
+    size = Vector2(targetWidth, targetWidth * asp);
+
+    // flip — 걷는 중 진행방향으로 좌우 반전 (scale.x 부호).
+    scale = Vector2(s * (useWalk ? _walkDir : 1.0), s);
+
+    // 시각적 발바닥(footRatio 보정)을 _groundY 에 정합. 걷는 중엔 통통 bob 추가.
+    final footR = useWalk ? _walkFootRatio : _footRatio[_action]!;
+    final footLift = size.y * s * footR;
+    final walkBob = useWalk ? sin(_elapsed * _walkBobFreq).abs() * _walkBobAmp : 0.0;
+    position = Vector2(_groundX, _groundY - _liftOffset + footLift - walkBob);
 
     // 그림자 — 들림·액션·호흡과 무관하게 _groundY(시각적 발바닥)에 고정. 원근 scale만 반영.
     _shadow
