@@ -38,44 +38,64 @@ class ChatRoomScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: headerAsync.when(
-          loading: () => const Text(''),
-          error: (_, __) => const Text(''),
-          data: (h) {
-            final tappable = !isIdolSelf && h != null;
-            final inner = Row(
-              children: [
-                Avatar(
-                  imageUrl: h?.thumbnailUrl,
-                  fallbackText: h?.displayName ?? '?',
-                  size: 36,
-                  idolRing: true,
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    h?.displayName ?? '',
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
+        // 뒤로가기도 title과 동일하게 위로 올려 얼라인 맞춤.
+        leading: Transform.translate(
+          offset: const Offset(0, -6),
+          child: const BackButton(),
+        ),
+        // 방 캔버스가 비치되 헤더(프사·닉네임·뒤로) 가독성 확보 — 상단 어두운 그라데이션.
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x8C000000), Color(0x00000000)],
+            ),
+          ),
+        ),
+        // 헤더(프사·닉네임)를 toolbar 중앙보다 살짝 위로 — 캔버스 침투 느낌 완화.
+        title: Transform.translate(
+          offset: const Offset(0, -6),
+          child: headerAsync.when(
+            loading: () => const Text(''),
+            error: (_, __) => const Text(''),
+            data: (h) {
+              final tappable = !isIdolSelf && h != null;
+              final inner = Row(
+                children: [
+                  Avatar(
+                    imageUrl: h?.thumbnailUrl,
+                    fallbackText: h?.displayName ?? '?',
+                    size: 36,
+                    idolRing: true,
                   ),
-                ),
-              ],
-            );
-            if (!tappable) return inner;
-            return InkWell(
-              onTap: () => context.push('/discover/$idolId'),
-              child: inner,
-            );
-          },
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      h?.displayName ?? '',
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                ],
+              );
+              if (!tappable) return inner;
+              return InkWell(
+                onTap: () => context.push('/discover/$idolId'),
+                child: inner,
+              );
+            },
+          ),
         ),
         actions: [
           if (!isIdolSelf)
-            IconButton(
-              tooltip: '메뉴',
-              icon: const Icon(Icons.more_vert),
-              onPressed: () => showChatRoomMenu(
-                context: context,
-                idolId: idolId,
+            Transform.translate(
+              offset: const Offset(0, -6),
+              child: IconButton(
+                tooltip: '메뉴',
+                icon: const Icon(Icons.more_vert),
+                onPressed: () =>
+                    showChatRoomMenu(context: context, idolId: idolId),
               ),
             ),
         ],
@@ -114,45 +134,45 @@ class _BlockedView extends StatelessWidget {
   const _BlockedView();
   @override
   Widget build(BuildContext context) => _Centered(
-        icon: Icons.lock_outline,
-        title: '응원하지 않는 아이돌입니다.',
-        hint: '아이돌 탐색에서 응원을 시작하세요.',
-        actionLabel: '아이돌 탐색',
-        onAction: () {
-          try {
-            context.go('/discover');
-          } catch (_) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('아이돌 탐색은 준비 중입니다.')),
-            );
-            context.pop();
-          }
-        },
-      );
+    icon: Icons.lock_outline,
+    title: '응원하지 않는 아이돌입니다.',
+    hint: '아이돌 탐색에서 응원을 시작하세요.',
+    actionLabel: '아이돌 탐색',
+    onAction: () {
+      try {
+        context.go('/discover');
+      } catch (_) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('아이돌 탐색은 준비 중입니다.')));
+        context.pop();
+      }
+    },
+  );
 }
 
 class _SuspendedView extends StatelessWidget {
   const _SuspendedView();
   @override
   Widget build(BuildContext context) => _Centered(
-        icon: Icons.pause_circle_outline,
-        title: '일시 정지된 아이돌입니다.',
-        hint: '운영자 확인 후 다시 활성화됩니다.',
-        actionLabel: '뒤로 가기',
-        onAction: () => context.pop(),
-      );
+    icon: Icons.pause_circle_outline,
+    title: '일시 정지된 아이돌입니다.',
+    hint: '운영자 확인 후 다시 활성화됩니다.',
+    actionLabel: '뒤로 가기',
+    onAction: () => context.pop(),
+  );
 }
 
 class _NotFoundView extends StatelessWidget {
   const _NotFoundView();
   @override
   Widget build(BuildContext context) => _Centered(
-        icon: Icons.help_outline,
-        title: '아이돌 정보를 찾을 수 없어요.',
-        hint: '주소가 잘못되었거나 삭제된 아이돌입니다.',
-        actionLabel: '뒤로 가기',
-        onAction: () => context.pop(),
-      );
+    icon: Icons.help_outline,
+    title: '아이돌 정보를 찾을 수 없어요.',
+    hint: '주소가 잘못되었거나 삭제된 아이돌입니다.',
+    actionLabel: '뒤로 가기',
+    onAction: () => context.pop(),
+  );
 }
 
 class _Centered extends StatelessWidget {
@@ -186,8 +206,8 @@ class _Centered extends StatelessWidget {
               hint,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
             const SizedBox(height: AppSpacing.xl),
             FilledButton(onPressed: onAction, child: Text(actionLabel)),
