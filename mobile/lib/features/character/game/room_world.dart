@@ -176,7 +176,7 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
   void reactToAction(CharacterActionType action) {
     final pos = _furniturePositionForAction(action);
     if (pos != null) {
-      character.setGroundPosition(pos.x, pos.y, animate: true);
+      character.setGroundPosition(pos.x, pos.y, animate: true, walk: true);
     } else {
       character.setAction(action);
     }
