@@ -18,6 +18,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/painting.dart';
 
 import '../data/character_cache.dart';
+import '../domain/furniture_placement.dart';
 import 'furniture_component.dart';
 import 'room_world.dart';
 
@@ -26,6 +27,7 @@ class EncoreCharacterGame extends FlameGame {
     this.onCharacterTap,
     this.onPositionSaved,
     this.loadCached,
+    this.loadCachedFurniture,
     this.onFurnitureSelected,
   })  : super(
           world: RoomWorld(),
@@ -47,6 +49,9 @@ class EncoreCharacterGame extends FlameGame {
 
   /// PR-G2 — 캐릭터 onLoad에서 호출할 로컬 캐시 로더 (진입 즉시 위치/액션 복원).
   final Future<CachedCharacter?> Function()? loadCached;
+
+  /// 가구 배치 로컬 캐시 로더 — RoomWorld.onLoad에서 호출, 생성 시점부터 적용해 깜빡임 방지.
+  final Future<Map<String, FurniturePlacement>?> Function()? loadCachedFurniture;
 
   /// 편집 모드 — 가구 탭/드래그 선택 시 외부(RoomCanvas)가 받아 슬라이더 표시.
   final void Function(FurnitureComponent)? onFurnitureSelected;

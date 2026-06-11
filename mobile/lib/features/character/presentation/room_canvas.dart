@@ -109,6 +109,7 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
       onCharacterTap: _handleCharacterTap,
       onPositionSaved: _handlePositionSaved,
       loadCached: () => _cache.read(widget.idolId),
+      loadCachedFurniture: () => _cache.readFurniture(widget.idolId),
       onFurnitureSelected: _handleFurnitureSelected,
     );
   }
@@ -133,6 +134,8 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
     final world = _game.world;
     if (world is RoomWorld) {
       final layout = world.currentFurnitureLayout();
+      // 로컬 캐시 즉시 갱신 → 다음 진입 시 서버 대기 없이 복원(깜빡임 방지).
+      unawaited(_cache.writeFurniture(widget.idolId, layout));
       final repo = ref.read(characterRepositoryProvider);
       unawaited(
         repo.saveFurniture(widget.idolId, layout).then(
@@ -153,6 +156,38 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
     if (f == null) return;
     f.setTargetWidth(w);
     setState(() {}); // 슬라이더 값 반영
+  }
+
+  /// 앞/뒤 z-order 기준선 조정 (값 ↑ = 바닥선 위로 = 캐릭터가 더 앞에 옴).
+  void _onFurnitureBottomMarginChanged(double m) {
+    final f = _selectedFurniture;
+    if (f == null) return;
+    f.setBottomMargin(m);
+    setState(() {});
+  }
+
+  /// 가구별 상호작용 거리 조정 (캐릭터가 이 거리 안에 오면 액션 트리거).
+  void _onFurnitureDistanceChanged(double d) {
+    final f = _selectedFurniture;
+    if (f == null) return;
+    f.setInteractionDistance(d);
+    setState(() {});
+  }
+
+  /// 가구 넣기/빼기 토글.
+  void _toggleFurnitureVisible(FurnitureKind kind) {
+    final world = _game.world;
+    if (world is! RoomWorld) return;
+    final on = world.furnitureVisibility()[kind] ?? true;
+    world.setFurnitureVisible(kind, !on);
+    // 빼는 가구가 선택돼 있었다면 선택 해제.
+    if (on && _selectedFurniture?.kind == kind) _selectedFurniture = null;
+    setState(() {});
+  }
+
+  Map<FurnitureKind, bool> _furnitureVisibility() {
+    final world = _game.world;
+    return world is RoomWorld ? world.furnitureVisibility() : const {};
   }
 
   /// PR-G2 — 드래그 종료 시 위치 저장. 실패해도 로컬 위치는 유지(스낵바 X — 조용히).
@@ -259,9 +294,17 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
             }
           }
           // 가구 배치 최초 1회 복원 (아이돌별, 모든 팬 공유).
-          if (!_furnitureRestored && state.furnitureLayout != null) {
+          if (!_furnitureRestored) {
             _furnitureRestored = true;
-            world.applyFurnitureLayout(state.furnitureLayout!);
+            final layout = state.furnitureLayout;
+            if (layout != null) {
+              world.applyFurnitureLayout(layout);
+              // 서버 배치를 캐시에 저장 → 다음 진입은 서버 대기 없이 즉시 복원.
+              unawaited(_cache.writeFurniture(widget.idolId, layout));
+            } else {
+              // 저장된 배치 없음 — 숨겨둔 기본배치 fade-in.
+              world.revealFurniture();
+            }
           }
         }
       });
@@ -341,7 +384,11 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
                 bottom: 0,
                 child: _FurnitureEditPanel(
                   selected: _selectedFurniture,
+                  visibility: _furnitureVisibility(),
+                  onToggleVisible: _toggleFurnitureVisible,
                   onSizeChanged: _onFurnitureSizeChanged,
+                  onBottomMarginChanged: _onFurnitureBottomMarginChanged,
+                  onDistanceChanged: _onFurnitureDistanceChanged,
                   onCancel: _toggleEdit,
                   onSave: _saveFurnitureAndExit,
                 ),
@@ -357,13 +404,21 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
 class _FurnitureEditPanel extends StatelessWidget {
   const _FurnitureEditPanel({
     required this.selected,
+    required this.visibility,
+    required this.onToggleVisible,
     required this.onSizeChanged,
+    required this.onBottomMarginChanged,
+    required this.onDistanceChanged,
     required this.onCancel,
     required this.onSave,
   });
 
   final FurnitureComponent? selected;
+  final Map<FurnitureKind, bool> visibility;
+  final ValueChanged<FurnitureKind> onToggleVisible;
   final ValueChanged<double> onSizeChanged;
+  final ValueChanged<double> onBottomMarginChanged;
+  final ValueChanged<double> onDistanceChanged;
   final VoidCallback onCancel;
   final VoidCallback onSave;
 
@@ -385,8 +440,8 @@ class _FurnitureEditPanel extends StatelessWidget {
                   Expanded(
                     child: Text(
                       f == null
-                          ? '가구를 탭해서 선택 → 드래그로 이동 / 슬라이더로 크기'
-                          : '${f.kind.name} — 크기 ${f.targetWidth.round()}',
+                          ? '가구를 탭해서 선택 → 드래그 이동 / 슬라이더 조정'
+                          : f.kind.name,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -394,17 +449,92 @@ class _FurnitureEditPanel extends StatelessWidget {
                   TextButton(onPressed: onSave, child: const Text('저장')),
                 ],
               ),
-              if (f != null)
-                Slider(
+              // 가구 넣기/빼기 — 켜진 칩 = 방에 배치됨.
+              if (visibility.isNotEmpty)
+                Wrap(
+                  spacing: 6,
+                  children: visibility.entries
+                      .map(
+                        (e) => FilterChip(
+                          label: Text(e.key.name),
+                          selected: e.value,
+                          onSelected: (_) => onToggleVisible(e.key),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      )
+                      .toList(),
+                ),
+              if (f != null) ...[
+                _EditSlider(
+                  label: '크기',
+                  value: f.targetWidth,
                   min: 40,
                   max: 360,
-                  value: f.targetWidth.clamp(40, 360),
+                  display: f.targetWidth.round().toString(),
                   onChanged: onSizeChanged,
                 ),
+                _EditSlider(
+                  label: '앞뒤선',
+                  value: f.bottomMargin,
+                  min: 0,
+                  max: 0.6,
+                  display: f.bottomMargin.toStringAsFixed(2),
+                  onChanged: onBottomMarginChanged,
+                ),
+                _EditSlider(
+                  label: '상호작용',
+                  value: f.interactionDistance,
+                  min: 30,
+                  max: 280,
+                  display: f.interactionDistance.round().toString(),
+                  onChanged: onDistanceChanged,
+                ),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 편집 패널 슬라이더 1줄 (라벨 + Slider + 현재값).
+class _EditSlider extends StatelessWidget {
+  const _EditSlider({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.display,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final String display;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodySmall;
+    return Row(
+      children: [
+        SizedBox(width: 56, child: Text(label, style: style)),
+        Expanded(
+          child: Slider(
+            min: min,
+            max: max,
+            value: value.clamp(min, max),
+            onChanged: onChanged,
+          ),
+        ),
+        SizedBox(
+          width: 40,
+          child: Text(display, style: style, textAlign: TextAlign.end),
+        ),
+      ],
     );
   }
 }

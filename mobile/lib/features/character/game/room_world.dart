@@ -42,10 +42,6 @@ const double _characterMoveX = 130;
 const double _characterMinFootY = -140;
 const double _characterMaxFootY = 80;
 
-/// PR-H / PR-M — 가구 ↔ 캐릭터 상호작용 임계 거리 (logical px).
-/// 캐릭터 사이즈 줄어서 임계도 조정. viewport 480의 ~27%.
-const double _interactionDistance = 130;
-
 class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
   /// 외부(RoomCanvas)에서 character.setAction(...) 호출 가능.
   /// PR-F: characterStateController 변화 → ref.listen → character.setAction.
@@ -65,7 +61,7 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
     await super.onLoad();
 
     // 가구 없는 빈 방 배경 (room_empty.png). 853×1844, 9:19.
-    final bgImage = await game.images.load('room_empty.png');
+    final bgImage = await game.images.load('room.png');
     add(
       SpriteComponent(
         sprite: Sprite(bgImage),
@@ -83,47 +79,47 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
     // 가구-액션 매핑: bed=sleep / desk=eat / standmic=sing / chair=happy.
     // (mirror는 배경 글로우라 보류. 매핑은 사용자 확정 후 조정.)
     // bottomMargin = PNG 불투명 영역의 바닥 여백 비율(실측) → z-order 기준선 보정.
+    // 가구 배치 — 저장된 로컬 캐시 있으면 생성 시점부터 반영(서버 대기 없이 깜빡임 0).
+    final cached = await game.loadCachedFurniture?.call();
+    FurnitureComponent build(
+      FurnitureKind kind,
+      CharacterActionType action,
+      String asset,
+      double w,
+      double bm,
+      Vector2 pos,
+    ) {
+      final p = cached?[kind.name];
+      return FurnitureComponent(
+        kind: kind,
+        actionWhenNear: action,
+        assetFile: asset,
+        targetWidth: p?.w ?? w,
+        bottomMargin: p?.bm ?? bm,
+        interactionDistance: p?.dist ?? 130,
+        position: p != null ? Vector2(p.x, p.y) : pos,
+        anchor: Anchor.center,
+      )..startHidden = cached == null;
+    }
+
     _furniture.addAll([
-      FurnitureComponent(
-        kind: FurnitureKind.bed,
-        actionWhenNear: CharacterActionType.sleep,
-        assetFile: 'furniture_bed.png',
-        targetWidth: 210,
-        bottomMargin: 0.247,
-        position: Vector2(115, -50),
-        anchor: Anchor.center,
-      ),
-      FurnitureComponent(
-        kind: FurnitureKind.desk,
-        actionWhenNear: CharacterActionType.eat,
-        assetFile: 'furniture_desk.png',
-        targetWidth: 200,
-        bottomMargin: 0.293,
-        position: Vector2(-120, -55),
-        anchor: Anchor.center,
-      ),
-      FurnitureComponent(
-        kind: FurnitureKind.standmic,
-        actionWhenNear: CharacterActionType.sing,
-        assetFile: 'furniture_standmic.png',
-        targetWidth: 95,
-        bottomMargin: 0.049,
-        position: Vector2(150, 35),
-        anchor: Anchor.center,
-      ),
-      FurnitureComponent(
-        kind: FurnitureKind.chair,
-        actionWhenNear: CharacterActionType.happy,
-        assetFile: 'furniture_chair.png',
-        targetWidth: 120,
-        bottomMargin: 0.188,
-        position: Vector2(-30, 35),
-        anchor: Anchor.center,
-      ),
+      build(FurnitureKind.bed, CharacterActionType.sleep, 'furniture_bed.png',
+          210, 0.247, Vector2(115, -50)),
+      build(FurnitureKind.desk, CharacterActionType.eat, 'furniture_desk.png',
+          200, 0.293, Vector2(-120, -55)),
+      build(FurnitureKind.standmic, CharacterActionType.sing,
+          'furniture_standmic.png', 95, 0.049, Vector2(150, 35)),
+      build(FurnitureKind.chair, CharacterActionType.happy,
+          'furniture_chair.png', 120, 0.188, Vector2(-30, 35)),
     ]);
     for (final f in _furniture) {
       f.onSelected = game.onFurnitureSelected;
-      add(f);
+      // 캐시에서 뺀 가구(visible=false)는 방에 안 넣음.
+      if (cached?[f.kind.name]?.visible == false) {
+        f.visible = false;
+      } else {
+        add(f);
+      }
     }
 
     character = CharacterComponent(
@@ -157,6 +153,24 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
     }
   }
 
+  /// 편집 — 가구 넣기/빼기. 빼면 월드에서 제거(렌더·상호작용 X), 넣으면 다시 추가.
+  void setFurnitureVisible(FurnitureKind kind, bool visible) {
+    for (final f in _furniture) {
+      if (f.kind != kind) continue;
+      f.visible = visible;
+      if (visible && f.parent == null) {
+        add(f);
+      } else if (!visible && f.parent != null) {
+        f.removeFromParent();
+      }
+    }
+  }
+
+  /// 가구별 표시 상태 (편집 UI 토글용).
+  Map<FurnitureKind, bool> furnitureVisibility() => {
+        for (final f in _furniture) f.kind: f.visible,
+      };
+
   /// 저장된 배치 적용 (GET state furniture_layout). 가구 kind.name 키 매칭.
   void applyFurnitureLayout(Map<String, FurniturePlacement> layout) {
     for (final f in _furniture) {
@@ -164,19 +178,34 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
       if (p != null) {
         f.setWorldPosition(p.x, p.y);
         f.setTargetWidth(p.w);
+        // bm/dist는 구버전 데이터에 없으면 null → 코드 기본값(생성 시 지정) 유지.
+        if (p.bm != null) f.setBottomMargin(p.bm!);
+        if (p.dist != null) f.setInteractionDistance(p.dist!);
+        if (p.visible != null) setFurnitureVisible(f.kind, p.visible!);
       }
+      f.reveal(); // 숨겨져 있었으면 fade-in
+    }
+  }
+
+  /// 저장된 배치가 없을 때 — 기본배치 그대로 fade-in (첫 진입).
+  void revealFurniture() {
+    for (final f in _furniture) {
+      f.reveal();
     }
   }
 
   /// 현재 배치 수집 (저장용).
   Map<String, FurniturePlacement> currentFurnitureLayout() => {
-        for (final f in _furniture)
-          f.kind.name: FurniturePlacement(
-            x: f.position.x,
-            y: f.position.y,
-            w: f.targetWidth,
-          ),
-      };
+    for (final f in _furniture)
+      f.kind.name: FurniturePlacement(
+        x: f.position.x,
+        y: f.position.y,
+        w: f.targetWidth,
+        bm: f.bottomMargin,
+        dist: f.interactionDistance,
+        visible: f.visible,
+      ),
+  };
 
   /// PR-H — 캐릭터가 가구 임계 거리 안에 들어오면 가구 액션 트리거.
   /// 임계 밖으로 벗어나면 _lastNearbyAction reset → 다음 진입 시 다시 발화.
@@ -188,6 +217,7 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
     FurnitureComponent? nearest;
     double minDist = double.infinity;
     for (final f in _furniture) {
+      if (!f.visible) continue; // 뺀 가구는 상호작용 제외
       final dist = pos.distanceTo(f.position);
       if (dist < minDist) {
         minDist = dist;
@@ -195,14 +225,16 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
       }
     }
 
-    if (nearest != null && minDist < _interactionDistance) {
+    if (nearest != null && minDist < nearest.interactionDistance) {
       final action = nearest.actionWhenNear;
       if (action != _lastNearbyAction) {
         _lastNearbyAction = action;
         character.setAction(action);
       }
-    } else {
+    } else if (_lastNearbyAction != null) {
+      // 가구에서 멀어지면 기본 idle로 복귀 (자동 랜덤 액션 없음).
       _lastNearbyAction = null;
+      character.setAction(CharacterActionType.idle);
     }
   }
 }
