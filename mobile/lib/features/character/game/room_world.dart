@@ -171,6 +171,25 @@ class RoomWorld extends World with HasGameReference<EncoreCharacterGame> {
         for (final f in _furniture) f.kind: f.visible,
       };
 
+  /// 메시지 반응 — 액션에 해당하는 가구로 캐릭터를 보냄(도착하면 proximity가 액션 부여).
+  /// 가구 없는 액션(sad 등)은 이동 없이 제자리에서 직접 setAction.
+  void reactToAction(CharacterActionType action) {
+    final pos = _furniturePositionForAction(action);
+    if (pos != null) {
+      character.setGroundPosition(pos.x, pos.y, animate: true);
+    } else {
+      character.setAction(action);
+    }
+  }
+
+  /// 액션과 매칭되는 보이는 가구의 위치 (없으면 null).
+  Vector2? _furniturePositionForAction(CharacterActionType action) {
+    for (final f in _furniture) {
+      if (f.visible && f.actionWhenNear == action) return f.position.clone();
+    }
+    return null;
+  }
+
   /// 저장된 배치 적용 (GET state furniture_layout). 가구 kind.name 키 매칭.
   void applyFurnitureLayout(Map<String, FurniturePlacement> layout) {
     for (final f in _furniture) {

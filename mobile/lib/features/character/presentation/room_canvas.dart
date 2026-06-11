@@ -23,6 +23,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radius.dart';
+import '../../chat_message/application/chat_messages_controller.dart';
+import '../../chat_message/domain/chat_item.dart';
+import '../../chat_message/domain/message.dart';
 import '../../chat_message/presentation/message_input.dart';
 import '../../chat_message/presentation/message_list.dart';
 import '../application/character_moment_controller.dart';
@@ -31,6 +34,7 @@ import '../data/character_cache.dart';
 import '../data/character_repository.dart';
 import '../domain/character_action.dart';
 import '../domain/character_moment.dart';
+import '../domain/message_action.dart';
 import '../game/encore_character_game.dart';
 import '../game/furniture_component.dart';
 import '../game/room_world.dart';
@@ -84,6 +88,10 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   bool _editMode = false;
   bool _furnitureRestored = false;
   FurnitureComponent? _selectedFurniture;
+
+  /// 메시지 반응 — 진입 후 새로 도착한 아이돌 메시지에만 1회 반응 (중복·과거 방지).
+  String? _lastReactedMessageId;
+  bool _reactionInitialized = false;
 
   /// 편집 가능 여부 = 디버그 빌드 + 로그인 사용자가 이 아이돌 본인.
   bool get _canEdit {
@@ -188,6 +196,21 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
   Map<FurnitureKind, bool> _furnitureVisibility() {
     final world = _game.world;
     return world is RoomWorld ? world.furnitureVisibility() : const {};
+  }
+
+  /// 메시지 리스트에서 가장 최근 아이돌 broadcast 메시지 (없으면 null).
+  Message? _latestIdolMessage(List<ChatItem> items) {
+    for (final item in items.reversed) {
+      if (item is ConfirmedItem) {
+        final m = item.message;
+        if (m.senderId == widget.idolId &&
+            (m.type == MessageType.idolToFans ||
+                m.type == MessageType.idolReply)) {
+          return m;
+        }
+      }
+    }
+    return null;
   }
 
   /// PR-G2 — 드래그 종료 시 위치 저장. 실패해도 로컬 위치는 유지(스낵바 X — 조용히).
@@ -298,15 +321,33 @@ class _RoomCanvasInnerState extends ConsumerState<_RoomCanvasInner>
             _furnitureRestored = true;
             final layout = state.furnitureLayout;
             if (layout != null) {
+              // 서버 값으로 위치/크기는 복원하되, 캐시(로컬 저장값)는 덮지 않음.
+              // 서버가 구버전이라 bm/dist가 비어도 캐시의 정상값이 초기화되지 않게.
               world.applyFurnitureLayout(layout);
-              // 서버 배치를 캐시에 저장 → 다음 진입은 서버 대기 없이 즉시 복원.
-              unawaited(_cache.writeFurniture(widget.idolId, layout));
             } else {
               // 저장된 배치 없음 — 숨겨둔 기본배치 fade-in.
               world.revealFurniture();
             }
           }
         }
+      });
+    });
+
+    // 아이돌 메시지 도착 → 키워드 분석 → 캐릭터 반응(가구로 이동/액션). 진입 후 새 메시지만.
+    ref.listen(chatMessagesControllerProvider(widget.idolId), (prev, next) {
+      next.whenData((items) {
+        final msg = _latestIdolMessage(items);
+        if (!_reactionInitialized) {
+          _reactionInitialized = true;
+          _lastReactedMessageId = msg?.id; // 진입 시점 마지막 메시지엔 반응 안 함
+          return;
+        }
+        if (msg == null || msg.id == _lastReactedMessageId) return;
+        _lastReactedMessageId = msg.id;
+        final action = analyzeMessageAction(msg.content ?? '');
+        if (action == null) return;
+        final world = _game.world;
+        if (world is RoomWorld) world.reactToAction(action);
       });
     });
 
