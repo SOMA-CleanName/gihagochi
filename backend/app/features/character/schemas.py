@@ -47,11 +47,17 @@ class PositionRequest(BaseModel):
 
 
 class FurniturePlacement(BaseModel):
-    """가구 1개의 배치 — flame world 좌표(logical) + 표시 폭."""
+    """가구 1개의 배치 — flame world 좌표(logical) + 표시 폭 + 편집 조정값.
+
+    bm/dist는 구버전 데이터에 없을 수 있어 optional. JSONB라 마이그레이션 불필요.
+    """
 
     x: float
     y: float
     w: float
+    bm: float | None = None  # z-order 기준선 비율 (앞/뒤 경계)
+    dist: float | None = None  # 상호작용 거리 (logical px)
+    visible: bool | None = None  # 방에 배치 여부 (넣기/빼기)
 
 
 class FurnitureLayoutRequest(BaseModel):

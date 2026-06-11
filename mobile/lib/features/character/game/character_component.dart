@@ -139,13 +139,9 @@ class CharacterComponent extends SpriteComponent
   static const double _perspectiveMaxScale = 1.0;
   static const double _perspectiveMinScale = 0.55;
 
-  // ── PR-E: 랜덤 액션 스케줄러 ──────────────────────────────
-  double _nextActionAt = 0;
-  static const double _idleProbability = 0.5;
-  static const double _minDelay = 5;
-  static const double _maxDelay = 12;
-
-  final Random _rng = Random();
+  /// viewport 반폭 (logical). CameraComponent fixedResolution 480 → 240.
+  /// 좌우 한계를 원근 scale에 맞춰 넓힐 때 화면 끝 기준값.
+  static const double _halfViewportX = 240;
 
   CharacterActionType get currentAction => _action;
 
@@ -156,8 +152,9 @@ class CharacterComponent extends SpriteComponent
   /// PR-G2 — 저장 위치 복원. animate면 현재 위치에서 부드럽게 이동(등장 후 점프 방지).
   Vector2? _moveTarget;
   void setGroundPosition(double x, double y, {bool animate = false}) {
-    final cx = x.clamp(minGround.x, maxGround.x);
     final cy = y.clamp(minGround.y, maxGround.y);
+    final xl = _xLimitForGround(cy);
+    final cx = x.clamp(-xl, xl);
     if (animate) {
       _moveTarget = Vector2(cx, cy);
     } else {
@@ -186,7 +183,6 @@ class CharacterComponent extends SpriteComponent
 
     _applyAction(_action);
     paint = Paint()..filterQuality = FilterQuality.none;
-    _scheduleNextAction();
 
     // 타원 그림자 — 가로 길게, 세로 짧게(0.25). 매 프레임 scale/위치 갱신됨.
     // 항상 표시 (서있을 때도) — 캐릭터 발밑 바닥에 고정.
@@ -215,11 +211,19 @@ class CharacterComponent extends SpriteComponent
 
   /// 원근법 scale — _groundY 에만 의존 (lift·호흡 무관).
   /// → 드래그 중 ↔ 착지 후 크기 완전 일관 (들었을 때와 놓았을 때 같음).
-  double _scaleForGround() {
-    final delta = _perspectiveOriginY - _groundY;
+  double _scaleForGround([double? groundY]) {
+    final y = groundY ?? _groundY;
+    final delta = _perspectiveOriginY - y;
     final t = (delta / _perspectiveRange).clamp(0.0, 1.0);
     return _perspectiveMaxScale -
         (_perspectiveMaxScale - _perspectiveMinScale) * t;
+  }
+
+  /// 원근 보정 좌우 한계 — 뒤(작은 scale)일수록 캐릭터가 작아지므로
+  /// 화면 끝까지 갈 수 있게 |x| 한계를 넓힘. 앞쪽(maxGround.x)보다 작아지진 않음.
+  double _xLimitForGround(double groundY) {
+    final s = _scaleForGround(groundY);
+    return max(maxGround.x, _halfViewportX - targetWidth * s / 2);
   }
 
   @override
@@ -278,32 +282,6 @@ class CharacterComponent extends SpriteComponent
     // 발이 가구 바닥보다 아래(앞)면 priority 큼 → 가구 앞에 그려짐.
     priority = _groundY.round();
     _shadow.priority = priority - 1;
-
-    // 랜덤 액션 스케줄러 — 누르는 중 멈춤.
-    if (!holding && _elapsed >= _nextActionAt) {
-      _triggerRandomAction();
-      _scheduleNextAction();
-    }
-  }
-
-  void _scheduleNextAction() {
-    final delay = _minDelay + _rng.nextDouble() * (_maxDelay - _minDelay);
-    _nextActionAt = _elapsed + delay;
-  }
-
-  void _triggerRandomAction() {
-    if (_rng.nextDouble() < _idleProbability) {
-      setAction(CharacterActionType.idle);
-      return;
-    }
-    const others = [
-      CharacterActionType.happy,
-      CharacterActionType.sad,
-      CharacterActionType.sing,
-      CharacterActionType.eat,
-      CharacterActionType.sleep,
-    ];
-    setAction(others[_rng.nextInt(others.length)]);
   }
 
   /// 액션 전환 — sprite + size 동기 갱신.
@@ -354,10 +332,10 @@ class CharacterComponent extends SpriteComponent
   void onDragUpdate(DragUpdateEvent event) {
     // localDelta는 캐릭터 scale 좌표계 기준 → 부모(World) 좌표로 변환(* scale)해야
     // 손가락 이동과 1:1 정합. 원근으로 작아진 상태에서 과이동하던 오차 제거.
-    _groundX = (_groundX + event.localDelta.x * scale.x)
-        .clamp(minGround.x, maxGround.x);
     _groundY = (_groundY + event.localDelta.y * scale.y)
         .clamp(minGround.y, maxGround.y);
+    final xl = _xLimitForGround(_groundY);
+    _groundX = (_groundX + event.localDelta.x * scale.x).clamp(-xl, xl);
   }
 
   @override

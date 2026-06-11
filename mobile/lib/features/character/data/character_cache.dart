@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/character_action.dart';
+import '../domain/furniture_placement.dart';
 
 typedef CachedCharacter = ({double x, double y, CharacterActionType action});
 
@@ -42,6 +43,31 @@ class CharacterCache {
     await prefs.setString(
       _key(idolId),
       jsonEncode({'x': x, 'y': y, 'action': action.name}),
+    );
+  }
+
+  // ── 가구 배치 캐시 — 진입 즉시 복원(서버 대기 없이 깜빡임 방지) ──────
+  static String _furnitureKey(String idolId) => 'character_furniture_$idolId';
+
+  Future<Map<String, FurniturePlacement>?> readFurniture(String idolId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_furnitureKey(idolId));
+    if (raw == null) return null;
+    final m = jsonDecode(raw) as Map<String, dynamic>;
+    return m.map(
+      (k, v) =>
+          MapEntry(k, FurniturePlacement.fromJson(v as Map<String, dynamic>)),
+    );
+  }
+
+  Future<void> writeFurniture(
+    String idolId,
+    Map<String, FurniturePlacement> layout,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _furnitureKey(idolId),
+      jsonEncode(layout.map((k, v) => MapEntry(k, v.toJson()))),
     );
   }
 }
