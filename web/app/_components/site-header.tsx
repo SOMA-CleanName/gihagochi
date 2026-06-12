@@ -10,20 +10,28 @@ export function SiteHeader() {
         >
           앙코르
         </Link>
-        <nav className="hidden items-center gap-7 text-sm text-fg-muted md:flex">
-          <Link href="/#ways" className="transition hover:text-fg">
-            함께하는 방식
+        <div className="flex items-center gap-7">
+          <nav className="hidden items-center gap-7 text-sm text-fg-muted md:flex">
+            <Link href="/#ways" className="transition hover:text-fg">
+              함께하는 방식
+            </Link>
+            <Link href="/#character" className="transition hover:text-fg">
+              캐릭터
+            </Link>
+            <Link href="/#journey" className="transition hover:text-fg">
+              여정
+            </Link>
+            <Link href="/#how" className="transition hover:text-fg">
+              구조
+            </Link>
+          </nav>
+          <Link
+            href="/#finale"
+            className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-on transition hover:bg-primary-hover"
+          >
+            사전신청
           </Link>
-          <Link href="/#character" className="transition hover:text-fg">
-            캐릭터
-          </Link>
-          <Link href="/#journey" className="transition hover:text-fg">
-            여정
-          </Link>
-          <Link href="/#how" className="transition hover:text-fg">
-            구조
-          </Link>
-        </nav>
+        </div>
       </div>
     </header>
   );
