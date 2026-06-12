@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { getSessionId, track } from "@/app/_lib/track";
 
 type Role = "fan" | "idol";
 type Status = "idle" | "submitting" | "success" | "error";
-
-// 배포 시 Vercel 환경변수로 설정 (Formspree 등 폼 엔드포인트)
-const ENDPOINT = process.env.NEXT_PUBLIC_WAITLIST_ENDPOINT;
 
 export function WaitlistForm() {
   const [email, setEmail] = useState("");
@@ -17,34 +15,37 @@ export function WaitlistForm() {
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
+  function selectRole(r: Role) {
+    setRole(r);
+    track("role_select", { label: r === "idol" ? "아이돌" : "팬" });
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!emailValid || status === "submitting") return;
     setStatus("submitting");
+    track("waitlist_submit_attempt", { label: role === "idol" ? "아이돌" : "팬" });
 
     const payload = {
       email,
       role: role === "idol" ? "아이돌" : "팬",
-      ...(role === "idol" ? { idolName, idolSns } : {}),
+      idolName: role === "idol" ? idolName : "",
+      idolSns: role === "idol" ? idolSns : "",
+      session_id: getSessionId(),
+      path: typeof window !== "undefined" ? window.location.pathname : "",
+      referrer: typeof document !== "undefined" ? document.referrer : "",
     };
 
     try {
-      if (ENDPOINT) {
-        const res = await fetch(ENDPOINT, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error("submit failed");
-      } else {
-        // 엔드포인트 미설정 시 UI 동작 확인용 (배포 시 NEXT_PUBLIC_WAITLIST_ENDPOINT 설정 필요)
-        await new Promise((r) => setTimeout(r, 600));
-      }
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("submit failed");
       setStatus("success");
     } catch {
+      track("waitlist_submit_error", { label: role === "idol" ? "아이돌" : "팬" });
       setStatus("error");
     }
   }
@@ -76,7 +77,7 @@ export function WaitlistForm() {
             <button
               key={r}
               type="button"
-              onClick={() => setRole(r)}
+              onClick={() => selectRole(r)}
               className={`rounded-lg py-2.5 text-sm font-semibold transition ${
                 active
                   ? "bg-primary text-primary-on shadow-[0_0_18px_rgba(199,112,255,0.45)]"
@@ -99,6 +100,7 @@ export function WaitlistForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onFocus={() => track("email_focus")}
           placeholder="you@example.com"
           className="mt-1.5 w-full rounded-xl border border-outline bg-bg/60 px-4 py-3 text-sm text-fg outline-none transition placeholder:text-fg-faint focus:border-primary focus:ring-2 focus:ring-primary/30"
         />

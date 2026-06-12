@@ -1,6 +1,7 @@
 import { CharacterPhoneSlides } from "./_components/character-phone-slides";
 import { SiteFooter } from "./_components/site-footer";
 import { SiteHeader } from "./_components/site-header";
+import { TrackedLink } from "./_components/tracked-link";
 import { WaitlistForm } from "./_components/waitlist-form";
 
 export default function Home() {
@@ -84,18 +85,20 @@ function Hero() {
           className="animate-fade-up mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
           style={{ animationDelay: "270ms" }}
         >
-          <a
+          <TrackedLink
             href="#finale"
+            label="hero_primary"
             className="animate-neon-pulse w-full rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-primary-on transition hover:bg-primary-hover sm:w-auto"
           >
             사전신청 하기 →
-          </a>
-          <a
+          </TrackedLink>
+          <TrackedLink
             href="#how"
+            label="hero_secondary"
             className="w-full rounded-full border border-outline px-7 py-3.5 text-sm font-semibold text-fg transition hover:border-primary hover:text-primary sm:w-auto"
           >
             어떻게 작동하나요
-          </a>
+          </TrackedLink>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { LightSticks } from "./_components/light-sticks";
 import { StageLights } from "./_components/stage-lights";
+import { TrackPage } from "./_components/track-page";
 import "./globals.css";
 
 const SITE_URL = "https://encore.app";
@@ -70,6 +71,7 @@ export default function RootLayout({
       <body className="min-h-full bg-bg text-fg kr-keep">
         <StageLights />
         <LightSticks />
+        <TrackPage />
         <div className="relative z-10">{children}</div>
       </body>
     </html>
