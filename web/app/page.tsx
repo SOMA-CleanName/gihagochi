@@ -1,6 +1,7 @@
 import { CharacterPhoneSlides } from "./_components/character-phone-slides";
 import { SiteFooter } from "./_components/site-footer";
 import { SiteHeader } from "./_components/site-header";
+import { WaitlistForm } from "./_components/waitlist-form";
 
 export default function Home() {
   return (
@@ -53,17 +54,49 @@ function Hero() {
       background="radial-gradient(ellipse 80% 60% at 50% 0%, rgba(199,112,255,0.18), transparent 65%), radial-gradient(ellipse 50% 40% at 25% 80%, rgba(0,229,255,0.06), transparent 60%)"
     >
       <div className="mx-auto w-full max-w-3xl text-center">
-        <h1 className="text-balance text-5xl font-semibold leading-[1.1] tracking-tight text-fg sm:text-7xl">
+        <span
+          className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary-container-on backdrop-blur-sm"
+          style={{ animationDelay: "0ms" }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
+          지하돌 팬덤 · 사전신청 받는 중
+        </span>
+
+        <h1
+          className="animate-fade-up mt-7 text-balance text-5xl font-semibold leading-[1.1] tracking-tight text-fg sm:text-7xl"
+          style={{ animationDelay: "90ms" }}
+        >
           당신의 아이돌,
           <br />
-          함께 자라요.
+          <span className="text-neon">함께 자라요.</span>
         </h1>
 
-        <p className="mt-8 text-pretty text-lg leading-relaxed text-fg-muted sm:text-xl">
+        <p
+          className="animate-fade-up mt-8 text-pretty text-lg leading-relaxed text-fg-muted sm:text-xl"
+          style={{ animationDelay: "180ms" }}
+        >
           지켜보고, 대화하고, 후원하며.
           <br />
           작은 응원이 한 명의 아이돌을 무대로 데려갑니다.
         </p>
+
+        <div
+          className="animate-fade-up mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+          style={{ animationDelay: "270ms" }}
+        >
+          <a
+            href="#finale"
+            className="animate-neon-pulse w-full rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-primary-on transition hover:bg-primary-hover sm:w-auto"
+          >
+            사전신청 하기 →
+          </a>
+          <a
+            href="#how"
+            className="w-full rounded-full border border-outline px-7 py-3.5 text-sm font-semibold text-fg transition hover:border-primary hover:text-primary sm:w-auto"
+          >
+            어떻게 작동하나요
+          </a>
+        </div>
       </div>
 
       {/* 다운 화살표 — 인터랙션 유도 */}
@@ -425,11 +458,15 @@ function Finale() {
           <h2 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight text-fg sm:text-6xl">
             함께 자라는 첫 무대,
             <br />
-            앙코르를 외쳐요.
+            <span className="text-neon">앙코르를 외쳐요.</span>
           </h2>
           <p className="mt-6 text-pretty text-lg leading-relaxed text-fg-muted">
+            출시 알림을 가장 먼저 받아보세요.
+            <br />
             팬과 아이돌이 함께 만드는 시간을 곧 시작합니다.
           </p>
+
+          <WaitlistForm />
         </div>
       </div>
 

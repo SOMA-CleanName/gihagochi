@@ -123,6 +123,35 @@ body {
   padding: 1.75rem 1.5rem;
 }
 
+/* ── 네온 그라데이션 텍스트 (헤드라인 강조) ──────── */
+.text-neon {
+  background: linear-gradient(
+    100deg,
+    var(--color-primary) 0%,
+    var(--color-tertiary) 55%,
+    var(--color-secondary) 110%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── 등장 애니메이션 (계단식 reveal) ──────────────── */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ── 네온 글로우 보조 utility ─────────────────────── */
 @keyframes neon-pulse {
   0%,
