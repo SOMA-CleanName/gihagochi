@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { track } from "@/app/_lib/track";
 
 type Action = "idle" | "happy" | "sad" | "sing" | "eat" | "sleep";
 
@@ -116,6 +117,7 @@ export function CharacterPhoneSlides() {
   const jumpTo = (i: number) => {
     setActive(i);
     pauseForInteraction();
+    track("character_click", { label: `dot:${ACTIONS[i]?.key ?? i}` });
   };
 
   // pointer drag — touch + mouse 통합. 가로 우세일 때만 슬라이드.
@@ -132,6 +134,7 @@ export function CharacterPhoneSlides() {
     // 세로 움직임이 더 크면 swipe 아님 (스크롤 의도)
     if (Math.abs(dy) > Math.abs(dx)) return;
     if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+    track("character_drag", { label: dx < 0 ? "next" : "prev" });
     go(dx < 0 ? +1 : -1);
   };
   const onPointerCancel = () => {

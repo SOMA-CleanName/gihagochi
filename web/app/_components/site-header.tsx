@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TrackedLink } from "./tracked-link";
 
 export function SiteHeader() {
   return (
@@ -25,12 +26,13 @@ export function SiteHeader() {
               구조
             </Link>
           </nav>
-          <Link
+          <TrackedLink
             href="/#finale"
+            label="header_cta"
             className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-on transition hover:bg-primary-hover"
           >
             사전신청
-          </Link>
+          </TrackedLink>
         </div>
       </div>
     </header>
