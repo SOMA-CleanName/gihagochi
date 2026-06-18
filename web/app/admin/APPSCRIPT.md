@@ -76,3 +76,37 @@ Apps Script 편집기 → **프로젝트 설정(⚙)** → **스크립트 속성
 curl "<웹앱URL>?token=<READ_TOKEN>&limit=5"
 # → {"ok":true,"events":[...],"signups":[...]}
 ```
+
+## 6. (1회) 과거 /admin 행 정리
+
+앞으로의 `/admin` 트래픽은 서버에서 차단되어 시트에 안 쌓인다.
+하지만 차단 이전에 이미 쌓인 행은 남아 있으므로, 아래 함수를 Apps Script에서
+**한 번** 실행해 제거한다. (`path`가 `/admin`으로 시작하는 행 삭제)
+
+```javascript
+function cleanupAdminRows() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ['events', 'signups'].forEach(function (name) {
+    var sh = ss.getSheetByName(name);
+    if (!sh) return;
+    var lastRow = sh.getLastRow();
+    var lastCol = sh.getLastColumn();
+    if (lastRow < 2) return;
+    var header = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+    var pathCol = header.indexOf('path');
+    if (pathCol === -1) return;
+    var values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    var removed = 0;
+    for (var i = values.length - 1; i >= 0; i--) {
+      // 아래에서 위로 삭제 — 행 인덱스 밀림 방지
+      if (String(values[i][pathCol] || '').indexOf('/admin') === 0) {
+        sh.deleteRow(i + 2);
+        removed++;
+      }
+    }
+    Logger.log(name + ': ' + removed + '행 삭제');
+  });
+}
+```
+
+실행: 편집기에서 `cleanupAdminRows` 선택 → ▶ 실행. (실행 로그에서 삭제 수 확인)
