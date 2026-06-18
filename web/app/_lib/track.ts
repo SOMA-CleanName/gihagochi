@@ -89,7 +89,14 @@ function post(event: string, props: TrackProps): void {
   }
 }
 
+// 관리자 페이지(/admin)는 분석 대상이 아님 — 관리자 본인 행위가 통계에 잡히면 안 됨.
+function isExcludedPath(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.location.pathname.startsWith("/admin");
+}
+
 export function track(event: string, props?: TrackProps): void {
+  if (isExcludedPath()) return;
   const base: TrackProps = props ? { ...props } : {};
   base.session_id = ensureSession();
   base.elapsed_ms = elapsed();
