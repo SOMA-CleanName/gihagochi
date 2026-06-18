@@ -1,12 +1,16 @@
-// 랜딩 관리 — /admin (비밀번호 게이트). 랜딩 CTA·행동·사전신청 시트 데이터 조회.
-// 미인증 → 로그인 폼. 인증 → 시트 뷰어. 검색엔진 비노출(noindex).
+// 랜딩 관리 — /admin (비밀번호 게이트). CTA·행동·사전신청 분석.
+// 뷰: 개요(overview) / 세션(sessions) / 원본(raw). 미인증 → 로그인. noindex.
 
 import type { Metadata } from "next";
 
 import { AdminLogin } from "./_components/admin-login";
 import { AdminLogout } from "./_components/admin-logout";
+import { OverviewView } from "./_components/overview-view";
+import { parseRawTab, RawView } from "./_components/raw-view";
+import { SessionsView } from "./_components/sessions-view";
 import { adminPassword, isAuthed } from "./_lib/auth";
-import { fetchSheet, type SheetData, type SheetRow } from "./_lib/sheet";
+import { buildOverview, buildSessions } from "./_lib/analytics";
+import { fetchSheet } from "./_lib/sheet";
 
 export const metadata: Metadata = {
   title: "앙코르 관리자",
@@ -16,31 +20,30 @@ export const metadata: Metadata = {
 // 인증/시트 조회는 매 요청 실행 — 정적 프리렌더 금지.
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ tab?: string; event?: string }>;
+type SearchParams = Promise<{ view?: string; tab?: string; event?: string }>;
 
-const TABS = ["events", "signups"] as const;
-type Tab = (typeof TABS)[number];
+const VIEWS = [
+  { key: "overview", label: "개요" },
+  { key: "sessions", label: "세션" },
+  { key: "raw", label: "원본" },
+] as const;
+type View = (typeof VIEWS)[number]["key"];
 
-const COLUMN_ORDER: Record<Tab, string[]> = {
-  events: ["ts", "event", "label", "path", "elapsed_ms", "session_id", "props_json"],
-  signups: ["ts", "email", "role", "idol_name", "idol_sns", "path", "referrer", "session_id"],
-};
-
-function parseTab(raw: string | undefined): Tab {
-  return (TABS as readonly string[]).includes(raw ?? "") ? (raw as Tab) : "events";
+function parseView(raw: string | undefined): View {
+  return VIEWS.some((v) => v.key === raw) ? (raw as View) : "overview";
 }
 
 export default async function AdminPage(props: { searchParams: SearchParams }) {
   if (!adminPassword()) return <SetupNotice />;
   if (!(await isAuthed())) return <AdminLogin />;
 
-  const { tab: rawTab, event: eventFilter } = await props.searchParams;
-  const tab = parseTab(rawTab);
+  const { view: rawView, tab, event } = await props.searchParams;
+  const view = parseView(rawView);
   const result = await fetchSheet();
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-fg">랜딩 분석</h1>
           <p className="mt-1 text-sm text-fg-muted">
@@ -50,6 +53,22 @@ export default async function AdminPage(props: { searchParams: SearchParams }) {
         <AdminLogout />
       </header>
 
+      <nav className="mt-6 flex gap-2 text-sm">
+        {VIEWS.map((v) => (
+          <a
+            key={v.key}
+            href={`/admin?view=${v.key}`}
+            className={`rounded-full px-4 py-1.5 transition ${
+              v.key === view
+                ? "bg-primary text-primary-on"
+                : "border border-outline text-fg-muted hover:text-fg"
+            }`}
+          >
+            {v.label}
+          </a>
+        ))}
+      </nav>
+
       <div className="mt-6">
         {result.state === "unconfigured" && <ReadSetupNotice />}
         {result.state === "error" && (
@@ -58,185 +77,30 @@ export default async function AdminPage(props: { searchParams: SearchParams }) {
           </div>
         )}
         {result.state === "ok" && (
-          <SheetView tab={tab} data={result.data} eventFilter={eventFilter} />
+          <ViewBody view={view} data={result.data} tab={tab} event={event} />
         )}
       </div>
     </div>
   );
 }
 
-function SheetView({
-  tab,
+function ViewBody({
+  view,
   data,
-  eventFilter,
+  tab,
+  event,
 }: {
-  tab: Tab;
-  data: SheetData;
-  eventFilter?: string;
+  view: View;
+  data: import("./_lib/sheet").SheetData;
+  tab?: string;
+  event?: string;
 }) {
-  const events = data.events ?? [];
-  const signups = data.signups ?? [];
-
-  const eventCounts = new Map<string, number>();
-  for (const r of events) {
-    const ev = String(r.event ?? "");
-    eventCounts.set(ev, (eventCounts.get(ev) ?? 0) + 1);
+  if (view === "raw") {
+    return <RawView tab={parseRawTab(tab)} data={data} eventFilter={event} />;
   }
-
-  const baseRows = tab === "events" ? events : signups;
-  const rows =
-    tab === "events" && eventFilter
-      ? baseRows.filter((r) => String(r.event ?? "") === eventFilter)
-      : baseRows;
-
-  const sorted = [...rows].sort((a, b) =>
-    String(b.ts ?? "").localeCompare(String(a.ts ?? "")),
-  );
-
-  const columns = buildColumns(tab, sorted);
-
-  return (
-    <div className="space-y-4">
-      <nav className="flex gap-2 text-sm">
-        {TABS.map((t) => (
-          <a
-            key={t}
-            href={`/admin?tab=${t}`}
-            className={`rounded-full px-4 py-1.5 transition ${
-              t === tab
-                ? "bg-primary text-primary-on"
-                : "border border-outline text-fg-muted hover:text-fg"
-            }`}
-          >
-            {t === "events" ? `이벤트 (${events.length})` : `사전신청 (${signups.length})`}
-          </a>
-        ))}
-      </nav>
-
-      {tab === "events" && eventCounts.size > 0 && (
-        <div className="flex flex-wrap gap-2 text-xs">
-          <a
-            href="/admin?tab=events"
-            className={`rounded-full px-3 py-1 transition ${
-              !eventFilter
-                ? "bg-fg text-bg"
-                : "border border-outline-soft text-fg-muted hover:text-fg"
-            }`}
-          >
-            전체 {events.length}
-          </a>
-          {[...eventCounts.entries()]
-            .sort((a, b) => b[1] - a[1])
-            .map(([ev, count]) => (
-              <a
-                key={ev}
-                href={`/admin?tab=events&event=${encodeURIComponent(ev)}`}
-                className={`rounded-full px-3 py-1 transition ${
-                  eventFilter === ev
-                    ? "bg-fg text-bg"
-                    : "border border-outline-soft text-fg-muted hover:text-fg"
-                }`}
-              >
-                {ev} {count}
-              </a>
-            ))}
-        </div>
-      )}
-
-      {sorted.length === 0 ? (
-        <div className="rounded-xl border border-outline-soft bg-surface-2/50 p-6 text-sm text-fg-muted">
-          표시할 데이터가 없습니다.
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-outline-soft">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-2/60 text-left text-xs uppercase text-fg-faint">
-              <tr>
-                {columns.map((c) => (
-                  <th key={c} className="whitespace-nowrap px-3 py-2 font-medium">
-                    {c}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((row, i) => (
-                <tr key={i} className="border-t border-outline-soft align-top">
-                  {columns.map((c) => (
-                    <td key={c} className="px-3 py-2 text-fg-muted">
-                      <Cell column={c} value={row[c]} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <p className="text-xs text-fg-faint">
-        최대 1000행 / 탭. 더 필요하면 시트에서 직접 확인하세요.
-      </p>
-    </div>
-  );
-}
-
-function Cell({
-  column,
-  value,
-}: {
-  column: string;
-  value: string | number | null | undefined;
-}) {
-  if (value === null || value === undefined || value === "") {
-    return <span className="text-fg-faint">-</span>;
-  }
-  if (column === "ts") {
-    return <span className="whitespace-nowrap">{formatTs(String(value))}</span>;
-  }
-  if (column === "props_json") {
-    return (
-      <details className="max-w-md">
-        <summary className="cursor-pointer text-fg-faint">상세</summary>
-        <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all rounded bg-surface-2/60 p-2 text-[11px] text-fg-muted">
-          {prettyJson(String(value))}
-        </pre>
-      </details>
-    );
-  }
-  if (column === "session_id") {
-    return <span className="font-mono text-xs text-fg-faint">{String(value)}</span>;
-  }
-  if (column === "idol_sns" || column === "referrer" || column === "path") {
-    return <span className="break-all">{String(value)}</span>;
-  }
-  return <span>{String(value)}</span>;
-}
-
-function buildColumns(tab: Tab, rows: SheetRow[]): string[] {
-  const preferred = COLUMN_ORDER[tab];
-  const present = new Set<string>();
-  for (const r of rows) for (const k of Object.keys(r)) present.add(k);
-  const ordered = preferred.filter((c) => present.has(c));
-  const extras = [...present].filter((c) => !preferred.includes(c) && c !== "event");
-  return tab === "events"
-    ? ["event", ...ordered.filter((c) => c !== "event"), ...extras]
-    : [...ordered, ...extras];
-}
-
-function prettyJson(text: string): string {
-  try {
-    return JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    return text;
-  }
-}
-
-function formatTs(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const sessions = buildSessions(data);
+  if (view === "sessions") return <SessionsView sessions={sessions} />;
+  return <OverviewView ov={buildOverview(data, sessions)} />;
 }
 
 function SetupNotice() {
