@@ -155,7 +155,7 @@ export type Overview = {
   totalSessions: number;
   totalPageViews: number;
   totalEvents: number;
-  signups: { total: number; fan: number; idol: number };
+  signups: { total: number; idol: number; agency: number; fan: number };
   ctaTotal: number;
   ctaByLabel: Bar[];
   sectionFunnel: Bar[];
@@ -324,11 +324,13 @@ export function buildOverview(data: SheetData, sessions: SessionSummary[]): Over
     .sort((a, b) => b.count - a.count);
 
   // 사전신청 역할 분포.
-  let fan = 0;
   let idol = 0;
+  let agency = 0;
+  let fan = 0;
   for (const s of signups) {
     const r = str(s.role);
     if (r === "아이돌") idol += 1;
+    else if (r === "소속사") agency += 1;
     else fan += 1;
   }
 
@@ -340,7 +342,7 @@ export function buildOverview(data: SheetData, sessions: SessionSummary[]): Over
     totalSessions,
     totalPageViews: events.filter((e) => str(e.event) === "page_view").length,
     totalEvents: events.length,
-    signups: { total: signups.length, fan, idol },
+    signups: { total: signups.length, idol, agency, fan },
     ctaTotal,
     ctaByLabel,
     sectionFunnel,

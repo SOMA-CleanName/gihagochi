@@ -9,7 +9,7 @@ export function OverviewView({ ov }: { ov: Overview }) {
         <Kpi label="세션" value={ov.totalSessions} />
         <Kpi label="페이지뷰" value={ov.totalPageViews} />
         <Kpi label="CTA 클릭" value={ov.ctaTotal} />
-        <Kpi label="사전신청" value={ov.signups.total} sub={`팬 ${ov.signups.fan} · 아이돌 ${ov.signups.idol}`} />
+        <Kpi label="신청·문의" value={ov.signups.total} sub={signupSub(ov.signups)} />
         <Kpi label="캐릭터 상호작용" value={ov.characterInteractions} />
         <Kpi label="총 이벤트" value={ov.totalEvents} />
       </div>
@@ -41,6 +41,12 @@ export function OverviewView({ ov }: { ov: Overview }) {
       </div>
     </div>
   );
+}
+
+function signupSub(s: { idol: number; agency: number; fan: number }): string {
+  const parts = [`아이돌 ${s.idol}`, `소속사 ${s.agency}`];
+  if (s.fan > 0) parts.push(`팬 ${s.fan}`);
+  return parts.join(" · ");
 }
 
 function Kpi({ label, value, sub }: { label: string; value: number; sub?: string }) {
