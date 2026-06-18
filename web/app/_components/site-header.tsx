@@ -25,6 +25,9 @@ export function SiteHeader() {
             <Link href="/#how" className="transition hover:text-fg">
               구조
             </Link>
+            <Link href="/#partners" className="transition hover:text-fg">
+              소속사
+            </Link>
           </nav>
           <TrackedLink
             href="/#finale"

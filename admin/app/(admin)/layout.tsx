@@ -13,6 +13,7 @@ const NAV = [
   { href: '/reports', label: '신고 처리' },
   { href: '/users', label: '사용자 관리' },
   { href: '/idols', label: '아이돌 관리' },
+  { href: '/landing', label: '랜딩 분석' },
 ];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
