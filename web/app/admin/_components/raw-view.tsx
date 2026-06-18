@@ -7,7 +7,7 @@ export type RawTab = (typeof RAW_TABS)[number];
 
 const COLUMN_ORDER: Record<RawTab, string[]> = {
   events: ["ts", "event", "label", "path", "elapsed_ms", "session_id", "props_json"],
-  signups: ["ts", "email", "role", "idol_name", "idol_sns", "path", "referrer", "session_id"],
+  signups: ["ts", "email", "role", "idol_name", "idol_sns", "company", "message", "path", "referrer", "session_id"],
 };
 
 export function parseRawTab(raw: string | undefined): RawTab {

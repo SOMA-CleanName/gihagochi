@@ -540,9 +540,9 @@ function Finale() {
             <span className="text-neon">앙코르를 외쳐요.</span>
           </h2>
           <p className="mt-6 text-pretty text-lg leading-relaxed text-fg-muted">
-            출시 알림을 가장 먼저 받아보세요.
+            함께 무대를 만들 아이돌과 소속사를 찾고 있어요.
             <br />
-            팬과 아이돌이 함께 만드는 시간을 곧 시작합니다.
+            지금 합류하거나, 편하게 문의 주세요.
           </p>
 
           <WaitlistForm />

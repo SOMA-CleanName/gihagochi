@@ -4,14 +4,19 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-outline-soft bg-bg px-6 py-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 text-sm text-fg-muted sm:flex-row sm:items-center sm:justify-between">
-        <p>© 2026 앙코르</p>
+        <div className="flex flex-col gap-1">
+          <p>© 2026 앙코르</p>
+          <p className="text-fg-faint">
+            Contact:{" "}
+            <a
+              href="mailto:encoreofficial00@gmail.com"
+              className="text-fg-muted transition hover:text-fg"
+            >
+              encoreofficial00@gmail.com
+            </a>
+          </p>
+        </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
-          <a
-            href="mailto:encoreofficial00@gmail.com"
-            className="transition hover:text-fg"
-          >
-            문의
-          </a>
           <a
             href="https://www.instagram.com/encoreofficial00/"
             target="_blank"

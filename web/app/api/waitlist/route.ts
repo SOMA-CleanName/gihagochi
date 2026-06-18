@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 type Body = {
   email?: string;
-  role?: string; // "팬" | "아이돌"
+  role?: string; // "아이돌" | "소속사" ("팬"은 레거시 호환)
   idolName?: string;
   idolSns?: string;
+  company?: string;
+  message?: string;
   session_id?: string;
   path?: string;
   referrer?: string;
 };
 
-const ALLOWED_ROLES = new Set(["팬", "아이돌"]);
+const ALLOWED_ROLES = new Set(["아이돌", "소속사", "팬"]);
 
 function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -31,7 +33,7 @@ export async function POST(req: NextRequest) {
   if (!isValidEmail(email)) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
-  const role = ALLOWED_ROLES.has(body.role || "") ? body.role! : "팬";
+  const role = ALLOWED_ROLES.has(body.role || "") ? body.role! : "아이돌";
 
   const payload = {
     event: "signup",
@@ -40,6 +42,8 @@ export async function POST(req: NextRequest) {
     role,
     idol_name: role === "아이돌" ? str(body.idolName, 100) : "",
     idol_sns: role === "아이돌" ? str(body.idolSns, 200) : "",
+    company: role === "소속사" ? str(body.company, 100) : "",
+    message: role === "소속사" ? str(body.message, 1000) : "",
     session_id: str(body.session_id, 64),
     path: str(body.path, 200),
     referrer: str(body.referrer, 500),
