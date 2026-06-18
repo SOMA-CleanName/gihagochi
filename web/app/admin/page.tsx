@@ -5,12 +5,14 @@ import type { Metadata } from "next";
 
 import { AdminLogin } from "./_components/admin-login";
 import { AdminLogout } from "./_components/admin-logout";
+import { DateRange } from "./_components/date-range";
 import { OverviewView } from "./_components/overview-view";
 import { parseRawTab, RawView } from "./_components/raw-view";
 import { SessionsView } from "./_components/sessions-view";
 import { adminPassword, isAuthed } from "./_lib/auth";
 import { buildOverview, buildSessions } from "./_lib/analytics";
-import { fetchSheet } from "./_lib/sheet";
+import { filterData, resolveRange } from "./_lib/range";
+import { fetchSheet, type SheetData } from "./_lib/sheet";
 
 export const metadata: Metadata = {
   title: "앙코르 관리자",
@@ -20,7 +22,14 @@ export const metadata: Metadata = {
 // 인증/시트 조회는 매 요청 실행 — 정적 프리렌더 금지.
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ view?: string; tab?: string; event?: string }>;
+type SearchParams = Promise<{
+  view?: string;
+  tab?: string;
+  event?: string;
+  range?: string;
+  from?: string;
+  to?: string;
+}>;
 
 const VIEWS = [
   { key: "overview", label: "개요" },
@@ -37,8 +46,9 @@ export default async function AdminPage(props: { searchParams: SearchParams }) {
   if (!adminPassword()) return <SetupNotice />;
   if (!(await isAuthed())) return <AdminLogin />;
 
-  const { view: rawView, tab, event } = await props.searchParams;
-  const view = parseView(rawView);
+  const sp = await props.searchParams;
+  const view = parseView(sp.view);
+  const range = resolveRange(sp);
   const result = await fetchSheet();
 
   return (
@@ -57,7 +67,7 @@ export default async function AdminPage(props: { searchParams: SearchParams }) {
         {VIEWS.map((v) => (
           <a
             key={v.key}
-            href={`/admin?view=${v.key}`}
+            href={`/admin?view=${v.key}${range.query}`}
             className={`rounded-full px-4 py-1.5 transition ${
               v.key === view
                 ? "bg-primary text-primary-on"
@@ -69,6 +79,18 @@ export default async function AdminPage(props: { searchParams: SearchParams }) {
         ))}
       </nav>
 
+      {result.state === "ok" && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <DateRange
+            view={view}
+            activeKey={range.key}
+            fromStr={range.fromStr}
+            toStr={range.toStr}
+          />
+          <span className="text-xs text-fg-faint">표시 기간: {range.label}</span>
+        </div>
+      )}
+
       <div className="mt-6">
         {result.state === "unconfigured" && <ReadSetupNotice />}
         {result.state === "error" && (
@@ -77,7 +99,13 @@ export default async function AdminPage(props: { searchParams: SearchParams }) {
           </div>
         )}
         {result.state === "ok" && (
-          <ViewBody view={view} data={result.data} tab={tab} event={event} />
+          <ViewBody
+            view={view}
+            data={filterData(result.data, range)}
+            tab={sp.tab}
+            event={sp.event}
+            q={range.query}
+          />
         )}
       </div>
     </div>
@@ -89,14 +117,16 @@ function ViewBody({
   data,
   tab,
   event,
+  q,
 }: {
   view: View;
-  data: import("./_lib/sheet").SheetData;
+  data: SheetData;
   tab?: string;
   event?: string;
+  q: string;
 }) {
   if (view === "raw") {
-    return <RawView tab={parseRawTab(tab)} data={data} eventFilter={event} />;
+    return <RawView tab={parseRawTab(tab)} data={data} eventFilter={event} q={q} />;
   }
   const sessions = buildSessions(data);
   if (view === "sessions") return <SessionsView sessions={sessions} />;
