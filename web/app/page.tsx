@@ -535,6 +535,20 @@ function Finale() {
           </p>
 
           <WaitlistForm />
+
+          <div className="mx-auto mt-8 w-full max-w-md">
+            <div className="flex items-center gap-3 text-xs text-fg-faint">
+              <span className="h-px flex-1 bg-outline-soft" />
+              또는 바로 연락 주세요
+              <span className="h-px flex-1 bg-outline-soft" />
+            </div>
+            <div className="mt-4">
+              <PartnerContact />
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-fg-faint">
+              받으신 메일에 회신하셔도 됩니다.
+            </p>
+          </div>
         </div>
       </div>
 
