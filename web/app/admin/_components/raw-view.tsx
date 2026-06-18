@@ -18,10 +18,12 @@ export function RawView({
   tab,
   data,
   eventFilter,
+  q = "",
 }: {
   tab: RawTab;
   data: SheetData;
   eventFilter?: string;
+  q?: string;
 }) {
   const events = data.events ?? [];
   const signups = data.signups ?? [];
@@ -49,7 +51,7 @@ export function RawView({
         {RAW_TABS.map((t) => (
           <a
             key={t}
-            href={`/admin?view=raw&tab=${t}`}
+            href={`/admin?view=raw&tab=${t}${q}`}
             className={`rounded-full px-4 py-1.5 transition ${
               t === tab
                 ? "bg-primary text-primary-on"
@@ -64,7 +66,7 @@ export function RawView({
       {tab === "events" && eventCounts.size > 0 && (
         <div className="flex flex-wrap gap-2 text-xs">
           <a
-            href="/admin?view=raw&tab=events"
+            href={`/admin?view=raw&tab=events${q}`}
             className={`rounded-full px-3 py-1 transition ${
               !eventFilter
                 ? "bg-fg text-bg"
@@ -78,7 +80,7 @@ export function RawView({
             .map(([ev, count]) => (
               <a
                 key={ev}
-                href={`/admin?view=raw&tab=events&event=${encodeURIComponent(ev)}`}
+                href={`/admin?view=raw&tab=events&event=${encodeURIComponent(ev)}${q}`}
                 className={`rounded-full px-3 py-1 transition ${
                   eventFilter === ev
                     ? "bg-fg text-bg"
