@@ -9,27 +9,28 @@ const SITE_URL = "https://encore.app";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "앙코르 — 당신의 아이돌, 함께 자라요",
+    default: "앙코르 — 지하돌 팬덤 플랫폼 · 소속사 파트너 모집",
     template: "%s | 앙코르",
   },
   description:
-    "팬이 아이돌의 성장을 함께하는 동반형 팬덤 서비스. 지켜보고, 대화하고, 후원하며, 한 명의 아이돌을 무대로 데려갑니다.",
+    "소속 아이돌의 첫 팬덤을 디지털에서. 입점 0원, 멤버 부담 없이 매일의 채팅으로 팬을 모으고 후원으로 수익을 나누는 지하돌 팬덤 플랫폼. 소속사·아이돌 파트너를 찾습니다.",
   keywords: [
     "앙코르",
     "encore",
+    "지하돌",
+    "아이돌 소속사",
+    "팬덤 플랫폼",
+    "아이돌 수익화",
     "팬 채팅",
-    "아이돌 응원",
-    "팬덤 앱",
-    "아이돌 채팅",
-    "팬 커뮤니티",
+    "소속사 제휴",
   ],
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "앙코르 — 당신의 아이돌, 함께 자라요",
+    title: "앙코르 — 지하돌 팬덤 플랫폼 · 소속사 파트너 모집",
     description:
-      "지켜보고, 대화하고, 후원하며. 작은 응원이 한 명의 아이돌을 무대로 데려갑니다.",
+      "소속 아이돌의 첫 팬덤을 디지털에서. 입점 0원·수익 셰어로 팬덤을 만들고 무대로 잇습니다.",
     url: SITE_URL,
     siteName: "앙코르",
     type: "website",
@@ -37,9 +38,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "앙코르 — 당신의 아이돌, 함께 자라요",
+    title: "앙코르 — 지하돌 팬덤 플랫폼 · 소속사 파트너 모집",
     description:
-      "지켜보고, 대화하고, 후원하며. 작은 응원이 한 명의 아이돌을 무대로 데려갑니다.",
+      "소속 아이돌의 첫 팬덤을 디지털에서. 입점 0원·수익 셰어로 팬덤을 만들고 무대로 잇습니다.",
   },
   robots: {
     index: true,

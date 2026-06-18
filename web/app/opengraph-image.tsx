@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "encore — Grow your idol, together.";
+export const alt = "앙코르 — 지하돌 팬덤 플랫폼 · 소속사 파트너 모집";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -48,17 +48,17 @@ export default async function OgImage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
           <p
             style={{
-              fontSize: 96,
+              fontSize: 84,
               fontWeight: 700,
-              lineHeight: 1.05,
+              lineHeight: 1.08,
               letterSpacing: "-0.025em",
               color: "#0A0A0A",
               margin: 0,
             }}
           >
-            Grow your idol,
+            소속 아이돌의 첫 팬덤,
             <br />
-            together.
+            디지털에서 시작해요.
           </p>
           <p
             style={{
@@ -69,7 +69,7 @@ export default async function OgImage() {
               letterSpacing: "0.02em",
             }}
           >
-            Watch · Talk · Cheer · Grow
+            입점 0원 · 수익 셰어 · 소속사 파트너 모집
           </p>
         </div>
       </div>
