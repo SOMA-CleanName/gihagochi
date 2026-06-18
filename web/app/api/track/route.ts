@@ -39,6 +39,12 @@ export async function POST(req: NextRequest) {
   }
 
   const p = body.props ?? {};
+
+  // 관리자 페이지(/admin) 트래픽은 분석에서 제외 (방어적 — 클라이언트도 막음).
+  if (typeof p.path === "string" && p.path.startsWith("/admin")) {
+    return NextResponse.json({ ok: true, mode: "skipped" });
+  }
+
   const payload = {
     event,
     ts: body.ts || new Date().toISOString(),
