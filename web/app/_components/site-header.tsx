@@ -13,20 +13,17 @@ export function SiteHeader() {
         </Link>
         <div className="flex items-center gap-7">
           <nav className="hidden items-center gap-7 text-sm text-fg-muted md:flex">
-            <Link href="/#ways" className="transition hover:text-fg">
-              함께하는 방식
-            </Link>
-            <Link href="/#character" className="transition hover:text-fg">
-              캐릭터
-            </Link>
-            <Link href="/#journey" className="transition hover:text-fg">
-              여정
+            <Link href="/#why" className="transition hover:text-fg">
+              왜 앙코르
             </Link>
             <Link href="/#how" className="transition hover:text-fg">
-              구조
+              작동 방식
             </Link>
             <Link href="/#partners" className="transition hover:text-fg">
-              소속사
+              소속사 혜택
+            </Link>
+            <Link href="/#process" className="transition hover:text-fg">
+              합류 절차
             </Link>
           </nav>
           <TrackedLink
@@ -34,7 +31,7 @@ export function SiteHeader() {
             label="header_cta"
             className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-on transition hover:bg-primary-hover"
           >
-            사전신청
+            데모 미팅
           </TrackedLink>
         </div>
       </div>

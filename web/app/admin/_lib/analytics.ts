@@ -20,28 +20,31 @@ export const EVENT_KR: Record<string, string> = {
 
 export const SECTION_ORDER = [
   "top",
-  "ways",
+  "why",
   "character",
-  "journey",
   "how",
   "partners",
+  "process",
   "finale",
 ] as const;
 
 export const SECTION_KR: Record<string, string> = {
   top: "히어로",
+  why: "왜 앙코르(문제)",
+  character: "제품(아이돌 경험)",
+  how: "fan-out 구조",
+  partners: "소속사 혜택",
+  process: "합류 절차",
+  finale: "신청·문의(피날레)",
+  // 레거시(구 섹션 id)
   ways: "함께하는 방식",
-  character: "캐릭터",
   journey: "여정",
-  how: "구조(1:N)",
-  partners: "소속사",
-  finale: "사전신청(피날레)",
 };
 
 export const CTA_KR: Record<string, string> = {
-  hero_primary: "히어로 · 사전신청 하기",
-  hero_secondary: "히어로 · 어떻게 작동하나요",
-  header_cta: "헤더 · 사전신청",
+  hero_primary: "히어로 · 15분 데모 미팅",
+  hero_secondary: "히어로 · 작동 방식 보기",
+  header_cta: "헤더 · 데모 미팅",
   partner_email: "소속사 · 이메일",
   partner_instagram: "소속사 · 인스타그램",
   partner_x: "소속사 · X",

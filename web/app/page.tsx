@@ -11,11 +11,11 @@ export default function Home() {
       <SiteHeader />
       <main>
         <Hero />
-        <Ways />
-        <Character />
-        <Journey />
+        <Why />
+        <Product />
         <HowItWorks />
         <Partners />
+        <Process />
         <Finale />
       </main>
     </>
@@ -48,7 +48,7 @@ function Section({
 }
 
 /* ─────────────────────────────────────────────────────
-   1. Hero
+   1. Hero — B2B (소속사·아이돌 대상)
    ───────────────────────────────────────────────────── */
 function Hero() {
   return (
@@ -62,25 +62,25 @@ function Hero() {
           style={{ animationDelay: "0ms" }}
         >
           <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
-          지하돌 팬덤 · 사전신청 받는 중
+          지하돌 팬덤 플랫폼 · 파트너 소속사 모집 중
         </span>
 
         <h1
           className="animate-fade-up mt-7 text-balance text-5xl font-semibold leading-[1.1] tracking-tight text-fg sm:text-7xl"
           style={{ animationDelay: "90ms" }}
         >
-          당신의 아이돌,
+          소속 아이돌의 첫 팬덤,
           <br />
-          <span className="text-neon">함께 자라요.</span>
+          <span className="text-neon">디지털에서 시작해요.</span>
         </h1>
 
         <p
           className="animate-fade-up mt-8 text-pretty text-lg leading-relaxed text-fg-muted sm:text-xl"
           style={{ animationDelay: "180ms" }}
         >
-          지켜보고, 대화하고, 후원하며.
-          <br />
-          작은 응원이 한 명의 아이돌을 무대로 데려갑니다.
+          입점 0원, 멤버 부담 없이. 매일의 채팅으로 팬을 모으고,
+          <br className="hidden sm:block" />
+          후원으로 수익을 나눕니다. 디지털 팬덤을 무대로 잇는 파트너, 앙코르.
         </p>
 
         <div
@@ -92,21 +92,27 @@ function Hero() {
             label="hero_primary"
             className="animate-neon-pulse w-full rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-primary-on transition hover:bg-primary-hover sm:w-auto"
           >
-            사전신청 하기 →
+            15분 데모 미팅 →
           </TrackedLink>
           <TrackedLink
             href="#how"
             label="hero_secondary"
             className="w-full rounded-full border border-outline px-7 py-3.5 text-sm font-semibold text-fg transition hover:border-primary hover:text-primary sm:w-auto"
           >
-            어떻게 작동하나요
+            작동 방식 보기
           </TrackedLink>
         </div>
+
+        <p
+          className="animate-fade-up mt-6 text-xs text-fg-faint"
+          style={{ animationDelay: "360ms" }}
+        >
+          입점비·개발비 없음 · 후원 매출 수익 셰어 · 파일럿 1팀으로 가볍게 시작
+        </p>
       </div>
 
-      {/* 다운 화살표 — 인터랙션 유도 */}
       <a
-        href="#ways"
+        href="#why"
         aria-label="다음 섹션으로 이동"
         className="animate-bounce-down absolute bottom-10 left-1/2 flex h-11 w-11 items-center justify-center rounded-full border border-outline text-fg-muted transition hover:border-primary hover:text-primary"
       >
@@ -128,68 +134,54 @@ function Hero() {
 }
 
 /* ─────────────────────────────────────────────────────
-   2. Ways — 함께하는 4가지 방식 (2x2 grid)
+   2. Why — 문제·기회 (지하돌의 현실)
    ───────────────────────────────────────────────────── */
-const WAYS = [
+const PAINS = [
   {
-    title: "지켜보기",
-    body: "매일의 채팅과 일상이 천천히 쌓입니다. 한 명의 아이돌이 자라는 모든 순간을, 처음부터 함께 봅니다.",
+    title: "흩어진 팬 접점",
+    body: "SNS·공방·스트리밍으로 팬은 흩어져 있고, 한곳에 모아 매일 닿을 채널이 없습니다.",
   },
   {
-    title: "대화하기",
-    body: "팬의 메시지는 그 아이돌에게만. 아이돌의 한 마디는 응원하는 모두에게. 가장 가까운 거리에서 매일 안부를 묻습니다.",
+    title: "막힌 수익화",
+    body: "음원·굿즈·콘서트 전까지, 분명히 있는 팬심을 매출로 잇는 수단이 마땅치 않습니다.",
   },
   {
-    title: "후원하기",
-    note: "준비 중",
-    body: "작은 응원이 모여 무대가 됩니다. 출시 이후 단계적으로 열리는 후원으로, 아이돌의 다음 길에 손을 보탭니다.",
+    title: "버거운 운영",
+    body: "멤버가 팬 한 명 한 명을 직접 응대하기엔 시간도 손도 부족합니다.",
   },
-  {
-    title: "성장시키기",
-    body: "당신과 함께한 시간이 아이돌의 다음 챕터가 됩니다. 첫 무대, 첫 콘서트, 그 너머의 여정까지.",
-  },
-] satisfies ReadonlyArray<{
-  title: string;
-  body: string;
-  note?: string;
-}>;
+] as const;
 
-function Ways() {
+function Why() {
   return (
     <Section
-      id="ways"
+      id="why"
       background="radial-gradient(ellipse 65% 50% at 100% 100%, rgba(0,229,255,0.10), transparent 60%), radial-gradient(ellipse 40% 30% at 0% 0%, rgba(199,112,255,0.06), transparent 60%)"
     >
       <div className="mx-auto w-full max-w-5xl">
         <div className="max-w-2xl">
           <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
-            네 가지 방식으로,
-            <br />한 명의 아이돌과.
+            무대는 가끔,
+            <br />
+            팬과 만날 곳은 없었어요.
           </h2>
           <p className="mt-5 text-pretty text-base leading-relaxed text-fg-muted sm:text-lg">
-            앙코르는 매일의 작은 순간이 한 명의 아이돌을 무대로 데려가는
-            자리입니다.
+            지하돌과 신인에게 팬덤은 곧 생존입니다. 하지만 매일 팬과 닿는 채널도,
+            그 팬심을 수익으로 잇는 수단도 부족했습니다. 앙코르가 그 빈자리를
+            메웁니다.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2">
-          {WAYS.map((w) => (
+        <div className="mt-12 grid gap-4 sm:grid-cols-3">
+          {PAINS.map((p) => (
             <article
-              key={w.title}
-              className="text-card relative rounded-2xl border border-outline-soft transition hover:border-outline"
+              key={p.title}
+              className="text-card rounded-2xl border border-outline-soft transition hover:border-outline"
             >
-              <div className="flex items-baseline justify-between">
-                <h3 className="text-xl font-semibold tracking-tight text-fg">
-                  {w.title}
-                </h3>
-                {w.note ? (
-                  <span className="text-[11px] font-medium text-fg-faint">
-                    {w.note}
-                  </span>
-                ) : null}
-              </div>
+              <h3 className="text-lg font-semibold tracking-tight text-fg">
+                {p.title}
+              </h3>
               <p className="mt-3 text-sm leading-relaxed text-fg-muted">
-                {w.body}
+                {p.body}
               </p>
             </article>
           ))}
@@ -200,24 +192,24 @@ function Ways() {
 }
 
 /* ─────────────────────────────────────────────────────
-   3. Character — 2.5D 캐릭터 (단계적 도입)
+   3. Product — 소속 아이돌이 얻는 것 (2.5D 캐릭터 + 채팅)
    ───────────────────────────────────────────────────── */
-const CHARACTER_FEATURES = [
+const PRODUCT_FEATURES = [
   {
-    title: "표정으로 답해요",
-    body: "아이돌이 보낸 메시지의 톤에 맞춰 캐릭터의 표정과 동작이 함께 움직입니다.",
+    title: "매일의 1:N 채팅",
+    body: "한 번 쓰면 응원하는 모든 팬에게 닿습니다. 팬은 1:1처럼 느끼고, 멤버 부담은 최소로.",
   },
   {
-    title: "당신의 화면에서만",
-    body: "팬 한 명 한 명의 시점에서, 아이돌의 분신이 정면을 바라보고 말합니다.",
+    title: "쌓이는 캐릭터",
+    body: "후원과 함께한 시간이 2.5D 캐릭터에 쌓여, 팬을 머무르게 하는 리텐션이 됩니다.",
   },
   {
-    title: "함께 자라요",
-    body: "후원과 함께한 시간이 쌓이면 의상과 공간, 표현이 단계적으로 풍부해집니다.",
+    title: "후원 = 수익",
+    body: "팬의 응원이 곧 매출로. 발생한 수익은 명확한 기준으로 소속사와 나눕니다.",
   },
 ] as const;
 
-function Character() {
+function Product() {
   return (
     <Section
       id="character"
@@ -227,22 +219,20 @@ function Character() {
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <div>
             <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
-              채팅에 맞춰 움직이는,
+              매일 팬과 만나는,
               <br />
-              아이돌의 분신.
+              아이돌의 디지털 분신.
             </h2>
             <p className="mt-5 text-pretty text-base leading-relaxed text-fg-muted sm:text-lg">
-              2.5D 맞춤 캐릭터로, 당신의 아이돌이 화면 너머에서 살아 움직이는
-              경험을 준비하고 있어요. 메시지 한 줄, 작은 후원, 함께한 시간이
-              그대로 캐릭터에 쌓여요.
+              2.5D 맞춤 캐릭터와 1:N 채팅으로, 소속 아이돌이 화면 너머 팬과 매일
+              닿습니다. 메시지 한 줄, 작은 후원, 함께한 시간이 그대로 캐릭터에
+              쌓여 팬덤을 키웁니다.
             </p>
 
             <dl className="mt-10 space-y-7">
-              {CHARACTER_FEATURES.map((f) => (
+              {PRODUCT_FEATURES.map((f) => (
                 <div key={f.title}>
-                  <dt className="text-base font-semibold text-fg">
-                    {f.title}
-                  </dt>
+                  <dt className="text-base font-semibold text-fg">{f.title}</dt>
                   <dd className="mt-1.5 text-sm leading-relaxed text-fg-muted">
                     {f.body}
                   </dd>
@@ -251,12 +241,11 @@ function Character() {
             </dl>
 
             <p className="mt-10 text-xs text-fg-faint">
-              출시 이후 단계적으로 도입됩니다.
+              일부 기능은 출시 이후 단계적으로 도입됩니다.
             </p>
           </div>
 
           <div className="relative flex justify-center lg:justify-end">
-            {/* 보라/핑크 글로우 — 핸드폰 mockup 뒤 */}
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 -z-0"
@@ -275,86 +264,23 @@ function Character() {
 }
 
 /* ─────────────────────────────────────────────────────
-   4. Journey — 세 단계의 여정
-   ───────────────────────────────────────────────────── */
-const JOURNEY = [
-  {
-    n: "01",
-    title: "디지털에서 만나",
-    body: "매일의 채팅으로 가까워져요. 응원하는 시간이 그 아이돌과 당신만의 기록으로 쌓입니다.",
-  },
-  {
-    n: "02",
-    title: "함께 자라요",
-    body: "후원과 응원이 아이돌의 다음 길에 손을 보탭니다. 변화를 가장 가까이서 지켜봐요.",
-  },
-  {
-    n: "03",
-    title: "무대에서 마주봐요",
-    body: "디지털에서 쌓은 시간이 첫 무대, 첫 콘서트, 그리고 직접 만나는 자리로 이어집니다.",
-  },
-] as const;
-
-function Journey() {
-  return (
-    <Section
-      id="journey"
-      background="linear-gradient(135deg, rgba(0,229,255,0.08) 0%, transparent 35%, transparent 65%, rgba(199,112,255,0.10) 100%)"
-    >
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="max-w-2xl">
-          <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
-            디지털에서 만나,
-            <br />
-            무대에서 마주봐요.
-          </h2>
-          <p className="mt-5 text-pretty text-base leading-relaxed text-fg-muted sm:text-lg">
-            매일의 작은 대화로 시작해, 첫 무대와 그 너머까지. 앙코르는 디지털과
-            오프라인을 잇는 자리입니다.
-          </p>
-        </div>
-
-        <ol className="mt-14 space-y-6 sm:mt-16">
-          {JOURNEY.map((s) => (
-            <li
-              key={s.n}
-              className="text-card grid gap-3 sm:grid-cols-[6rem_1fr] sm:gap-8"
-            >
-              <span className="font-mono text-sm text-fg-faint">{s.n}</span>
-              <div>
-                <h3 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-                  {s.title}
-                </h3>
-                <p className="mt-2 text-base leading-relaxed text-fg-muted">
-                  {s.body}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </Section>
-  );
-}
-
-/* ─────────────────────────────────────────────────────
-   5. HowItWorks — 1:N 채팅 메커니즘
+   4. HowItWorks — fan-out 구조 (멤버 부담 최소)
    ───────────────────────────────────────────────────── */
 type Msg = { from: "me" | "other" | "idol"; text: string };
 
 const HOW_IDOL: Msg[] = [
-  { from: "idol", text: "오늘 콘서트 너무 좋았어!" },
+  { from: "idol", text: "오늘 무대 너무 좋았어!" },
   { from: "idol", text: "다들 잘 들어갔지?" },
 ];
 const HOW_FAN_A: Msg[] = [
-  { from: "other", text: "오늘 콘서트 너무 좋았어!" },
+  { from: "other", text: "오늘 무대 너무 좋았어!" },
   { from: "other", text: "다들 잘 들어갔지?" },
   { from: "me", text: "너무 행복했어요" },
 ];
 const HOW_FAN_B: Msg[] = [
-  { from: "other", text: "오늘 콘서트 너무 좋았어!" },
+  { from: "other", text: "오늘 무대 너무 좋았어!" },
   { from: "other", text: "다들 잘 들어갔지?" },
-  { from: "me", text: "다음 콘서트는 언제예요?" },
+  { from: "me", text: "다음 무대는 언제예요?" },
 ];
 
 function HowItWorks() {
@@ -366,13 +292,13 @@ function HowItWorks() {
       <div className="mx-auto w-full max-w-6xl">
         <div className="max-w-2xl">
           <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
-            1:1처럼 보이는,
+            한 번 쓰면 모두에게,
             <br />
-            1:N 대화의 구조.
+            답장은 그 아이돌에게만.
           </h2>
           <p className="mt-5 text-pretty text-base leading-relaxed text-fg-muted sm:text-lg">
-            아이돌의 한 마디는 응원하는 모든 팬에게 동일하게. 팬의 답장은 그
-            아이돌에게만. 모든 팬은 자신만의 1:1 화면을 가집니다.
+            1:N fan-out 구조로 멤버의 운영 부담은 줄이고, 팬은 1:1처럼 느끼는
+            거리를 유지합니다. 모든 팬이 자신만의 화면을 가집니다.
           </p>
         </div>
 
@@ -446,20 +372,24 @@ function ChatPreview({
 }
 
 /* ─────────────────────────────────────────────────────
-   6. Partners — 소속사/기획사 B2B
+   5. Partners — 소속사가 얻는 것
    ───────────────────────────────────────────────────── */
 const PARTNER_POINTS = [
   {
-    title: "새로운 팬 접점",
-    body: "소속 아이돌의 일상이 매일의 채팅으로 팬과 이어집니다. 데뷔 전·후 어느 단계든, 디지털에서 팬덤을 먼저 만듭니다.",
+    title: "입점 0원",
+    body: "초기 비용·개발 없이 합류합니다. 세팅은 저희가, 리스크 없는 시작.",
   },
   {
     title: "투명한 수익 셰어",
-    body: "후원·구독에서 발생하는 수익을 소속사와 함께 나눕니다. 정산 기준은 명확하게, 데이터는 투명하게 공유합니다.",
+    body: "후원·구독 매출을 명확한 기준으로 정산하고, 데이터를 투명하게 공유합니다.",
   },
   {
-    title: "함께 키우는 IP",
-    body: "쌓인 팬과의 시간이 첫 무대, 첫 콘서트로 이어집니다. 디지털 팬덤을 오프라인 IP로 확장하는 파트너가 됩니다.",
+    title: "멤버 부담 없는 운영",
+    body: "fan-out 구조로 매일의 응대 부담을 최소화합니다. 멤버는 활동에 집중.",
+  },
+  {
+    title: "디지털 → 오프라인 IP",
+    body: "쌓인 팬덤이 첫 무대, 첫 콘서트로 이어집니다. 디지털 팬덤을 IP로 확장.",
   },
 ] as const;
 
@@ -472,21 +402,19 @@ function Partners() {
       <div className="mx-auto w-full max-w-5xl">
         <div className="max-w-2xl">
           <span className="inline-flex items-center gap-2 rounded-full border border-secondary/35 bg-secondary/10 px-4 py-1.5 text-xs font-medium text-secondary-container-on backdrop-blur-sm">
-            소속사 · 기획사 파트너
+            소속사 · 기획사
           </span>
           <h2 className="mt-6 text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
-            소속 아이돌의 다음 무대,
-            <br />
-            함께 만들어요.
+            소속사가 얻는 것.
           </h2>
           <p className="mt-5 text-pretty text-base leading-relaxed text-fg-muted sm:text-lg">
             앙코르는 소속사와 함께 디지털 팬덤을 만들고, 그 성장을 오프라인
-            무대로 잇는 파트너입니다. 팬 접점·수익 셰어·IP 확장을 함께
-            설계해요.
+            무대로 잇는 파트너입니다. 비용 부담 없이 시작해, 수익을 함께
+            나눕니다.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-3">
+        <div className="mt-12 grid gap-4 sm:grid-cols-2">
           {PARTNER_POINTS.map((p) => (
             <article
               key={p.title}
@@ -520,6 +448,67 @@ function Partners() {
 }
 
 /* ─────────────────────────────────────────────────────
+   6. Process — 합류 절차
+   ───────────────────────────────────────────────────── */
+const PROCESS = [
+  {
+    n: "01",
+    title: "15분 데모 미팅",
+    body: "먼저 듣습니다. 소속 아이돌과 수익 구조에 맞는 그림을 함께 그려요.",
+  },
+  {
+    n: "02",
+    title: "파일럿 온보딩",
+    body: "한 팀으로 가볍게 시작합니다. 입점 0원, 세팅과 캐릭터 제작은 저희가.",
+  },
+  {
+    n: "03",
+    title: "런칭 & 성장",
+    body: "팬덤을 키우고 수익을 나누며, 첫 무대와 그 너머까지 함께 갑니다.",
+  },
+] as const;
+
+function Process() {
+  return (
+    <Section
+      id="process"
+      background="linear-gradient(135deg, rgba(0,229,255,0.08) 0%, transparent 35%, transparent 65%, rgba(199,112,255,0.10) 100%)"
+    >
+      <div className="mx-auto w-full max-w-5xl">
+        <div className="max-w-2xl">
+          <h2 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
+            합류는, 이렇게.
+          </h2>
+          <p className="mt-5 text-pretty text-base leading-relaxed text-fg-muted sm:text-lg">
+            거창한 계약서 없이, 15분 대화로 시작합니다. 파일럿 한 팀으로 가볍게
+            확인하고, 맞으면 함께 키워갑니다.
+          </p>
+        </div>
+
+        <ol className="mt-14 space-y-6 sm:mt-16">
+          {PROCESS.map((s) => (
+            <li
+              key={s.n}
+              className="text-card grid gap-3 sm:grid-cols-[6rem_1fr] sm:gap-8"
+            >
+              <span className="font-mono text-sm text-fg-faint">{s.n}</span>
+              <div>
+                <h3 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
+                  {s.title}
+                </h3>
+                <p className="mt-2 text-base leading-relaxed text-fg-muted">
+                  {s.body}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </Section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
    7. Finale — CTA + Footer
    ───────────────────────────────────────────────────── */
 function Finale() {
@@ -535,7 +524,7 @@ function Finale() {
       <div className="flex flex-1 items-center justify-center px-6 pt-24 pb-12">
         <div className="mx-auto w-full max-w-2xl text-center">
           <h2 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight text-fg sm:text-6xl">
-            함께 자라는 첫 무대,
+            함께 만들 첫 무대,
             <br />
             <span className="text-neon">앙코르를 외쳐요.</span>
           </h2>
