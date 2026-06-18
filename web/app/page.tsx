@@ -1,4 +1,5 @@
 import { CharacterPhoneSlides } from "./_components/character-phone-slides";
+import { PartnerContact } from "./_components/partner-contact";
 import { SiteFooter } from "./_components/site-footer";
 import { SiteHeader } from "./_components/site-header";
 import { TrackedLink } from "./_components/tracked-link";
@@ -14,6 +15,7 @@ export default function Home() {
         <Character />
         <Journey />
         <HowItWorks />
+        <Partners />
         <Finale />
       </main>
     </>
@@ -444,7 +446,81 @@ function ChatPreview({
 }
 
 /* ─────────────────────────────────────────────────────
-   6. Finale — CTA + Footer
+   6. Partners — 소속사/기획사 B2B
+   ───────────────────────────────────────────────────── */
+const PARTNER_POINTS = [
+  {
+    title: "새로운 팬 접점",
+    body: "소속 아이돌의 일상이 매일의 채팅으로 팬과 이어집니다. 데뷔 전·후 어느 단계든, 디지털에서 팬덤을 먼저 만듭니다.",
+  },
+  {
+    title: "투명한 수익 셰어",
+    body: "후원·구독에서 발생하는 수익을 소속사와 함께 나눕니다. 정산 기준은 명확하게, 데이터는 투명하게 공유합니다.",
+  },
+  {
+    title: "함께 키우는 IP",
+    body: "쌓인 팬과의 시간이 첫 무대, 첫 콘서트로 이어집니다. 디지털 팬덤을 오프라인 IP로 확장하는 파트너가 됩니다.",
+  },
+] as const;
+
+function Partners() {
+  return (
+    <Section
+      id="partners"
+      background="radial-gradient(ellipse 60% 45% at 0% 100%, rgba(0,229,255,0.10), transparent 60%), radial-gradient(ellipse 50% 40% at 100% 0%, rgba(199,112,255,0.10), transparent 60%)"
+    >
+      <div className="mx-auto w-full max-w-5xl">
+        <div className="max-w-2xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-secondary/35 bg-secondary/10 px-4 py-1.5 text-xs font-medium text-secondary-container-on backdrop-blur-sm">
+            소속사 · 기획사 파트너
+          </span>
+          <h2 className="mt-6 text-balance text-4xl font-semibold leading-tight tracking-tight text-fg sm:text-5xl">
+            소속 아이돌의 다음 무대,
+            <br />
+            함께 만들어요.
+          </h2>
+          <p className="mt-5 text-pretty text-base leading-relaxed text-fg-muted sm:text-lg">
+            앙코르는 소속사와 함께 디지털 팬덤을 만들고, 그 성장을 오프라인
+            무대로 잇는 파트너입니다. 팬 접점·수익 셰어·IP 확장을 함께
+            설계해요.
+          </p>
+        </div>
+
+        <div className="mt-12 grid gap-4 sm:grid-cols-3">
+          {PARTNER_POINTS.map((p) => (
+            <article
+              key={p.title}
+              className="text-card rounded-2xl border border-outline-soft transition hover:border-outline"
+            >
+              <h3 className="text-lg font-semibold tracking-tight text-fg">
+                {p.title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-fg-muted">
+                {p.body}
+              </p>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-12 rounded-2xl border border-outline-soft bg-surface-2/60 p-6 backdrop-blur-md sm:p-8">
+          <h3 className="text-xl font-semibold tracking-tight text-fg">
+            파트너십 문의
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+            소속 아이돌과 함께할 소속사·기획사를 찾고 있어요. 아래 채널로
+            편하게 연락 주세요. 제휴 자료와 데모를 보내드립니다.
+          </p>
+          <div className="mt-6">
+            <PartnerContact />
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
+   7. Finale — CTA + Footer
    ───────────────────────────────────────────────────── */
 function Finale() {
   return (
